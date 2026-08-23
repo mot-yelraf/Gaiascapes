@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gaia-rhythms"
+version = "v0.26.235.20"
+description = "Turn live terrestrial events into generative musical performances."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Tom Farley"}]
+dependencies = [
+  "fastapi>=0.115,<1.0",
+  "uvicorn>=0.30,<1.0",
+  "jinja2>=3.1,<4.0",
+  "astral>=3.2,<4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1.0",
+  "pytest>=8.0,<9.0",
+]
+
+[project.scripts]
+gaia-rhythms-server = "gaia_rhythms_host.__main__:main"
+gaia-rhythms-gui = "gaia_rhythms_host.desktop:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+gaia_rhythms_host = ["templates/*.html", "static/*.css", "static/*.js", "static/*.svg"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

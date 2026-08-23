@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gaia Rhythms</title>
+  <link rel="stylesheet" href="/static/app.css?v={{ version }}">
+</head>
+<body>
+  <div class="event-pulse-layer" id="eventPulseLayer" aria-hidden="true"></div>
+  <main>
+    <header>
+      <div class="heading-block">
+        <p class="eyebrow">Terrestrial sonification</p>
+        <div class="title-line">
+          <h1>Gaia Rhythms</h1>
+          <small class="project-version">{{ version }}</small>
+        </div>
+        <div class="intro-row">
+          <p class="intro">Earthquakes, ocean motion, and storm potential become a spatial musical score.</p>
+          <div class="pulse" id="systemPulse"><span></span><strong>Starting</strong></div>
+        </div>
+      </div>
+      <button class="settings-trigger" type="button" data-open-settings><span aria-hidden="true">⚙</span> Settings</button>
+    </header>
+
+    <section class="metrics" aria-label="Application status">
+      <article><span>Captured events</span><strong id="eventCount">—</strong></article>
+      <article><span>Latest capture</span><strong id="captureTime">—</strong></article>
+      <article><span>SuperCollider</span><strong id="scStatus">—</strong></article>
+      <article><span>OSC destination</span><strong id="oscStatus">—</strong></article>
+    </section>
+
+    <section class="workspace">
+      <article class="panel performance-panel">
+        <div class="panel-title">
+          <div><p class="eyebrow">Environmental stream</p><h2>Live Events</h2></div>
+          <span class="badge" id="performanceBadge">Idle</span>
+        </div>
+        <div class="controls">
+          <label>Mode
+            <select id="liveMode"><option value="capture" {% if live_mode == "capture" %}selected{% endif %}>Capture</option><option value="continuous" {% if live_mode == "continuous" %}selected{% endif %}>Continuous</option></select>
+          </label>
+          <label class="capture-only">History window
+            <span><input id="hours" type="number" min="0.05" max="24" step="0.25" value="{{ default_hours }}"> hours</span>
+          </label>
+          <label class="capture-only">Performance length
+            <span><input id="duration" type="number" min="1" max="3600" step="1" value="{{ default_duration }}"> seconds</span>
+          </label>
+          <p class="mode-note continuous-only" hidden>New earthquakes sound as they arrive. Ocean, tide, and storm cues rotate through global locations every 12 seconds.</p>
+        </div>
+        <div class="actions">
+          <button class="primary" id="replayButton">Begin replay</button>
+          <button id="stopButton">Stop</button>
+          <button id="captureButton">Capture now</button>
+        </div>
+        <p class="message" id="message">Waiting for application status…</p>
+      </article>
+
+      <article class="panel events-panel">
+        <div class="panel-title">
+          <div><p class="eyebrow">Recent activity</p><h2>Environmental event history</h2></div>
+          <button class="quiet" id="refreshButton">Refresh</button>
+        </div>
+        <div class="event-list" id="eventList"><p class="empty">No captured events yet.</p></div>
+      </article>
+    </section>
+
+  </main>
+
+  <footer class="site-footer"><img src="/static/gaia-rhythms-icon.svg?v={{ version }}" alt="Gaia Rhythms"></footer>
+
+  <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+    <form id="settingsForm">
+      <header class="modal-header">
+        <div><p class="eyebrow">Gaia control room</p><h2 id="settingsTitle">Settings</h2></div>
+        <button class="icon-button" type="button" data-close-settings aria-label="Close Settings">×</button>
+      </header>
+      <div class="modal-layout">
+        <nav class="settings-menu" aria-label="Settings sections" role="tablist" aria-orientation="vertical">
+          <button type="button" class="settings-tab is-active" data-settings-pane="sources">Sound sources</button>
+          <button type="button" class="settings-tab" data-settings-pane="instruments">Instruments</button>
+        </nav>
+        <div class="settings-content">
+          <section class="settings-pane is-active" data-pane="sources">
+            <div class="pane-heading"><span>01</span><div><h3>Captured sound sources</h3><p>Choose which live Earth data feeds can enter the local event history.</p></div></div>
+            <label class="source-option"><input id="sourceUsgs" type="checkbox" {% if "usgs" in enabled_sources %}checked{% endif %}><span><strong>USGS earthquakes</strong><small>Observed earthquakes from the current USGS daily feed.</small></span></label>
+            <label class="source-option"><input id="sourceMarine" type="checkbox" {% if "open_meteo_marine" in enabled_sources %}checked{% endif %}><span><strong>Open-Meteo surf & tides</strong><small>Modeled swell and tide turns at twelve global surf locations.</small></span></label>
+            <label class="source-option"><input id="sourceStorm" type="checkbox" {% if "open_meteo_storm" in enabled_sources %}checked{% endif %}><span><strong>Open-Meteo storm potential</strong><small>Global forecast convection—not observed lightning strikes.</small></span></label>
+            <p class="settings-tip"><span>ⓘ</span><span>Marine forecasts are not suitable for navigation. Data: Open-Meteo and contributing weather agencies.</span></p>
+          </section>
+          <section class="settings-pane" data-pane="instruments" hidden>
+            <div class="pane-heading"><span>02</span><div><h3>Event instrument mapping</h3><p>Route each normalized event kind to a SuperCollider instrument.</p></div></div>
+            {% for kind, options in instrument_options.items() %}
+            <div class="mapping-control">
+              <label class="settings-field" for="{{ kind }}Instrument"><span>{{ kind | replace("_", " ") | title }}</span><select id="{{ kind }}Instrument">{% for instrument in options %}<option value="{{ instrument }}" {% if instrument == event_instruments[kind] %}selected{% endif %}>{{ instrument | replace("_", " ") | title }}</option>{% endfor %}</select></label>
+              <button type="button" class="preview-instrument-button" data-kind="{{ kind }}" data-select="{{ kind }}Instrument">▶ Preview</button>
+            </div>
+            {% endfor %}
+            <p class="settings-tip"><span>ⓘ</span><span>The selected SynthDef is sent with every OSC cue and takes effect on the next replay.</span></p>
+          </section>
+        </div>
+      </div>
+      <footer class="modal-footer"><p id="settingsStatus" aria-live="polite">Changes are stored with this installation.</p><div><button type="button" data-close-settings>Close</button><button class="primary" type="submit">Save settings</button></div></footer>
+    </form>
+  </dialog>
+  <script src="/static/app.js?v={{ version }}"></script>
+</body>
+</html>
