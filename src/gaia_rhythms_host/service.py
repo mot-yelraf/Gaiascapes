@@ -351,8 +351,15 @@ class GaiaRhythmsService:
             "storm_potential": ambient_duration,
         }
         source = build_score((event,), event.timestamp, 1.0, 1.0)[0]
+        velocity = source.velocity
+        if event.kind in {"ocean_swell", "tide_turn", "storm_potential"}:
+            # SuperCollider maps 20..127 to amplitude 0.08..0.58. Convert
+            # through that mapping so 75% means amplitude, not MIDI velocity.
+            current_amplitude = 0.08 + ((source.velocity - 20) / 107.0 * 0.5)
+            reduced_amplitude = current_amplitude * 0.75
+            velocity = round(20 + ((reduced_amplitude - 0.08) / 0.5 * 107.0))
         cue = ScoreCue(
-            0, event, source.pitch, source.velocity,
+            0, event, source.pitch, velocity,
             duration=durations.get(event.kind, source.duration), pan=source.pan,
         )
         async with self._live_play_lock:

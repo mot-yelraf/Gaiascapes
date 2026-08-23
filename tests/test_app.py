@@ -82,6 +82,10 @@ def test_ambient_cue_overlaps_the_next_continuous_interval(tmp_path):
 
     assert asyncio.run(app.state.service.play_next_ambient_event()) is True
     assert played[0].duration == app.state.config.continuous_interval_seconds + 1.5
+    original_velocity = 20 + round(ocean.strength * 107.0)
+    original_amplitude = 0.08 + ((original_velocity - 20) / 107.0 * 0.5)
+    reduced_amplitude = 0.08 + ((played[0].velocity - 20) / 107.0 * 0.5)
+    assert abs(reduced_amplitude - (original_amplitude * 0.75)) < 0.003
 
 
 def test_audio_settings_persist_and_update_live_renderer(tmp_path):

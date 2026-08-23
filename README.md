@@ -10,7 +10,8 @@ The first source is the USGS all-day earthquake feed. Events are normalized,
 deduplicated in SQLite, and retained locally. The Live Events tile offers two modes:
 Capture replays a selected history window, while Continuous sounds newly captured
 earthquakes immediately and rotates ambient ocean, tide, and storm cues globally.
-Continuous mode does not derive ocean sound from the listener’s location.
+Continuous mode does not derive ocean sound from the listener’s location. Ambient
+cues play at 75% of their mapped level so full-level earthquake cues remain distinct.
 
 Optional Open-Meteo sources add:
 
@@ -106,7 +107,7 @@ longitude, latitude, raw_magnitude, depth_km
 
 The included `supercollider/gaia-rhythms.scd` listens on UDP 57130 and provides
 earthquake, seismic-bell, tectonic-drone, ocean-swell, tidal-bell, and
-storm-potential voices. The Settings menu selects
+cymbal-like storm-potential voices. The Settings menu selects
 the capture sources and maps normalized event kinds to these instruments. OSC host and port can be overridden with
 `GAIA_RHYTHMS_OSC_HOST` and `GAIA_RHYTHMS_OSC_PORT`; change `oscPort` in the
 SuperCollider script when selecting another receive port.

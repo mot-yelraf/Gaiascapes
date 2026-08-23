@@ -51,3 +51,5 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     assert "msg[3].asString" in synth
     assert "(duration - 1.5).max(0.4)" in synth
     assert "(duration - 0.08).max(1.0)" in synth
+    assert "[2600, 3700, 5100, 6900, 8700]" in synth
+    assert "HPF.ar(WhiteNoise.ar(0.22), 2400)" in synth

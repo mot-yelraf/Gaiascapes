@@ -65,12 +65,20 @@ SynthDef(\tidalBell, {
 
 SynthDef(\stormPotential, {
     |out=0, freq=110, amp=0.35, duration=0.8, pan=0, depth=10, strength=0.5|
-    var envelope, air, charge, distant;
+    var envelope, onset, wash, excitation, shimmer, sparkle, signal;
     envelope = EnvGen.kr(Env.linen(0.75, (duration - 1.5).max(0.4), 0.75, curve: -3), doneAction: Done.freeSelf);
-    air = BPF.ar(PinkNoise.ar(0.55), (freq * 5).clip(350, 1800), 0.35);
-    charge = Ringz.ar(Dust2.ar(4 + (strength * 14), 0.12), (freq * [2.1, 3.2]).clip(180, 1600), 0.22).sum;
-    distant = RLPF.ar(BrownNoise.ar(0.2), (freq * 2).clip(90, 420), 0.3);
-    Out.ar(out, Pan2.ar((air + charge + distant) * envelope * amp, pan));
+    onset = HPF.ar(WhiteNoise.ar(0.22), 2400) * EnvGen.kr(Env.perc(0.01, 1.4, curve: -5));
+    wash = HPF.ar(PinkNoise.ar(0.22), 3200);
+    excitation = Dust2.ar(0.7 + (strength * 2.6), 0.055);
+    shimmer = Ringz.ar(
+        excitation,
+        [2600, 3700, 5100, 6900, 8700],
+        [1.8, 1.55, 1.3, 1.05, 0.8],
+        [0.2, 0.18, 0.14, 0.1, 0.07]
+    ).sum;
+    sparkle = HPF.ar(WhiteNoise.ar(0.055), 6200) * LFNoise2.kr(1.7).range(0.15, 1);
+    signal = onset + ((wash + shimmer + sparkle) * envelope);
+    Out.ar(out, Pan2.ar(signal * amp, pan));
 }).add;
 
     s.sync;
