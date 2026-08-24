@@ -49,7 +49,7 @@ label { display: flex; align-items: center; justify-content: space-between; gap:
 label span { display: flex; align-items: baseline; gap: 8px; color: var(--muted); }
 input { width: 92px; padding: 10px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: #0b120f; font: inherit; }
 #liveMode { min-width: 150px; padding: 10px 34px 10px 12px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: #0b120f; font: inherit; }
-.mode-note { padding: 14px; border-left: 3px solid var(--moss); color: var(--muted); background: rgba(158,211,154,.06); font-size: .84rem; line-height: 1.55; }
+.mode-note { padding: 14px; color: var(--muted); background: rgba(158,211,154,.06); font-size: .84rem; line-height: 1.55; }
 .actions + .mode-note { margin-top: 22px; }
 [hidden] { display: none !important; }
 button { padding: 10px 15px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: #17231e; font: inherit; cursor: pointer; }
@@ -73,7 +73,7 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .site-footer img { display: block; width: clamp(96px, 11vw, 138px); height: auto; opacity: .88; }
 
 .event-pulse-layer { position: fixed; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
-.event-wave { position: absolute; left: var(--wave-x, 50%); top: var(--wave-y, 50%); width: 15vmin; aspect-ratio: 1; border-radius: 50%; opacity: 0; transform: translate(-50%, -50%) scale(.12); background: radial-gradient(circle, color-mix(in srgb, var(--wave-inner, #765236) 86%, transparent) 0%, color-mix(in srgb, var(--wave-color, #93643f) 88%, transparent) 34%, color-mix(in srgb, var(--wave-color, #93643f) 34%, transparent) 64%, transparent 82%); filter: blur(.45vmin) saturate(1.18); mix-blend-mode: screen; animation: event-wave var(--wave-duration, 3.6s) cubic-bezier(.12,.5,.18,1) forwards; }
+.event-wave { position: absolute; left: var(--wave-x, 50%); top: var(--wave-y, 50%); width: 15vmin; aspect-ratio: 1; border-radius: 50%; opacity: 0; transform: translate(-50%, -50%) scale(.12); background: radial-gradient(circle, color-mix(in srgb, var(--wave-inner, #765236) 86%, transparent) 0%, color-mix(in srgb, var(--wave-color, #93643f) 88%, transparent) 34%, color-mix(in srgb, var(--wave-color, #93643f) 34%, transparent) 64%, transparent 82%); filter: blur(.45vmin) saturate(1.18); mix-blend-mode: screen; animation: event-wave var(--wave-duration, 3.6s) cubic-bezier(.45,0,.55,1) forwards; }
 .event-wave--background { z-index: 0; }
 .event-wave--event { z-index: 1; }
 .event-wave--earthquake { --wave-color: #93643f; --wave-inner: #765236; }

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gaia-rhythms"
-version = "v0.26.236.26"
+version = "v0.26.236.29"
 description = "Turn live terrestrial events into generative musical performances."
 readme = "README.md"
 requires-python = ">=3.10"

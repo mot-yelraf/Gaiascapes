@@ -99,6 +99,31 @@ class EventStore:
             ).fetchall()
         return tuple(_event_from_row(row) for row in rows)
 
+    def events_by_keys(self, keys):
+        """Return stored events matching provider and event ID pairs."""
+        keys = tuple(
+            dict.fromkeys(
+                (str(provider), str(event_id)) for provider, event_id in keys
+            )
+        )
+        if not keys:
+            return ()
+        with closing(sqlite3.connect(self.path)) as connection:
+            rows = []
+            for provider, event_id in keys:
+                row = connection.execute(
+                    """
+                    SELECT provider, event_id, kind, occurred_at, latitude,
+                           longitude, strength, traits_json
+                    FROM gaia_events
+                    WHERE provider = ? AND event_id = ?
+                    """,
+                    (provider, event_id),
+                ).fetchone()
+                if row is not None:
+                    rows.append(row)
+        return tuple(_event_from_row(row) for row in rows)
+
     def count(self) -> int:
         """Return the total number of captured events."""
         with closing(sqlite3.connect(self.path)) as connection:

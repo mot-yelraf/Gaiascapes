@@ -191,19 +191,32 @@ class GaiaRhythmsService:
         }
 
     async def recent_events(self, hours=None, limit=500):
-        """Return recent events for the API."""
+        """Return recently occurring or recently emitted stored events."""
         hours = self.config.replay_hours if hours is None else float(hours)
         hours = max(0.05, min(24.0, hours))
+        cutoff = time.time() - (hours * 3600.0)
         events = await asyncio.to_thread(
-            self.store.events_since, time.time() - (hours * 3600.0), 20000
+            self.store.events_since, cutoff, 20000
         )
+        recent_cues = tuple(
+            cue for cue in self._emitted_cues if cue["emitted_at"] >= cutoff
+        )
+        event_keys = {(event.provider, event.event_id) for event in events}
+        emitted_keys = {
+            (cue["event"]["provider"], cue["event"]["event_id"])
+            for cue in recent_cues
+        }
+        missing_events = await asyncio.to_thread(
+            self.store.events_by_keys, emitted_keys - event_keys
+        )
+        events = (*events, *missing_events)
         emitted_instruments = {
             (cue["event"]["provider"], cue["event"]["event_id"]): cue["instrument"]
-            for cue in self._emitted_cues
+            for cue in recent_cues
         }
         emitted_times = {
             (cue["event"]["provider"], cue["event"]["event_id"]): cue["emitted_at"]
-            for cue in self._emitted_cues
+            for cue in recent_cues
         }
         history = []
         for event in events:

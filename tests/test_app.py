@@ -214,6 +214,26 @@ def test_event_history_returns_newest_records_with_small_limit(tmp_path):
     assert [item["event_id"] for item in history] == ["event-4", "event-3"]
 
 
+def test_event_history_includes_older_event_emitted_inside_window(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    event = GaiaEvent(
+        "usgs",
+        "older-but-just-heard",
+        "earthquake",
+        time.time() - 10800,
+        strength=0.6,
+        traits={"place": "Test Ridge"},
+    )
+    app.state.service.store.add_events((event,))
+    app.state.service.renderer.play = lambda cue, instrument=None: True
+
+    asyncio.run(app.state.service._play_live_event(event))
+    history = asyncio.run(app.state.service.recent_events(hours=1))
+
+    assert [item["event_id"] for item in history] == ["older-but-just-heard"]
+    assert history[0]["emitted_at"] is not None
+
+
 def test_audio_settings_persist_and_update_live_renderer(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
 
