@@ -24,13 +24,6 @@
       <button class="settings-trigger" type="button" data-open-settings><span aria-hidden="true">⚙</span> Settings</button>
     </header>
 
-    <section class="metrics" aria-label="Application status">
-      <article><span>Captured events</span><strong id="eventCount">—</strong></article>
-      <article><span>Latest capture</span><strong id="captureTime">—</strong></article>
-      <article><span>SuperCollider</span><strong id="scStatus">—</strong></article>
-      <article><span>OSC destination</span><strong id="oscStatus">—</strong></article>
-    </section>
-
     <section class="workspace">
       <article class="panel performance-panel">
         <div class="panel-title">
@@ -47,23 +40,27 @@
           <label class="capture-only">Performance length
             <span><input id="duration" type="number" min="1" max="3600" step="1" value="{{ default_duration }}"> seconds</span>
           </label>
-          <p class="mode-note continuous-only" hidden>New earthquakes sound as they arrive. Ocean, tide, and storm cues rotate through global locations every 12 seconds.</p>
         </div>
         <div class="actions">
-          <button class="primary" id="replayButton">Begin replay</button>
+          <button class="primary" id="startButton">Start</button>
           <button id="stopButton">Stop</button>
-          <button id="captureButton">Capture now</button>
         </div>
-        <p class="message" id="message">Waiting for application status…</p>
+        <p class="mode-note continuous-only" hidden>The selected background instruments evolves continuously while new event voices layer over rotating global locations of the background instrument.</p>
+        <p class="message" id="message" aria-live="polite"></p>
       </article>
 
       <article class="panel events-panel">
         <div class="panel-title">
           <div><p class="eyebrow">Recent activity</p><h2>Environmental event history</h2></div>
-          <button class="quiet" id="refreshButton">Refresh</button>
         </div>
         <div class="event-list" id="eventList"><p class="empty">No captured events yet.</p></div>
       </article>
+    </section>
+
+    <section class="metrics" aria-label="Application status">
+      <article><span>Captured events</span><strong id="eventCount">—</strong></article>
+      <article><span>Latest capture</span><strong id="captureTime">—</strong></article>
+      <article><span>Sound Location</span><strong id="locationStatus">—</strong></article>
     </section>
 
   </main>
@@ -90,14 +87,20 @@
             <p class="settings-tip"><span>ⓘ</span><span>Marine forecasts are not suitable for navigation. Data: Open-Meteo and contributing weather agencies.</span></p>
           </section>
           <section class="settings-pane" data-pane="instruments" hidden>
-            <div class="pane-heading"><span>02</span><div><h3>Event instrument mapping</h3><p>Route each normalized event kind to a SuperCollider instrument.</p></div></div>
-            {% for kind, options in instrument_options.items() %}
+            <div class="pane-heading"><span>02</span><div><h3>Instrument layers</h3><p>Event 1 voices earthquakes, Event 2 voices tide turns, and Background follows one continuous global forecast.</p></div></div>
             <div class="mapping-control">
-              <label class="settings-field" for="{{ kind }}Instrument"><span>{{ kind | replace("_", " ") | title }}</span><select id="{{ kind }}Instrument">{% for instrument in options %}<option value="{{ instrument }}" {% if instrument == event_instruments[kind] %}selected{% endif %}>{{ instrument | replace("_", " ") | title }}</option>{% endfor %}</select></label>
-              <button type="button" class="preview-instrument-button" data-kind="{{ kind }}" data-select="{{ kind }}Instrument">▶ Preview</button>
+              <label class="settings-field" for="event1Instrument"><span>Event 1</span><select id="event1Instrument">{% for instrument in event_voice_options %}<option value="{{ instrument }}" {% if instrument == instrument_slots.event_1 %}selected{% endif %}>{% if instrument == "seismic_bells" %}Seismic Bell{% else %}{{ instrument | replace("_", " ") | title }}{% endif %}</option>{% endfor %}</select></label>
+              <button type="button" class="preview-instrument-button" data-kind="earthquake" data-select="event1Instrument">▶ Preview</button>
             </div>
-            {% endfor %}
-            <p class="settings-tip"><span>ⓘ</span><span>The selected SynthDef is sent with every OSC cue and takes effect on the next replay.</span></p>
+            <div class="mapping-control">
+              <label class="settings-field" for="event2Instrument"><span>Event 2</span><select id="event2Instrument">{% for instrument in event_voice_options %}<option value="{{ instrument }}" {% if instrument == instrument_slots.event_2 %}selected{% endif %}>{% if instrument == "seismic_bells" %}Seismic Bell{% else %}{{ instrument | replace("_", " ") | title }}{% endif %}</option>{% endfor %}</select></label>
+              <button type="button" class="preview-instrument-button" data-kind="tide_turn" data-select="event2Instrument">▶ Preview</button>
+            </div>
+            <div class="mapping-control">
+              <label class="settings-field" for="backgroundInstrument"><span>Background</span><select id="backgroundInstrument">{% for instrument in background_options %}<option value="{{ instrument }}" {% if instrument == instrument_slots.background %}selected{% endif %}>{{ instrument | replace("_", " ") | title }}</option>{% endfor %}</select></label>
+              <button type="button" class="preview-instrument-button" data-kind="background" data-select="backgroundInstrument">▶ Preview</button>
+            </div>
+            <p class="settings-tip"><span>ⓘ</span><span>The background remains continuous while its forecast location and intensity evolve. Event voices play over it.</span></p>
           </section>
         </div>
       </div>

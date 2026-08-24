@@ -51,10 +51,11 @@ class PerformancePlayer:
                 delay = origin + cue.offset - loop.time()
                 if delay > 0:
                     await asyncio.sleep(delay)
-                await asyncio.to_thread(self.renderer.play, cue)
-                if self.on_played is not None:
-                    self.on_played(cue)
-                self.played_count += 1
+                rendered = await asyncio.to_thread(self.renderer.play, cue)
+                if rendered is not False:
+                    if self.on_played is not None:
+                        self.on_played(cue)
+                    self.played_count += 1
         except asyncio.CancelledError:
             raise
         except Exception as exc:

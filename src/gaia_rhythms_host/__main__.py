@@ -24,9 +24,15 @@ def main(argv=None) -> None:
     print(f"Gaia Rhythms is listening on http://127.0.0.1:{args.port}")
     if args.host not in {"127.0.0.1", "localhost", "::1"}:
         print(f"LAN access: http://<this-computer-ip>:{args.port}")
-    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    uvicorn.run(
+        app,
+        host=args.host,
+        port=args.port,
+        log_level="info",
+        access_log=False,
+        timeout_graceful_shutdown=4,
+    )
 
 
 if __name__ == "__main__":
     main()
-

@@ -20,6 +20,9 @@ from .performance import PerformancePlayer
 from .usgs import UsgsClient
 
 
+CUE_LONG_POLL_SECONDS = 2.0
+
+
 class GaiaRhythmsService:
     """Coordinate provider polling without coupling it to HTTP routes."""
 
@@ -52,7 +55,9 @@ class GaiaRhythmsService:
         self._poll_task = None
         self._continuous_task = None
         self._live_play_lock = asyncio.Lock()
-        self._ambient_cursor = 0
+        self._ambient_cursors = {
+            kind: 0 for kind in ("ocean_swell", "storm_potential", "tide_turn")
+        }
         self.continuous_played_count = 0
         self.continuous_last_error = ""
         self.last_capture_at = None
@@ -83,6 +88,8 @@ class GaiaRhythmsService:
             except asyncio.CancelledError:
                 pass
         self._continuous_task = None
+        await asyncio.to_thread(self.renderer.stop_layer, "ocean_swell")
+        await asyncio.to_thread(self.renderer.stop_layer, "storm_potential")
 
     async def set_live_mode(self, mode: str) -> None:
         """Select capture or continuous behavior and apply it immediately."""
@@ -196,6 +203,16 @@ class GaiaRhythmsService:
             asyncio.to_thread(self.store.count),
             asyncio.to_thread(self.store.latest_timestamp),
         )
+        latest_cue = self._emitted_cues[-1] if self._emitted_cues else None
+        latest_location = (
+            {
+                "name": str(latest_cue["event"]["traits"].get("place", "")).strip(),
+                "latitude": latest_cue["event"]["latitude"],
+                "longitude": latest_cue["event"]["longitude"],
+            }
+            if latest_cue is not None
+            else None
+        )
         return {
             "capture": {
                 "polling": self._poll_task is not None and not self._poll_task.done(),
@@ -205,7 +222,10 @@ class GaiaRhythmsService:
                 "last_error": self.last_capture_error,
             },
             "history": {"event_count": count, "latest_timestamp": latest},
-            "cues": {"latest_sequence": self._cue_sequence},
+            "cues": {
+                "latest_sequence": self._cue_sequence,
+                "latest_location": latest_location,
+            },
             "performance": self.player.status(),
             "live": {
                 "mode": self.config.live_mode,
@@ -213,7 +233,7 @@ class GaiaRhythmsService:
                 "played_count": self.continuous_played_count,
                 "last_error": self.continuous_last_error,
                 "interval_seconds": self.config.continuous_interval_seconds,
-                "location_strategy": "global_rotation",
+                "location_strategy": "layered_global_rotation",
             },
             "osc": self.renderer.status(),
             "supercollider": detect_supercollider(),
@@ -233,6 +253,9 @@ class GaiaRhythmsService:
             self.config.event_instruments = previous_instruments
             raise
         self.renderer.instrument_mappings = dict(self.config.event_instruments)
+        for kind in ("ocean_swell", "storm_potential"):
+            if self.config.event_instruments[kind] != kind:
+                self.renderer.stop_layer(kind)
 
     async def preview_instrument(self, instrument: str, kind: str = "earthquake") -> dict:
         """Play a representative cue through the selected host instrument."""
@@ -260,9 +283,10 @@ class GaiaRhythmsService:
             traits={"magnitude": magnitude, "depth_km": depth, "place": place},
         )
         cue = ScoreCue(0, event, pitch=50, velocity=116, duration=2.4, pan=0.0)
-        await asyncio.to_thread(self.renderer.play, cue, instrument)
-        self._record_emitted_cue(cue)
-        return {"played": True, "instrument": instrument, "kind": kind}
+        rendered = await asyncio.to_thread(self.renderer.play, cue, instrument)
+        if rendered is not False:
+            self._record_emitted_cue(cue)
+        return {"played": rendered is not False, "instrument": instrument, "kind": kind}
 
     async def emitted_cues(self, after=None) -> dict:
         """Return cue events emitted after a browser.s sequence cursor."""
@@ -275,7 +299,9 @@ class GaiaRhythmsService:
                 if self._cue_sequence > cursor:
                     break
                 try:
-                    await asyncio.wait_for(self._cue_event.wait(), timeout=20.0)
+                    await asyncio.wait_for(
+                        self._cue_event.wait(), timeout=CUE_LONG_POLL_SECONDS
+                    )
                 except asyncio.TimeoutError:
                     break
             cues = tuple(cue for cue in self._emitted_cues if cue["sequence"] > cursor)
@@ -305,7 +331,7 @@ class GaiaRhythmsService:
     async def _continuous_loop(self) -> None:
         while True:
             try:
-                await self.play_next_ambient_event()
+                await self.play_next_ambient_layers()
                 self.continuous_last_error = ""
             except asyncio.CancelledError:
                 raise
@@ -313,8 +339,8 @@ class GaiaRhythmsService:
                 self.continuous_last_error = f"{type(exc).__name__}: {exc}"
             await asyncio.sleep(self.config.continuous_interval_seconds)
 
-    async def play_next_ambient_event(self) -> bool:
-        """Play one globally rotated ocean, tide, or storm state."""
+    async def play_next_ambient_layers(self) -> tuple[str, ...]:
+        """Update every available ambient layer from independent global rotations."""
         events = await asyncio.to_thread(
             self.store.events_since, time.time() - 86400.0, 5000
         )
@@ -329,17 +355,24 @@ class GaiaRhythmsService:
             groups[event.kind].append(event)
         for events_for_kind in groups.values():
             events_for_kind.sort(key=lambda event: str(event.traits.get("place", "")))
-        ambient = []
-        while any(groups.values()):
-            for kind in ("ocean_swell", "storm_potential", "tide_turn"):
-                if groups[kind]:
-                    ambient.append(groups[kind].pop(0))
-        if not ambient:
-            return False
-        event = ambient[self._ambient_cursor % len(ambient)]
-        self._ambient_cursor += 1
-        await self._play_live_event(event)
-        return True
+        for kind in ("ocean_swell", "storm_potential"):
+            if not groups[kind]:
+                await asyncio.to_thread(self.renderer.stop_layer, kind)
+        selected = []
+        for kind in ("ocean_swell", "storm_potential", "tide_turn"):
+            choices = groups[kind]
+            if not choices or self.config.event_instruments[kind] == "none":
+                continue
+            cursor = self._ambient_cursors[kind]
+            selected.append(choices[cursor % len(choices)])
+            self._ambient_cursors[kind] = cursor + 1
+        if selected:
+            await asyncio.gather(*(self._play_live_event(event) for event in selected))
+        return tuple(event.kind for event in selected)
+
+    async def play_next_ambient_event(self) -> bool:
+        """Compatibility wrapper for one cycle of the layered ambient scheduler."""
+        return bool(await self.play_next_ambient_layers())
 
     async def _play_live_event(self, event: GaiaEvent) -> None:
         """Render one event now and journal it for synchronized visuals."""
@@ -363,9 +396,17 @@ class GaiaRhythmsService:
             duration=durations.get(event.kind, source.duration), pan=source.pan,
         )
         async with self._live_play_lock:
-            await asyncio.to_thread(self.renderer.play, cue)
-            self._record_emitted_cue(cue)
-            self.continuous_played_count += 1
+            persistent_background = (
+                event.kind in {"ocean_swell", "storm_potential"}
+                and self.config.event_instruments[event.kind] == event.kind
+            )
+            render = (
+                self.renderer.update_layer if persistent_background else self.renderer.play
+            )
+            rendered = await asyncio.to_thread(render, cue)
+            if rendered is not False:
+                self._record_emitted_cue(cue)
+                self.continuous_played_count += 1
 
 
 def _resolve_event_database(data_dir: Path) -> Path:

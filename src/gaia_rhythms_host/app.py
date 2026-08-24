@@ -11,7 +11,13 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS, resolve_data_dir
+from .config import (
+    AppConfig,
+    BACKGROUND_INSTRUMENT_OPTIONS,
+    EVENT_VOICE_OPTIONS,
+    event_mappings_for_slots,
+    resolve_data_dir,
+)
 from .service import GaiaRhythmsService
 
 
@@ -63,8 +69,9 @@ def create_app(data_dir=None, auto_capture=True, usgs_client=None, marine_client
             default_duration=config.performance_seconds,
             live_mode=config.live_mode,
             enabled_sources=set(config.enabled_sources),
-            event_instruments=dict(config.event_instruments),
-            instrument_options=EVENT_INSTRUMENT_OPTIONS,
+            instrument_slots=config.instrument_slots(),
+            event_voice_options=EVENT_VOICE_OPTIONS,
+            background_options=BACKGROUND_INSTRUMENT_OPTIONS,
         )
 
     @app.get("/healthz")
@@ -138,16 +145,22 @@ def create_app(data_dir=None, auto_capture=True, usgs_client=None, marine_client
     async def update_audio_settings(request: Request):
         body = await _json_body(request)
         sources = body.get("enabled_sources", [])
-        mappings = body.get("event_instruments", {})
-        if not isinstance(sources, list) or not isinstance(mappings, dict):
+        if not isinstance(sources, list):
             raise HTTPException(status_code=422, detail="Invalid audio settings")
         try:
+            if "instrument_slots" in body:
+                mappings = event_mappings_for_slots(body["instrument_slots"])
+            else:
+                mappings = body.get("event_instruments", {})
+                if not isinstance(mappings, dict):
+                    raise ValueError("Event instrument mappings must be an object")
             service.apply_audio_settings(sources, mappings)
             config.save(config_path)
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {
             "enabled_sources": list(config.enabled_sources),
+            "instrument_slots": config.instrument_slots(),
             "event_instruments": dict(config.event_instruments),
         }
 

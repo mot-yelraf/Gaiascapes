@@ -1,12 +1,13 @@
 const byId = (id) => document.getElementById(id);
 let observedCueSequence = null;
 let cuePollInFlight = false;
+let observedHistorySignature = null;
 
 function applyLiveMode(mode) {
   const continuous = mode === "continuous";
   document.querySelectorAll(".capture-only").forEach((element) => { element.hidden = continuous; });
   document.querySelectorAll(".continuous-only").forEach((element) => { element.hidden = !continuous; });
-  byId("replayButton").textContent = continuous ? "Start continuous" : "Begin replay";
+  byId("startButton").textContent = "Start";
 }
 
 async function request(path, options = {}) {
@@ -69,16 +70,23 @@ function animateCapturedEvent(event) {
     }
   };
   wave.addEventListener("animationend", removeWave, {once: true});
-  setTimeout(removeWave, 3500);
+  setTimeout(removeWave, 4000);
 }
 
 async function updateStatus() {
   try {
     const status = await request("/api/status");
     byId("eventCount").textContent = status.history.event_count.toLocaleString();
+    const historySignature = `${status.history.event_count}:${status.history.latest_timestamp ?? ""}`;
+    const historyChanged = observedHistorySignature !== null && observedHistorySignature !== historySignature;
+    observedHistorySignature = historySignature;
     byId("captureTime").textContent = when(status.capture.last_at);
-    byId("scStatus").textContent = status.supercollider.available ? "Available" : "Not detected";
-    byId("oscStatus").textContent = `${status.osc.host}:${status.osc.port}`;
+    const location = status.cues.latest_location;
+    const locationText = location
+      ? (location.name || `${Number(location.latitude).toFixed(2)}, ${Number(location.longitude).toFixed(2)}`)
+      : "—";
+    byId("locationStatus").textContent = locationText;
+    byId("locationStatus").title = locationText === "—" ? "" : locationText;
     byId("systemPulse").classList.add("online");
     byId("systemPulse").querySelector("strong").textContent = status.capture.last_error ? "Capture warning" : "Online";
     const continuous = status.live.mode === "continuous";
@@ -90,6 +98,7 @@ async function updateStatus() {
       : (status.performance.running ? `Playing ${status.performance.played_count}/${status.performance.cue_count}` : "Capture");
     byId("performanceBadge").classList.toggle("running", active);
     if (status.capture.last_error) message(status.capture.last_error, true);
+    if (historyChanged) await updateEvents();
   } catch (error) {
     byId("systemPulse").classList.remove("online");
     byId("systemPulse").querySelector("strong").textContent = "Unavailable";
@@ -156,16 +165,7 @@ function escapeHtml(value) {
   return node.innerHTML;
 }
 
-byId("captureButton").addEventListener("click", async () => {
-  message("Fetching enabled environmental feeds…");
-  try {
-    const result = await request("/api/capture", {method: "POST", body: "{}"});
-    message(`Captured ${result.received} events; ${result.inserted} were new.`);
-    await Promise.all([updateStatus(), updateEvents()]);
-  } catch (error) { message(error.message, true); }
-});
-
-byId("replayButton").addEventListener("click", async () => {
+byId("startButton").addEventListener("click", async () => {
   try {
     if (byId("liveMode").value === "continuous") {
       await request("/api/live/start", {method: "POST", body: "{}"});
@@ -198,8 +198,8 @@ byId("liveMode").addEventListener("change", async (event) => {
       method: "PUT", body: JSON.stringify({mode}),
     });
     message(mode === "continuous"
-      ? "Continuous mode started: new earthquakes plus globally rotating ocean, tide, and storm cues."
-      : "Capture mode selected. Use Capture now or replay the stored history.");
+      ? "Continuous mode started: live event voices over the selected rotating global background."
+      : "Capture mode selected. Start replays stored history while capture continues automatically.");
     byId("performanceBadge").textContent = live.running ? "Continuous" : "Capture";
     await updateStatus();
   } catch (error) { message(error.message, true); }
@@ -207,7 +207,6 @@ byId("liveMode").addEventListener("change", async (event) => {
 
 applyLiveMode(byId("liveMode").value);
 
-byId("refreshButton").addEventListener("click", updateEvents);
 byId("hours").addEventListener("change", updateEvents);
 
 const settingsDialog = byId("settingsDialog");
@@ -273,22 +272,28 @@ if (settingsDialog && settingsForm) {
     if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeSettings();
   });
   settingsDialog.querySelectorAll(".preview-instrument-button").forEach((button) => {
+    const instrumentSelect = byId(button.dataset.select);
+    const updatePreviewState = () => { button.disabled = instrumentSelect.value === "none"; };
+    instrumentSelect.addEventListener("change", updatePreviewState);
+    updatePreviewState();
     button.addEventListener("click", async () => {
       const status = byId("settingsStatus");
       button.disabled = true;
       status.textContent = "Playing preview…";
       status.classList.remove("error");
       try {
+        const instrument = byId(button.dataset.select).value;
+        const kind = button.dataset.kind === "background" ? instrument : button.dataset.kind;
         const payload = await request("/api/instruments/preview", {
           method: "POST",
-          body: JSON.stringify({kind: button.dataset.kind, instrument: byId(button.dataset.select).value}),
+          body: JSON.stringify({kind, instrument}),
         });
         status.textContent = "Previewed " + payload.instrument.replaceAll("_", " ") + ".";
       } catch (error) {
         status.textContent = error.message;
         status.classList.add("error");
       } finally {
-        button.disabled = false;
+        updatePreviewState();
       }
     });
   });
@@ -306,15 +311,14 @@ if (settingsDialog && settingsForm) {
             ...(byId("sourceMarine").checked ? ["open_meteo_marine"] : []),
             ...(byId("sourceStorm").checked ? ["open_meteo_storm"] : []),
           ],
-          event_instruments: {
-            earthquake: byId("earthquakeInstrument").value,
-            ocean_swell: byId("ocean_swellInstrument").value,
-            tide_turn: byId("tide_turnInstrument").value,
-            storm_potential: byId("storm_potentialInstrument").value,
+          instrument_slots: {
+            event_1: byId("event1Instrument").value,
+            event_2: byId("event2Instrument").value,
+            background: byId("backgroundInstrument").value,
           },
         }),
       });
-      status.textContent = "Settings saved. Instrument changes apply to the next replay.";
+      status.textContent = "Settings saved. Changes apply to the next event or background update.";
     } catch (error) {
       status.textContent = error.message;
       status.classList.add("error");

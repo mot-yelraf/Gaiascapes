@@ -12,14 +12,19 @@ DEFAULT_USGS_URL = (
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
 )
 SUPPORTED_SOURCES = ("usgs", "open_meteo_marine", "open_meteo_storm")
+EVENT_VOICE_OPTIONS = ("earthquake", "tidal_bell", "seismic_bells", "none")
+BACKGROUND_INSTRUMENT_OPTIONS = ("ocean_swell", "storm_potential", "none")
 EVENT_INSTRUMENT_OPTIONS = {
-    "earthquake": ("earthquake", "seismic_bells", "tectonic_drone"),
-    "ocean_swell": ("ocean_swell", "tidal_bell"),
-    "tide_turn": ("tidal_bell", "ocean_swell"),
-    "storm_potential": ("storm_potential", "seismic_bells"),
+    "earthquake": EVENT_VOICE_OPTIONS,
+    "ocean_swell": ("ocean_swell", "none"),
+    "tide_turn": EVENT_VOICE_OPTIONS,
+    "storm_potential": ("storm_potential", "none"),
 }
 DEFAULT_EVENT_INSTRUMENTS = {
-    kind: instruments[0] for kind, instruments in EVENT_INSTRUMENT_OPTIONS.items()
+    "earthquake": "earthquake",
+    "ocean_swell": "ocean_swell",
+    "tide_turn": "tidal_bell",
+    "storm_potential": "none",
 }
 SUPPORTED_INSTRUMENTS = tuple(
     dict.fromkeys(instrument for values in EVENT_INSTRUMENT_OPTIONS.values() for instrument in values)
@@ -59,6 +64,7 @@ class AppConfig:
             for key, value in document.items():
                 if key in recognized:
                     setattr(config, key, value)
+            config._migrate_legacy_instruments()
         config.apply_environment()
         config.validate()
         return config
@@ -111,6 +117,42 @@ class AppConfig:
             normalized_instruments[kind] = instrument
         self.event_instruments = normalized_instruments
 
+    def instrument_slots(self) -> dict[str, str]:
+        """Return the three user-facing musical roles."""
+        if self.event_instruments.get("storm_potential") == "storm_potential":
+            background = "storm_potential"
+        elif self.event_instruments.get("ocean_swell") == "ocean_swell":
+            background = "ocean_swell"
+        else:
+            background = "none"
+        return {
+            "event_1": self.event_instruments["earthquake"],
+            "event_2": self.event_instruments["tide_turn"],
+            "background": background,
+        }
+
+    def _migrate_legacy_instruments(self) -> None:
+        """Translate the former four-kind UI into the three musical roles."""
+        if not isinstance(self.event_instruments, dict):
+            return
+        mappings = dict(self.event_instruments)
+        if mappings.get("earthquake") not in EVENT_VOICE_OPTIONS:
+            mappings["earthquake"] = "earthquake"
+        if mappings.get("tide_turn") not in EVENT_VOICE_OPTIONS:
+            mappings["tide_turn"] = "tidal_bell"
+        ocean_selected = mappings.get("ocean_swell") == "ocean_swell"
+        storm_selected = mappings.get("storm_potential") == "storm_potential"
+        if ocean_selected:
+            mappings["ocean_swell"] = "ocean_swell"
+            mappings["storm_potential"] = "none"
+        elif storm_selected:
+            mappings["ocean_swell"] = "none"
+            mappings["storm_potential"] = "storm_potential"
+        else:
+            mappings["ocean_swell"] = "none"
+            mappings["storm_potential"] = "none"
+        self.event_instruments = mappings
+
     def save(self, path: Path) -> None:
         """Atomically save the current configuration."""
         self.validate()
@@ -124,6 +166,29 @@ def resolve_data_dir() -> Path:
     """Resolve writable state without depending on the source checkout."""
     override = os.environ.get("GAIA_RHYTHMS_DATA_DIR")
     return Path(override).expanduser().resolve() if override else Path.cwd() / "data"
+
+
+def event_mappings_for_slots(slots: object) -> dict[str, str]:
+    """Validate musical-role selections and derive renderer mappings."""
+    if not isinstance(slots, dict):
+        raise ValueError("Instrument slots must be an object")
+    event_1 = str(slots.get("event_1", ""))
+    event_2 = str(slots.get("event_2", ""))
+    background = str(slots.get("background", ""))
+    if event_1 not in EVENT_VOICE_OPTIONS:
+        raise ValueError(f"Unsupported Event 1 instrument: {event_1}")
+    if event_2 not in EVENT_VOICE_OPTIONS:
+        raise ValueError(f"Unsupported Event 2 instrument: {event_2}")
+    if background not in BACKGROUND_INSTRUMENT_OPTIONS:
+        raise ValueError(f"Unsupported Background instrument: {background}")
+    return {
+        "earthquake": event_1,
+        "tide_turn": event_2,
+        "ocean_swell": "ocean_swell" if background == "ocean_swell" else "none",
+        "storm_potential": (
+            "storm_potential" if background == "storm_potential" else "none"
+        ),
+    }
 
 
 def _port(value: object, label: str) -> int:

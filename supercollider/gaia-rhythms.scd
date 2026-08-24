@@ -13,6 +13,8 @@ if(audioDevice.notNil and: { audioDevice.size > 0 }, {
 });
 
 s.waitForBoot({
+~gaiaLayers = IdentityDictionary.new;
+
 SynthDef(\earthquake, {
     |out=0, freq=110, amp=0.35, duration=0.8, pan=0, depth=10, strength=0.5|
     var rumbleFreq, tremor, groundTone, body, impact, envelope, signal, outputSignal;
@@ -55,6 +57,33 @@ SynthDef(\oceanSwell, {
     Out.ar(out, Pan2.ar((surge + foam + undertow) * envelope * amp, pan));
 }).add;
 
+SynthDef(\oceanSwellLayer, {
+    |out=0, freq=110, amp=0.24, pan=0, depth=10, strength=0.5,
+        transition=6, gate=1, release=3|
+    var smoothFreq, smoothAmp, smoothPan, smoothStrength, swellPeriod;
+    var swellCycle, envelope, surge, foam, undertow, signal;
+    smoothFreq = Lag.kr(freq, transition.clip(1, 30));
+    smoothAmp = Lag.kr(amp, transition.clip(1, 30));
+    smoothPan = Lag.kr(pan, transition.clip(1, 30));
+    smoothStrength = Lag.kr(strength, transition.clip(1, 30));
+    swellPeriod = Lag.kr(depth.clip(4, 24), transition.clip(1, 30));
+    swellCycle = LFTri.kr(swellPeriod.reciprocal, 3).range(0.22, 1).squared;
+    envelope = EnvGen.kr(Env.asr(2.5, 1, release.max(1)), gate, doneAction: Done.freeSelf);
+    surge = RLPF.ar(
+        PinkNoise.ar(0.68),
+        (smoothFreq * 3).clip(180, 900),
+        0.2 + (smoothStrength * 0.2)
+    ) * (0.38 + (swellCycle * 0.62));
+    foam = BPF.ar(
+        WhiteNoise.ar(0.2),
+        (smoothFreq * 8).clip(700, 3200),
+        0.5
+    ) * swellCycle;
+    undertow = SinOsc.ar((smoothFreq * 0.5).clip(45, 130), 0, 0.2);
+    signal = (surge + foam + undertow) * envelope * smoothAmp;
+    Out.ar(out, Pan2.ar(signal, smoothPan));
+}).add;
+
 SynthDef(\tidalBell, {
     |out=0, freq=110, amp=0.35, duration=0.8, pan=0, depth=10, strength=0.5|
     var envelope, bell;
@@ -65,20 +94,49 @@ SynthDef(\tidalBell, {
 
 SynthDef(\stormPotential, {
     |out=0, freq=110, amp=0.35, duration=0.8, pan=0, depth=10, strength=0.5|
-    var envelope, onset, wash, excitation, shimmer, sparkle, signal;
+    var envelope, rainDensity, wash, drops, roofTone, distantBody, signal;
     envelope = EnvGen.kr(Env.linen(0.75, (duration - 1.5).max(0.4), 0.75, curve: -3), doneAction: Done.freeSelf);
-    onset = HPF.ar(WhiteNoise.ar(0.22), 2400) * EnvGen.kr(Env.perc(0.01, 1.4, curve: -5));
-    wash = HPF.ar(PinkNoise.ar(0.22), 3200);
-    excitation = Dust2.ar(0.7 + (strength * 2.6), 0.055);
-    shimmer = Ringz.ar(
-        excitation,
-        [2600, 3700, 5100, 6900, 8700],
-        [1.8, 1.55, 1.3, 1.05, 0.8],
-        [0.2, 0.18, 0.14, 0.1, 0.07]
+    rainDensity = 12 + (strength * 95);
+    wash = BPF.ar(PinkNoise.ar(0.55), 1700 + (strength * 2600), 0.7, 0.42);
+    drops = Ringz.ar(
+        Dust2.ar(rainDensity, 0.035 + (strength * 0.035)),
+        [2400, 3600, 5200, 7100],
+        [0.035, 0.028, 0.022, 0.017],
+        [0.32, 0.24, 0.16, 0.1]
     ).sum;
-    sparkle = HPF.ar(WhiteNoise.ar(0.055), 6200) * LFNoise2.kr(1.7).range(0.15, 1);
-    signal = onset + ((wash + shimmer + sparkle) * envelope);
-    Out.ar(out, Pan2.ar(signal * amp, pan));
+    roofTone = HPF.ar(WhiteNoise.ar(0.11), 4800) * LFNoise2.kr(3.5).range(0.25, 1);
+    distantBody = RLPF.ar(BrownNoise.ar(0.18), (freq * 2).clip(90, 320), 0.35);
+    signal = (wash + drops + roofTone + distantBody) * envelope * amp;
+    Out.ar(out, Pan2.ar(signal, pan));
+}).add;
+
+SynthDef(\stormRainLayer, {
+    |out=0, freq=110, amp=0.22, pan=0, depth=30, strength=0.5,
+        transition=6, gate=1, release=3|
+    var smoothFreq, smoothAmp, smoothPan, smoothStrength, rainDensity;
+    var envelope, wash, drops, surface, distantBody, signal;
+    smoothFreq = Lag.kr(freq, transition.clip(1, 30));
+    smoothAmp = Lag.kr(amp, transition.clip(1, 30));
+    smoothPan = Lag.kr(pan, transition.clip(1, 30));
+    smoothStrength = Lag.kr(strength, transition.clip(1, 30));
+    rainDensity = 10 + (smoothStrength * 110);
+    envelope = EnvGen.kr(Env.asr(2.5, 1, release.max(1)), gate, doneAction: Done.freeSelf);
+    wash = BPF.ar(
+        PinkNoise.ar(0.58),
+        1500 + (smoothStrength * 3000),
+        0.72,
+        0.38 + (smoothStrength * 0.18)
+    );
+    drops = Ringz.ar(
+        Dust2.ar(rainDensity, 0.03 + (smoothStrength * 0.04)),
+        [2300, 3400, 4900, 6800],
+        [0.038, 0.03, 0.023, 0.018],
+        [0.32, 0.24, 0.16, 0.1]
+    ).sum;
+    surface = HPF.ar(WhiteNoise.ar(0.1), 4600) * LFNoise2.kr(3.2).range(0.2, 1);
+    distantBody = RLPF.ar(BrownNoise.ar(0.2), (smoothFreq * 2).clip(90, 340), 0.36);
+    signal = (wash + drops + surface + distantBody) * envelope * smoothAmp;
+    Out.ar(out, Pan2.ar(signal, smoothPan));
 }).add;
 
     s.sync;
@@ -115,6 +173,57 @@ SynthDef(\stormPotential, {
             ++ " @ " ++ latitude.round(0.01) ++ ", "
             ++ longitude.round(0.01)).postln;
     }, '/gaia/cue', recvPort: oscPort);
+
+    OSCdef(\gaiaLayer, {
+        |msg, time, addr, recvPort|
+        var eventId = msg[1];
+        var kind = msg[2].asString;
+        var instrument = msg[3].asString;
+        var pitch = msg[4].asFloat;
+        var velocity = msg[5].asFloat;
+        var transition = msg[6].asFloat;
+        var pan = msg[7].asFloat;
+        var strength = msg[8].asFloat;
+        var depth = msg[12].asFloat;
+        var key = kind.asSymbol;
+        var layer = ~gaiaLayers[key];
+        var synthName;
+
+        if(instrument == "ocean_swell", { synthName = \oceanSwellLayer });
+        if(instrument == "storm_potential", { synthName = \stormRainLayer });
+        if(synthName.notNil, {
+            if(layer.isNil, {
+                layer = Synth(synthName, [
+                    \freq, pitch.midicps,
+                    \amp, velocity.linlin(20, 127, 0.06, 0.34),
+                    \transition, transition,
+                    \pan, pan,
+                    \depth, depth,
+                    \strength, strength
+                ]);
+                ~gaiaLayers[key] = layer;
+            }, {
+                layer.set(
+                    \freq, pitch.midicps,
+                    \amp, velocity.linlin(20, 127, 0.06, 0.34),
+                    \transition, transition,
+                    \pan, pan,
+                    \depth, depth,
+                    \strength, strength
+                );
+            });
+            ("Gaia layer " ++ kind ++ " updated from " ++ eventId).postln;
+        });
+    }, '/gaia/layer', recvPort: oscPort);
+
+    OSCdef(\gaiaLayerStop, {
+        |msg, time, addr, recvPort|
+        var key = msg[1].asString.asSymbol;
+        var release = msg[2].asFloat;
+        var layer = ~gaiaLayers.removeAt(key);
+        if(layer.notNil, { layer.set(\release, release, \gate, 0) });
+        ("Gaia layer " ++ key ++ " released").postln;
+    }, '/gaia/layer/stop', recvPort: oscPort);
 
     ("Gaia Rhythms listening for OSC on UDP " ++ oscPort).postln;
 });
