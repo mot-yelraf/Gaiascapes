@@ -38,6 +38,40 @@ SynthDef(\seismicBells, {
     Out.ar(out, Pan2.ar((shimmer + lowBell) * envelope * amp, pan));
 }).add;
 
+SynthDef(\lightningGlass, {
+    |out=0, freq=110, amp=0.35, duration=1.2, pan=0, depth=10, strength=0.5|
+    var crackEnvelope, glassEnvelope, pitchContour, crack, shimmer, sparkle, lowPulse, signal;
+    crackEnvelope = EnvGen.kr(Env.perc(0.001, 0.07, curve: -8));
+    glassEnvelope = EnvGen.kr(
+        Env.perc(0.003, duration.clip(0.4, 2.8), curve: -6),
+        doneAction: Done.freeSelf
+    );
+    pitchContour = XLine.kr(
+        freq * Rand(1.28, 1.52),
+        freq * Rand(0.94, 1.08),
+        duration.clip(0.35, 1.4)
+    );
+    crack = BPF.ar(
+        WhiteNoise.ar,
+        (pitchContour * 30).clip(1800, 9000),
+        0.45,
+        0.65
+    ) * crackEnvelope;
+    shimmer = SinOsc.ar(
+        pitchContour * [1, 1.333, 1.618, 2.414] * [0.997, 1.011, 0.989, 1.019],
+        0,
+        [0.42, 0.26, 0.15, 0.08]
+    ).sum;
+    sparkle = Ringz.ar(
+        Dust2.ar(8 + (strength * 28), 0.018),
+        pitchContour * [2.7, 3.9],
+        [0.055, 0.085]
+    ).sum;
+    lowPulse = SinOsc.ar((pitchContour * 0.5).max(42), 0, 0.09 * strength);
+    signal = crack + ((shimmer + sparkle + lowPulse) * glassEnvelope);
+    Out.ar(out, Pan2.ar(signal.tanh * amp * 0.52, pan));
+}).add;
+
 SynthDef(\tectonicDrone, {
     |out=0, freq=110, amp=0.35, duration=0.8, pan=0, depth=10, strength=0.5|
     var envelope, drift, rumble;
@@ -157,6 +191,7 @@ SynthDef(\stormRainLayer, {
         var synthName = \earthquake;
 
         if(instrument == "seismic_bells", { synthName = \seismicBells });
+        if(instrument == "lightning_glass", { synthName = \lightningGlass });
         if(instrument == "tectonic_drone", { synthName = \tectonicDrone });
         if(instrument == "ocean_swell", { synthName = \oceanSwell });
         if(instrument == "tidal_bell", { synthName = \tidalBell });

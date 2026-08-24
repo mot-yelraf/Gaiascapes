@@ -63,7 +63,10 @@ class OscRenderer:
             event.traits.get(
                 "depth_km",
                 event.traits.get(
-                    "swell_period_s", event.traits.get("wind_gust_kmh", 0.0)
+                    "swell_period_s",
+                    event.traits.get(
+                        "wind_gust_kmh", event.traits.get("flash_area_km2", 0.0)
+                    ),
                 ),
             )
         )
@@ -105,7 +108,10 @@ class OscRenderer:
             event.traits.get(
                 "depth_km",
                 event.traits.get(
-                    "swell_period_s", event.traits.get("wind_gust_kmh", 0.0)
+                    "swell_period_s",
+                    event.traits.get(
+                        "wind_gust_kmh", event.traits.get("flash_area_km2", 0.0)
+                    ),
                 ),
             )
         )

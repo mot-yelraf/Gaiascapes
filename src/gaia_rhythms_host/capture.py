@@ -124,16 +124,35 @@ class EventStore:
                     rows.append(row)
         return tuple(_event_from_row(row) for row in rows)
 
-    def count(self) -> int:
+    def count(self, excluded_kinds=()) -> int:
         """Return the total number of captured events."""
+        excluded_kinds = tuple(str(kind) for kind in excluded_kinds)
         with closing(sqlite3.connect(self.path)) as connection:
-            row = connection.execute("SELECT COUNT(*) FROM gaia_events").fetchone()
+            if excluded_kinds:
+                placeholders = ",".join("?" for _kind in excluded_kinds)
+                row = connection.execute(
+                    f"SELECT COUNT(*) FROM gaia_events WHERE kind NOT IN ({placeholders})",
+                    excluded_kinds,
+                ).fetchone()
+            else:
+                row = connection.execute("SELECT COUNT(*) FROM gaia_events").fetchone()
         return int(row[0])
 
-    def latest_timestamp(self):
+    def latest_timestamp(self, excluded_kinds=()):
         """Return the newest occurrence timestamp, if any."""
+        excluded_kinds = tuple(str(kind) for kind in excluded_kinds)
         with closing(sqlite3.connect(self.path)) as connection:
-            row = connection.execute("SELECT MAX(occurred_at) FROM gaia_events").fetchone()
+            if excluded_kinds:
+                placeholders = ",".join("?" for _kind in excluded_kinds)
+                row = connection.execute(
+                    f"SELECT MAX(occurred_at) FROM gaia_events "
+                    f"WHERE kind NOT IN ({placeholders})",
+                    excluded_kinds,
+                ).fetchone()
+            else:
+                row = connection.execute(
+                    "SELECT MAX(occurred_at) FROM gaia_events"
+                ).fetchone()
         return None if row[0] is None else float(row[0])
 
     def prune_before(self, cutoff_timestamp: float) -> int:

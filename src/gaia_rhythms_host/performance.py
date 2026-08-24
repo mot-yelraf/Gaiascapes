@@ -5,13 +5,32 @@ from __future__ import annotations
 import asyncio
 import time
 
+from gaia_rhythms.score import ScoreCue
+
+
+def cue_with_gain(cue, gain: float):
+    """Return a cue whose MIDI velocity produces the requested amplitude gain."""
+    gain = max(0.0, min(1.0, float(gain)))
+    source_amplitude = 0.08 + ((cue.velocity - 20) / 107.0 * 0.5)
+    target_amplitude = source_amplitude * gain
+    velocity = round(20 + ((target_amplitude - 0.08) / 0.5 * 107.0))
+    return ScoreCue(
+        cue.offset,
+        cue.event,
+        cue.pitch,
+        max(0, min(127, velocity)),
+        duration=cue.duration,
+        pan=cue.pan,
+    )
+
 
 class PerformancePlayer:
     """Own at most one score playback task."""
 
-    def __init__(self, renderer, on_played=None):
+    def __init__(self, renderer, on_played=None, instruments_for_cue=None):
         self.renderer = renderer
         self.on_played = on_played
+        self.instruments_for_cue = instruments_for_cue
         self._task = None
         self.started_at = None
         self.finished_at = None
@@ -26,9 +45,10 @@ class PerformancePlayer:
     async def start(self, score) -> None:
         """Cancel an existing performance and begin the supplied score."""
         await self.stop()
+        score = tuple(score)
         self.started_at = time.time()
         self.finished_at = None
-        self.cue_count = len(score)
+        self.cue_count = sum(len(self._voices(cue)) for cue in score)
         self.played_count = 0
         self.last_error = ""
         self._task = asyncio.create_task(self._run(score), name="gaia-rhythms-performance")
@@ -51,17 +71,34 @@ class PerformancePlayer:
                 delay = origin + cue.offset - loop.time()
                 if delay > 0:
                     await asyncio.sleep(delay)
-                rendered = await asyncio.to_thread(self.renderer.play, cue)
-                if rendered is not False:
-                    if self.on_played is not None:
-                        self.on_played(cue)
-                    self.played_count += 1
+                for instrument, gain in self._voices(cue):
+                    rendered_cue = cue_with_gain(cue, gain)
+                    rendered = await asyncio.to_thread(
+                        self.renderer.play, rendered_cue, instrument
+                    )
+                    if rendered is not False:
+                        if self.on_played is not None:
+                            self.on_played(rendered_cue, instrument, volume=gain)
+                        self.played_count += 1
         except asyncio.CancelledError:
             raise
         except Exception as exc:
             self.last_error = f"{type(exc).__name__}: {exc}"
         finally:
             self.finished_at = time.time()
+
+    def _voices(self, cue) -> tuple[tuple[str | None, float], ...]:
+        if self.instruments_for_cue is None:
+            return ((None, 1.0),)
+        voices = []
+        for selection in self.instruments_for_cue(cue):
+            if isinstance(selection, tuple):
+                instrument, gain = selection
+            else:
+                instrument, gain = selection, 1.0
+            if float(gain) > 0:
+                voices.append((instrument, float(gain)))
+        return tuple(voices)
 
     def status(self) -> dict:
         return {

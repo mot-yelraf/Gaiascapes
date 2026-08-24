@@ -42,6 +42,8 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     assert "trap cleanup EXIT INT TERM" in gui
     assert "data/audio-device" in audio
     assert "GAIA_RHYTHMS_AUDIO_DEVICE" in audio
+    assert 'GAIA_RHYTHMS_SCLANG_PORT:-57131' in audio
+    assert 'exec "$SCLANG" -u "$SCLANG_PORT"' in audio
     assert 'GAIA_RHYTHMS_HTTP_HOST="${GAIA_RHYTHMS_HTTP_HOST:-0.0.0.0}"' in gui
     assert '\"GAIA_RHYTHMS_AUDIO_DEVICE\".getenv' in synth
     assert "s.options.outDevice = audioDevice" in synth
@@ -52,5 +54,8 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     assert "(duration - 1.5).max(0.4)" in synth
     assert "(duration - 0.08).max(1.0)" in synth
     assert "SynthDef(\\stormRainLayer" in synth
+    assert "SynthDef(\\lightningGlass" in synth
+    assert "pitchContour = XLine.kr" in synth
+    assert "Dust2.ar(8 + (strength * 28)" in synth
     assert "rainDensity = 10 + (smoothStrength * 110)" in synth
     assert "Dust2.ar(rainDensity" in synth

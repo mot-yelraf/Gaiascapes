@@ -47,6 +47,24 @@ def longitude_to_pan(longitude):
     return longitude / 180.0
 
 
+def _lightning_pitch(event, geographic_pitch, note_max):
+    """Give individual flashes a higher, deterministic pentatonic contour."""
+    scale = (0, 2, 4, 7, 9)
+    try:
+        identity = int(event.traits.get("flash_id"))
+    except (TypeError, ValueError):
+        identity = sum(ord(character) for character in event.event_id)
+    energy_step = int(round(event.strength * 8.0))
+    longitude_step = int((max(-180.0, min(180.0, event.longitude)) + 180.0) / 30.0)
+    satellite_step = sum(
+        ord(character) for character in str(event.traits.get("satellite", ""))
+    )
+    interval = 4 + scale[
+        (identity + energy_step + longitude_step + satellite_step) % len(scale)
+    ]
+    return min(int(note_max) + 8, geographic_pitch + interval)
+
+
 def build_score(
     events,
     window_start,
@@ -63,6 +81,8 @@ def build_score(
         offset = max(0.0, (event.timestamp - float(window_start)) * scale)
         latitude_ratio = (max(-90.0, min(90.0, event.latitude)) + 90.0) / 180.0
         pitch = int(note_min) + int(round(latitude_ratio * width))
+        if event.kind == "lightning_flash":
+            pitch = _lightning_pitch(event, pitch, note_max)
         velocity = 20 + int(round(event.strength * 107.0))
         duration = 0.18 + (event.strength * 1.6)
         cues.append(
@@ -77,4 +97,3 @@ def build_score(
         )
     cues.sort(key=lambda cue: (cue.offset, cue.event_id))
     return tuple(cues)
-

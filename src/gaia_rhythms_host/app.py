@@ -15,6 +15,7 @@ from .config import (
     AppConfig,
     BACKGROUND_INSTRUMENT_OPTIONS,
     EVENT_VOICE_OPTIONS,
+    event_kind_for_voice,
     event_mappings_for_slots,
     resolve_data_dir,
 )
@@ -28,7 +29,14 @@ TEMPLATES = Environment(
 )
 
 
-def create_app(data_dir=None, auto_capture=True, usgs_client=None, marine_client=None, storm_client=None) -> FastAPI:
+def create_app(
+    data_dir=None,
+    auto_capture=True,
+    usgs_client=None,
+    marine_client=None,
+    storm_client=None,
+    glm_client=None,
+) -> FastAPI:
     """Create an isolated application, optionally disabling network polling."""
     runtime_data = Path(data_dir) if data_dir is not None else resolve_data_dir()
     runtime_data.mkdir(parents=True, exist_ok=True)
@@ -42,6 +50,7 @@ def create_app(data_dir=None, auto_capture=True, usgs_client=None, marine_client
         usgs_client=usgs_client,
         marine_client=marine_client,
         storm_client=storm_client,
+        glm_client=glm_client,
     )
 
     @asynccontextmanager
@@ -69,7 +78,9 @@ def create_app(data_dir=None, auto_capture=True, usgs_client=None, marine_client
             default_duration=config.performance_seconds,
             live_mode=config.live_mode,
             enabled_sources=set(config.enabled_sources),
+            units=config.units,
             instrument_slots=config.instrument_slots(),
+            instrument_volumes=config.volume_slots(),
             event_voice_options=EVENT_VOICE_OPTIONS,
             background_options=BACKGROUND_INSTRUMENT_OPTIONS,
         )
@@ -151,24 +162,40 @@ def create_app(data_dir=None, auto_capture=True, usgs_client=None, marine_client
             if "instrument_slots" in body:
                 mappings = event_mappings_for_slots(body["instrument_slots"])
             else:
-                mappings = body.get("event_instruments", {})
-                if not isinstance(mappings, dict):
+                legacy = body.get("event_instruments", {})
+                if not isinstance(legacy, dict):
                     raise ValueError("Event instrument mappings must be an object")
-            service.apply_audio_settings(sources, mappings)
+                mappings = AppConfig(event_instruments=legacy)
+                mappings._migrate_legacy_instruments()
+                mappings = mappings.instrument_slots()
+            service.apply_audio_settings(
+                sources,
+                mappings,
+                body.get("units", config.units),
+                body.get("instrument_volumes", config.instrument_volumes),
+            )
             config.save(config_path)
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {
             "enabled_sources": list(config.enabled_sources),
+            "units": config.units,
             "instrument_slots": config.instrument_slots(),
             "event_instruments": dict(config.event_instruments),
+            "instrument_volumes": config.volume_slots(),
         }
 
     @app.post("/api/instruments/preview")
     async def preview_instrument(request: Request):
         body = await _json_body(request)
         try:
-            return await service.preview_instrument(body.get("instrument", ""), body.get("kind", "earthquake"))
+            instrument = body.get("instrument", "")
+            kind = body.get("kind")
+            if instrument in EVENT_VOICE_OPTIONS and instrument != "none":
+                kind = event_kind_for_voice(instrument)
+            return await service.preview_instrument(
+                instrument, kind or "earthquake", body.get("volume", 1.0)
+            )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except OSError as exc:

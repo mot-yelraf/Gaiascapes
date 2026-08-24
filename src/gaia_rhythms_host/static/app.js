@@ -21,7 +21,9 @@ async function request(path, options = {}) {
 }
 
 function when(timestamp) {
-  return timestamp ? new Date(timestamp * 1000).toLocaleString() : "Not yet";
+  return timestamp
+    ? new Date(timestamp * 1000).toLocaleString().replace(/,\s*/, " ")
+    : "Not yet";
 }
 
 function message(text, error = false) {
@@ -29,10 +31,19 @@ function message(text, error = false) {
   byId("message").classList.toggle("error", error);
 }
 
+function updateSoundLocation(location) {
+  const locationText = location
+    ? (location.name || `${Number(location.latitude).toFixed(2)}, ${Number(location.longitude).toFixed(2)}`)
+    : "—";
+  byId("backgroundSoundsStatus").textContent = locationText;
+  byId("backgroundSoundsStatus").title = locationText === "—" ? "" : locationText;
+}
+
 const EVENT_PALETTES = {
   earthquake: ["#765236", "#93643f", "#ad7749", "#c28b59", "#d0a06d"],
   ocean_swell: ["#214c5a", "#286579", "#327f94", "#489aab", "#6ab5bd"],
   tide_turn: ["#244d68", "#2e6685", "#3c80a0", "#579bb7", "#7bb5ca"],
+  lightning_flash: ["#79500a", "#9d6a10", "#c58a1b", "#e5aa2b", "#ffd15a"],
   storm_potential: ["#3b4568", "#4c5782", "#606b9d", "#7882b5", "#969dcc"],
   default: ["#476352", "#567966", "#679079", "#7ca68d", "#96bba1"],
 };
@@ -55,7 +66,7 @@ function cueRole(cue) {
   return ["ocean_swell", "storm_potential"].includes(cue.event?.kind) ? "background" : "event";
 }
 
-function animateCapturedEvent(event, instrument = "", role = "event", cueDuration = 3.6) {
+function animateCapturedEvent(event, instrument = "", role = "event", cueDuration = 3.6, volume = 1) {
   const layer = byId("eventPulseLayer");
   if (!layer) return;
   const animationDuration = role === "background"
@@ -64,6 +75,8 @@ function animateCapturedEvent(event, instrument = "", role = "event", cueDuratio
   const longitude = Number(event?.longitude ?? 0);
   const latitude = Number(event?.latitude ?? 0);
   const magnitude = Number(event?.traits?.magnitude ?? 2);
+  const visualVolume = Math.max(0, Math.min(1, Number(volume) || 0));
+  const baseScale = Math.max(6, Math.min(13, 6 + magnitude));
   const wave = document.createElement("span");
   const colors = eventColors(event, instrument);
   const safeKind = colors.kind.replace(/[^a-z0-9_-]/g, "-");
@@ -72,7 +85,8 @@ function animateCapturedEvent(event, instrument = "", role = "event", cueDuratio
   wave.dataset.cueRole = role;
   wave.style.setProperty("--wave-x", `${Math.max(8, Math.min(92, ((longitude + 180) / 360) * 100))}%`);
   wave.style.setProperty("--wave-y", `${Math.max(12, Math.min(88, ((90 - latitude) / 180) * 100))}%`);
-  wave.style.setProperty("--wave-scale", String(Math.max(6, Math.min(13, 6 + magnitude))));
+  // Keep muted/quiet cues visible, while making pulse diameter follow slot volume.
+  wave.style.setProperty("--wave-scale", String(Math.max(1.5, baseScale * visualVolume)));
   wave.style.setProperty("--wave-color", colors.primary);
   wave.style.setProperty("--wave-inner", colors.inner);
   wave.style.setProperty("--wave-duration", `${animationDuration}s`);
@@ -95,13 +109,11 @@ async function updateStatus() {
     const historySignature = `${status.history.event_count}:${status.history.latest_timestamp ?? ""}`;
     const historyChanged = observedHistorySignature !== null && observedHistorySignature !== historySignature;
     observedHistorySignature = historySignature;
-    byId("captureTime").textContent = when(status.capture.last_at);
-    const location = status.cues.latest_location;
-    const locationText = location
-      ? (location.name || `${Number(location.latitude).toFixed(2)}, ${Number(location.longitude).toFixed(2)}`)
-      : "—";
-    byId("locationStatus").textContent = locationText;
-    byId("locationStatus").title = locationText === "—" ? "" : locationText;
+    byId("eventTimeStatus").textContent = when(status.capture.last_at);
+    updateSoundLocation(status.cues.latest_background_location);
+    const eventSounds = (status.cues.latest_event_sounds || []).map(instrumentLabel).join(" + ") || "—";
+    byId("eventSoundsStatus").textContent = eventSounds;
+    byId("eventSoundsStatus").title = eventSounds === "—" ? "" : eventSounds;
     byId("systemPulse").classList.add("online");
     byId("systemPulse").querySelector("strong").textContent = status.capture.last_error ? "Capture warning" : "Online";
     const continuous = status.live.mode === "continuous";
@@ -128,10 +140,18 @@ async function updateEmittedCues() {
   try {
     const query = observedCueSequence === null ? "" : `?after=${observedCueSequence}`;
     const payload = await request(`/api/cues${query}`);
-    payload.cues.forEach((cue) => animateCapturedEvent(
-      cue.event, cue.instrument, cueRole(cue), cue.duration,
-    ));
-    if (payload.cues.length) await updateEvents();
+    payload.cues.forEach((cue) => {
+      animateCapturedEvent(
+        cue.event, cue.instrument, cueRole(cue), cue.duration, cue.volume ?? 1
+      );
+    });
+    const locationCue = payload.cues.filter((cue) => cueRole(cue) === "background").at(-1);
+    if (locationCue) updateSoundLocation({
+      name: locationCue.event.traits?.place || "",
+      latitude: locationCue.event.latitude,
+      longitude: locationCue.event.longitude,
+    });
+    if (payload.cues.some((cue) => cue.history_updated !== false)) await updateEvents();
     observedCueSequence = payload.latest_sequence;
   } catch (error) {
     console.warn("Unable to synchronize emitted cues", error);
@@ -150,8 +170,12 @@ async function updateEvents() {
     byId("eventList").innerHTML = events.length ? events.map((event) => {
       const summary = eventSummary(event);
       const place = event.traits.place || `${event.latitude.toFixed(2)}, ${event.longitude.toFixed(2)}`;
-      const instrument = instrumentLabel(event.instrument);
-      return `<div class="event"><span class="magnitude">${escapeHtml(summary.badge)}</span><div><strong>${escapeHtml(place)}</strong><small>${escapeHtml(summary.detail)} · ${escapeHtml(instrument)} · ${event.latitude.toFixed(2)}, ${event.longitude.toFixed(2)}</small></div><time>${when(event.timestamp)}</time></div>`;
+      const instruments = (event.instruments || [event.instrument]).map(instrumentLabel).join(" + ");
+      const backgroundForecast = ["ocean_swell", "storm_potential"].includes(event.kind);
+      const detail = backgroundForecast
+        ? `${instruments} · ${summary.detail}`
+        : `${summary.detail} · ${instruments}`;
+      return `<div class="event"><span class="magnitude">${escapeHtml(summary.badge)}</span><div><strong>${escapeHtml(place)}</strong><small>${escapeHtml(detail)} · ${event.latitude.toFixed(2)}, ${event.longitude.toFixed(2)}</small></div><time>${when(event.timestamp)}</time></div>`;
     }).join("") : '<p class="empty">No events in this history window.</p>';
   } catch (error) {
     message(error.message, true);
@@ -166,21 +190,36 @@ function instrumentLabel(instrument) {
 
 function eventSummary(event) {
   const traits = event.traits || {};
+  const imperial = byId("displayUnits")?.value === "imperial";
   if (event.kind === "ocean_swell") {
-    const height = Number(traits.swell_height_m ?? traits.wave_height_m ?? 0);
+    const heightMeters = Number(traits.swell_height_m ?? traits.wave_height_m ?? 0);
+    const height = imperial ? heightMeters * 3.28084 : heightMeters;
+    const heightUnit = imperial ? "ft" : "m";
     const period = Number(traits.swell_period_s ?? 0);
-    return {badge: `${height.toFixed(1)}m`, detail: `${period.toFixed(1)}s modeled swell`};
+    return {badge: `${height.toFixed(1)}${heightUnit}`, detail: `${period.toFixed(1)}s modeled swell`};
   }
   if (event.kind === "tide_turn") {
     const state = String(traits.tide_state || "tide").toUpperCase();
-    return {badge: state, detail: `${Number(traits.sea_level_msl_m ?? 0).toFixed(2)}m modeled sea level`};
+    const levelMeters = Number(traits.sea_level_msl_m ?? 0);
+    const level = imperial ? levelMeters * 3.28084 : levelMeters;
+    const levelUnit = imperial ? "ft" : "m";
+    return {badge: state, detail: `${level.toFixed(2)}${levelUnit} modeled sea level`};
   }
   if (event.kind === "storm_potential") {
     return {badge: "CAPE", detail: `${Number(traits.cape_jkg ?? 0).toFixed(0)} J/kg forecast storm potential`};
   }
+  if (event.kind === "lightning_flash") {
+    const area = Number(traits.flash_area_km2 ?? 0);
+    const detail = area > 0
+      ? `${area.toFixed(1)} km² observed flash area`
+      : "observed lightning flash";
+    return {badge: "FLASH", detail};
+  }
   return {
     badge: `M${Number(traits.magnitude || 0).toFixed(1)}`,
-    detail: `${Number(traits.depth_km || 0).toFixed(1)} km deep`,
+    detail: imperial
+      ? `${(Number(traits.depth_km || 0) * 0.621371).toFixed(1)} mi deep`
+      : `${Number(traits.depth_km || 0).toFixed(1)} km deep`,
   };
 }
 
@@ -296,6 +335,12 @@ if (settingsDialog && settingsForm) {
     const rect = settingsDialog.getBoundingClientRect();
     if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeSettings();
   });
+  settingsDialog.querySelectorAll('.volume-control input[type="range"]').forEach((slider) => {
+    const output = slider.parentElement.querySelector("output");
+    const updateVolumeLabel = () => { output.textContent = `${slider.value}%`; };
+    slider.addEventListener("input", updateVolumeLabel);
+    updateVolumeLabel();
+  });
   settingsDialog.querySelectorAll(".preview-instrument-button").forEach((button) => {
     const instrumentSelect = byId(button.dataset.select);
     const updatePreviewState = () => { button.disabled = instrumentSelect.value === "none"; };
@@ -308,10 +353,18 @@ if (settingsDialog && settingsForm) {
       status.classList.remove("error");
       try {
         const instrument = byId(button.dataset.select).value;
-        const kind = button.dataset.kind === "background" ? instrument : button.dataset.kind;
+        const kind = button.dataset.kind === "background"
+          ? instrument
+          : (instrument === "tidal_bell"
+            ? "tide_turn"
+            : (instrument === "lightning_glass" ? "lightning_flash" : "earthquake"));
         const payload = await request("/api/instruments/preview", {
           method: "POST",
-          body: JSON.stringify({kind, instrument}),
+          body: JSON.stringify({
+            kind,
+            instrument,
+            volume: Number(byId(button.dataset.volume).value) / 100,
+          }),
         });
         status.textContent = "Previewed " + payload.instrument.replaceAll("_", " ") + ".";
         await Promise.all([updateStatus(), updateEvents()]);
@@ -323,6 +376,7 @@ if (settingsDialog && settingsForm) {
       }
     });
   });
+  byId("displayUnits").addEventListener("change", updateEvents);
   settingsForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const status = byId("settingsStatus");
@@ -336,15 +390,25 @@ if (settingsDialog && settingsForm) {
             ...(byId("sourceUsgs").checked ? ["usgs"] : []),
             ...(byId("sourceMarine").checked ? ["open_meteo_marine"] : []),
             ...(byId("sourceStorm").checked ? ["open_meteo_storm"] : []),
+            ...(byId("sourceGlm").checked ? ["noaa_glm"] : []),
           ],
           instrument_slots: {
             event_1: byId("event1Instrument").value,
             event_2: byId("event2Instrument").value,
+            event_3: byId("event3Instrument").value,
             background: byId("backgroundInstrument").value,
           },
+          instrument_volumes: {
+            event_1: Number(byId("event1Volume").value) / 100,
+            event_2: Number(byId("event2Volume").value) / 100,
+            event_3: Number(byId("event3Volume").value) / 100,
+            background: Number(byId("backgroundVolume").value) / 100,
+          },
+          units: byId("displayUnits").value,
         }),
       });
-      status.textContent = "Settings saved. Changes apply to the next event or background update.";
+      status.textContent = "Settings saved.";
+      await updateEvents();
     } catch (error) {
       status.textContent = error.message;
       status.classList.add("error");

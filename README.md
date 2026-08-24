@@ -10,10 +10,23 @@ The first source is the USGS all-day earthquake feed. Events are normalized,
 deduplicated in SQLite, and retained locally. The Live Events tile offers two modes:
 Capture replays a selected history window, while Continuous sounds newly captured
 earthquakes immediately and rotates ambient data globally. The selected ocean-swell
-or storm-rain background remains continuous while earthquake and tide event voices
-play over it.
+or storm-rain background remains continuous while event voices play over it.
+Event 1, Event 2, and Event 3 are independent: Earthquake and Seismic Bell voices
+follow USGS earthquakes, Tidal Bell follows modeled tide turns, and Lightning Glass
+follows normalized lightning-flash observations. Selecting the same voice in
+multiple slots emits each configured cue for every matching event.
 Continuous mode does not derive ocean sound from the listener’s location. Ambient
 cues play at 75% of their mapped level so full-level earthquake cues remain distinct.
+The global Background Sounds location rotates every 23 seconds. Background cues span 24.5
+seconds, retaining a 1.5-second overlap while the next location fades in.
+Lightning Glass uses a short crack, descending pitch contour, glassy decay, and
+pentatonic flash-by-flash pitch variation at least four semitones above other
+events, paired with a yellow-gold map pulse. Each slot's volume also scales its
+map-pulse radius, so quiet lightning remains visible as a compact burst without
+overwhelming the background animation. NOAA GOES-East and GOES-West GLM
+LCFA granules are checked independently every 20 seconds. Quality-accepted flashes
+are normalized with their observation timestamp, position, optical energy, area,
+duration, satellite, and granule identity.
 
 Optional Open-Meteo sources add:
 
@@ -21,10 +34,27 @@ Optional Open-Meteo sources add:
 - modeled high and low tide turns when a local sea-level extremum is present;
 - global forecast storm potential derived from CAPE and thunderstorm weather codes.
 
-Storm potential is not an observed lightning-strike feed. Marine values are
+The NOAA GLM source is enabled during installation or one-time configuration
+migration. Each granule may contain hundreds of flashes, so Gaia records a bounded
+database sample while chronologically selecting every eleventh quality-accepted
+flash for sound. Those notes retain their original observed time gaps, preserving
+the natural bursts and pauses in the lightning field. GLM
+flashes remain available for deduplication and replay but are intentionally omitted
+from Environmental Event History, its Events count, and the Event Sounds status
+field. Live yellow-gold pulses still show their observed positions. The console and
+`/api/status` report granules, raw flashes, sampled flashes, inserts, and errors, for
+example: `NOAA GLM update: 2 granules, 534 raw flashes, 8 sampled, 8 new, 47 sonified`.
+
+Storm potential is not an observed lightning-flash feed. Marine values are
 model output and are not suitable for navigation. Open-Meteo marine data
 combines models from DWD, ECMWF, Météo-France, NOAA, and other contributing
 agencies; source attribution is shown in Settings.
+
+Event History adds a storm-potential or ocean-swell location when the continuous
+background first visits it, then replaces that location only when its forecast
+values change. Unchanged global rotations still update Background Sounds without
+adding redundant history. Earthquake, tide-turn, and other event history remains
+chronological. Captured forecast records remain available to the replay engine.
 
 ## Ports
 
@@ -113,9 +143,14 @@ forecast strength controls rainfall density and intensity. `/gaia/layer/stop`
 releases the synth when continuous mode stops or the background selection changes.
 
 The included `supercollider/gaia-rhythms.scd` listens on UDP 57130 and provides
-earthquake, seismic-bell, ocean-swell, tidal-bell, and storm-rain voices. The
-Settings menu selects capture sources, two event voices, and one continuous
-background. Each musical role can also be set to None. OSC host and port can be overridden with
+earthquake, seismic-bell, lightning-glass, ocean-swell, tidal-bell, and storm-rain
+voices. The
+Settings menu selects capture sources, three independent event voices, and one continuous
+background. Each musical role can also be set to None. The persisted Units setting
+displays swell and tide heights in meters or feet and earthquake depth in kilometers
+or miles. Independent 0–100% volume sliders sit beneath each Preview button for
+Event 1, Event 2, Event 3, and Background; the Lightning Glass default in Event 3
+starts at 45% to leave headroom for dense flash fields. OSC host and port can be overridden with
 `GAIA_RHYTHMS_OSC_HOST` and `GAIA_RHYTHMS_OSC_PORT`; change `oscPort` in the
 SuperCollider script when selecting another receive port.
 

@@ -23,3 +23,27 @@ def test_event_strength_is_bounded():
     assert GaiaEvent("x", "1", "test", 1, strength=-2).strength == 0.0
     assert GaiaEvent("x", "2", "test", 1, strength=9).strength == 1.0
 
+
+def test_lightning_flash_is_four_semitones_higher_than_other_events():
+    earthquake = GaiaEvent("x", "quake", "earthquake", 1, latitude=0)
+    lightning = GaiaEvent("x", "flash", "lightning_flash", 1, latitude=0)
+
+    score = build_score((earthquake, lightning), 1, 1, 1)
+
+    pitches = {cue.kind: cue.pitch for cue in score}
+    assert pitches["lightning_flash"] >= pitches["earthquake"] + 4
+
+
+def test_lightning_flash_ids_create_pitch_variation_at_one_location():
+    flashes = tuple(
+        GaiaEvent(
+            "noaa_glm", f"flash-{index}", "lightning_flash", 1,
+            latitude=20, longitude=-80, strength=0.7,
+            traits={"flash_id": index},
+        )
+        for index in range(5)
+    )
+
+    score = build_score(flashes, 1, 1, 1)
+
+    assert len({cue.pitch for cue in score}) == 5

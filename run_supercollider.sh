@@ -29,4 +29,5 @@ if [[ -n "${GAIA_RHYTHMS_AUDIO_DEVICE:-}" ]]; then
   printf 'Requesting SuperCollider output device: %s\n' "$GAIA_RHYTHMS_AUDIO_DEVICE"
 fi
 
-exec "$SCLANG" "$SC_SCRIPT" "$@"
+SCLANG_PORT="${GAIA_RHYTHMS_SCLANG_PORT:-57131}"
+exec "$SCLANG" -u "$SCLANG_PORT" "$SC_SCRIPT" "$@"

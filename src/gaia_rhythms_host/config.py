@@ -11,20 +11,39 @@ from pathlib import Path
 DEFAULT_USGS_URL = (
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
 )
-SUPPORTED_SOURCES = ("usgs", "open_meteo_marine", "open_meteo_storm")
-EVENT_VOICE_OPTIONS = ("earthquake", "tidal_bell", "seismic_bells", "none")
+SUPPORTED_SOURCES = ("usgs", "open_meteo_marine", "open_meteo_storm", "noaa_glm")
+EVENT_VOICE_OPTIONS = (
+    "earthquake",
+    "tidal_bell",
+    "seismic_bells",
+    "lightning_glass",
+    "none",
+)
 BACKGROUND_INSTRUMENT_OPTIONS = ("ocean_swell", "storm_potential", "none")
 EVENT_INSTRUMENT_OPTIONS = {
-    "earthquake": EVENT_VOICE_OPTIONS,
+    "earthquake": ("earthquake", "seismic_bells", "none"),
     "ocean_swell": ("ocean_swell", "none"),
-    "tide_turn": EVENT_VOICE_OPTIONS,
+    "tide_turn": ("tidal_bell", "none"),
+    "lightning_flash": ("lightning_glass", "none"),
     "storm_potential": ("storm_potential", "none"),
 }
-DEFAULT_EVENT_INSTRUMENTS = {
+EVENT_KIND_BY_VOICE = {
     "earthquake": "earthquake",
-    "ocean_swell": "ocean_swell",
-    "tide_turn": "tidal_bell",
-    "storm_potential": "none",
+    "seismic_bells": "earthquake",
+    "tidal_bell": "tide_turn",
+    "lightning_glass": "lightning_flash",
+}
+DEFAULT_INSTRUMENT_SLOTS = {
+    "event_1": "earthquake",
+    "event_2": "tidal_bell",
+    "event_3": "lightning_glass",
+    "background": "ocean_swell",
+}
+DEFAULT_INSTRUMENT_VOLUMES = {
+    "event_1": 1.0,
+    "event_2": 1.0,
+    "event_3": 0.45,
+    "background": 1.0,
 }
 SUPPORTED_INSTRUMENTS = tuple(
     dict.fromkeys(instrument for values in EVENT_INSTRUMENT_OPTIONS.values() for instrument in values)
@@ -35,6 +54,7 @@ SUPPORTED_INSTRUMENTS = tuple(
 class AppConfig:
     """Validated runtime settings stored alongside application data."""
 
+    config_revision: int = 3
     http_host: str = "0.0.0.0"
     http_port: int = 8768
     usgs_url: str = DEFAULT_USGS_URL
@@ -43,13 +63,17 @@ class AppConfig:
     replay_hours: float = 2.0
     performance_seconds: float = 120.0
     live_mode: str = "capture"
-    continuous_interval_seconds: float = 12.0
+    continuous_interval_seconds: float = 23.0
     osc_host: str = "127.0.0.1"
     osc_port: int = 57130
     osc_enabled: bool = True
-    enabled_sources: list[str] = field(default_factory=lambda: ["usgs"])
+    units: str = "metric"
+    enabled_sources: list[str] = field(default_factory=lambda: ["usgs", "noaa_glm"])
     event_instruments: dict[str, str] = field(
-        default_factory=lambda: dict(DEFAULT_EVENT_INSTRUMENTS)
+        default_factory=lambda: dict(DEFAULT_INSTRUMENT_SLOTS)
+    )
+    instrument_volumes: dict[str, float] = field(
+        default_factory=lambda: dict(DEFAULT_INSTRUMENT_VOLUMES)
     )
 
     @classmethod
@@ -64,7 +88,15 @@ class AppConfig:
             for key, value in document.items():
                 if key in recognized:
                     setattr(config, key, value)
+            if int(document.get("config_revision", 0)) < 2:
+                if "noaa_glm" not in config.enabled_sources:
+                    config.enabled_sources.append("noaa_glm")
+            if int(document.get("config_revision", 0)) < 3:
+                config.config_revision = 3
             config._migrate_legacy_instruments()
+            # v0.26.236.36 lengthened the original, non-user-facing default.
+            if document.get("continuous_interval_seconds") in {12, 12.0}:
+                config.continuous_interval_seconds = 23.0
         config.apply_environment()
         config.validate()
         return config
@@ -83,6 +115,7 @@ class AppConfig:
     def validate(self) -> None:
         """Normalize values and reject unsafe ranges."""
         self.http_host = str(self.http_host).strip() or "0.0.0.0"
+        self.config_revision = max(3, int(self.config_revision))
         self.osc_host = str(self.osc_host).strip() or "127.0.0.1"
         self.usgs_url = str(self.usgs_url).strip()
         if not self.usgs_url.startswith("https://"):
@@ -100,6 +133,9 @@ class AppConfig:
             5.0, min(300.0, float(self.continuous_interval_seconds))
         )
         self.osc_enabled = bool(self.osc_enabled)
+        self.units = str(self.units).strip().lower()
+        if self.units not in {"metric", "imperial"}:
+            raise ValueError("Units must be metric or imperial")
         if not isinstance(self.enabled_sources, list):
             raise ValueError("Enabled sources must be a list")
         self.enabled_sources = [
@@ -107,51 +143,72 @@ class AppConfig:
         ]
         if not isinstance(self.event_instruments, dict):
             raise ValueError("Event instrument mappings must be an object")
-        normalized_instruments = {}
-        for kind, default in DEFAULT_EVENT_INSTRUMENTS.items():
-            instrument = str(self.event_instruments.get(kind, default))
-            if instrument not in EVENT_INSTRUMENT_OPTIONS[kind]:
-                raise ValueError(
-                    f"Unsupported SuperCollider instrument for {kind}: {instrument}"
-                )
-            normalized_instruments[kind] = instrument
-        self.event_instruments = normalized_instruments
+        self.event_instruments = event_mappings_for_slots(self.event_instruments)
+        self.instrument_volumes = volume_mappings_for_slots(self.instrument_volumes)
 
     def instrument_slots(self) -> dict[str, str]:
-        """Return the three user-facing musical roles."""
-        if self.event_instruments.get("storm_potential") == "storm_potential":
-            background = "storm_potential"
-        elif self.event_instruments.get("ocean_swell") == "ocean_swell":
-            background = "ocean_swell"
-        else:
-            background = "none"
+        """Return the user-facing event and background musical roles."""
+        return dict(self.event_instruments)
+
+    def volume_slots(self) -> dict[str, float]:
+        """Return independent gain settings for each musical role."""
+        return dict(self.instrument_volumes)
+
+    def voices_for_event(self, kind: str) -> tuple[tuple[str, float], ...]:
+        """Return matching event-slot instruments with their independent gains."""
+        return tuple(
+            (instrument, self.instrument_volumes[slot])
+            for slot in ("event_1", "event_2", "event_3")
+            if (instrument := self.event_instruments[slot]) != "none"
+            and EVENT_KIND_BY_VOICE[instrument] == kind
+            and self.instrument_volumes[slot] > 0
+        )
+
+    def instruments_for_event(self, kind: str) -> tuple[str, ...]:
+        """Return each independently selected voice triggered by an event kind."""
+        return tuple(instrument for instrument, _gain in self.voices_for_event(kind))
+
+    def background_mappings(self) -> dict[str, str]:
+        """Return renderer mappings for the one selected persistent background."""
+        background = self.event_instruments["background"]
         return {
-            "event_1": self.event_instruments["earthquake"],
-            "event_2": self.event_instruments["tide_turn"],
-            "background": background,
+            "earthquake": "none",
+            "tide_turn": "none",
+            "ocean_swell": "ocean_swell" if background == "ocean_swell" else "none",
+            "storm_potential": (
+                "storm_potential" if background == "storm_potential" else "none"
+            ),
         }
 
     def _migrate_legacy_instruments(self) -> None:
-        """Translate the former four-kind UI into the three musical roles."""
+        """Translate older configurations into the current musical roles."""
         if not isinstance(self.event_instruments, dict):
             return
         mappings = dict(self.event_instruments)
-        if mappings.get("earthquake") not in EVENT_VOICE_OPTIONS:
-            mappings["earthquake"] = "earthquake"
-        if mappings.get("tide_turn") not in EVENT_VOICE_OPTIONS:
-            mappings["tide_turn"] = "tidal_bell"
+        if {"event_1", "event_2", "background"}.issubset(mappings):
+            mappings.setdefault("event_3", "lightning_glass")
+            self.event_instruments = mappings
+            return
+        event_1 = mappings.get("earthquake", "earthquake")
+        event_2 = mappings.get("tide_turn", "tidal_bell")
+        if event_1 not in EVENT_VOICE_OPTIONS:
+            event_1 = "earthquake"
+        if event_2 not in EVENT_VOICE_OPTIONS:
+            event_2 = "tidal_bell"
         ocean_selected = mappings.get("ocean_swell") == "ocean_swell"
         storm_selected = mappings.get("storm_potential") == "storm_potential"
         if ocean_selected:
-            mappings["ocean_swell"] = "ocean_swell"
-            mappings["storm_potential"] = "none"
+            background = "ocean_swell"
         elif storm_selected:
-            mappings["ocean_swell"] = "none"
-            mappings["storm_potential"] = "storm_potential"
+            background = "storm_potential"
         else:
-            mappings["ocean_swell"] = "none"
-            mappings["storm_potential"] = "none"
-        self.event_instruments = mappings
+            background = "none"
+        self.event_instruments = {
+            "event_1": event_1,
+            "event_2": event_2,
+            "event_3": "lightning_glass",
+            "background": background,
+        }
 
     def save(self, path: Path) -> None:
         """Atomically save the current configuration."""
@@ -169,26 +226,51 @@ def resolve_data_dir() -> Path:
 
 
 def event_mappings_for_slots(slots: object) -> dict[str, str]:
-    """Validate musical-role selections and derive renderer mappings."""
+    """Validate and preserve independent musical-role selections."""
     if not isinstance(slots, dict):
         raise ValueError("Instrument slots must be an object")
     event_1 = str(slots.get("event_1", ""))
     event_2 = str(slots.get("event_2", ""))
+    event_3 = str(slots.get("event_3", "none"))
     background = str(slots.get("background", ""))
     if event_1 not in EVENT_VOICE_OPTIONS:
         raise ValueError(f"Unsupported Event 1 instrument: {event_1}")
     if event_2 not in EVENT_VOICE_OPTIONS:
         raise ValueError(f"Unsupported Event 2 instrument: {event_2}")
+    if event_3 not in EVENT_VOICE_OPTIONS:
+        raise ValueError(f"Unsupported Event 3 instrument: {event_3}")
     if background not in BACKGROUND_INSTRUMENT_OPTIONS:
         raise ValueError(f"Unsupported Background instrument: {background}")
     return {
-        "earthquake": event_1,
-        "tide_turn": event_2,
-        "ocean_swell": "ocean_swell" if background == "ocean_swell" else "none",
-        "storm_potential": (
-            "storm_potential" if background == "storm_potential" else "none"
-        ),
+        "event_1": event_1,
+        "event_2": event_2,
+        "event_3": event_3,
+        "background": background,
     }
+
+
+def event_kind_for_voice(instrument: str) -> str:
+    """Resolve the environmental trigger represented by an event voice."""
+    try:
+        return EVENT_KIND_BY_VOICE[str(instrument)]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported event instrument: {instrument}") from exc
+
+
+def volume_mappings_for_slots(volumes: object) -> dict[str, float]:
+    """Validate 0..1 gain controls for every independent musical role."""
+    if not isinstance(volumes, dict):
+        raise ValueError("Instrument volumes must be an object")
+    normalized = {}
+    for slot, default in DEFAULT_INSTRUMENT_VOLUMES.items():
+        try:
+            value = float(volumes.get(slot, default))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid {slot.replace('_', ' ')} volume") from exc
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(f"{slot.replace('_', ' ').title()} volume must be 0..1")
+        normalized[slot] = value
+    return normalized
 
 
 def _port(value: object, label: str) -> int:
