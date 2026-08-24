@@ -37,30 +37,45 @@ const EVENT_PALETTES = {
   default: ["#476352", "#567966", "#679079", "#7ca68d", "#96bba1"],
 };
 
-function eventColors(event) {
+const INSTRUMENT_PALETTES = {
+  seismic_bells: ["#4f321f", "#67432a", "#805537", "#9b6945", "#b98258"],
+};
+
+function eventColors(event, instrument = "") {
   const kind = String(event?.kind || "default").toLowerCase();
-  const palette = EVENT_PALETTES[kind] || EVENT_PALETTES.default;
+  const voice = String(instrument).toLowerCase();
+  const palette = INSTRUMENT_PALETTES[voice] || EVENT_PALETTES[kind] || EVENT_PALETTES.default;
   const magnitude = Math.max(0, Number(event?.traits?.magnitude ?? event?.strength ?? 0));
   const index = Math.min(palette.length - 1, Math.floor(magnitude / 1.5));
   return {kind, primary: palette[index], inner: palette[Math.max(0, index - 1)]};
 }
 
-function animateCapturedEvent(event) {
+function cueRole(cue) {
+  if (cue.role) return cue.role;
+  return ["ocean_swell", "storm_potential"].includes(cue.event?.kind) ? "background" : "event";
+}
+
+function animateCapturedEvent(event, instrument = "", role = "event", cueDuration = 3.6) {
   const layer = byId("eventPulseLayer");
   if (!layer) return;
+  const animationDuration = role === "background"
+    ? Math.max(3.6, Number(cueDuration) || 3.6)
+    : 3.6;
   const longitude = Number(event?.longitude ?? 0);
   const latitude = Number(event?.latitude ?? 0);
   const magnitude = Number(event?.traits?.magnitude ?? 2);
   const wave = document.createElement("span");
-  const colors = eventColors(event);
+  const colors = eventColors(event, instrument);
   const safeKind = colors.kind.replace(/[^a-z0-9_-]/g, "-");
-  wave.className = `event-wave event-wave--${safeKind}`;
+  wave.className = `event-wave event-wave--${safeKind} event-wave--${role}`;
   wave.dataset.eventKind = colors.kind;
+  wave.dataset.cueRole = role;
   wave.style.setProperty("--wave-x", `${Math.max(8, Math.min(92, ((longitude + 180) / 360) * 100))}%`);
   wave.style.setProperty("--wave-y", `${Math.max(12, Math.min(88, ((90 - latitude) / 180) * 100))}%`);
   wave.style.setProperty("--wave-scale", String(Math.max(6, Math.min(13, 6 + magnitude))));
   wave.style.setProperty("--wave-color", colors.primary);
   wave.style.setProperty("--wave-inner", colors.inner);
+  wave.style.setProperty("--wave-duration", `${animationDuration}s`);
   layer.append(wave);
   if (byId("settingsDialog")?.open) document.body.classList.add("preview-pulse-visible");
   const removeWave = () => {
@@ -70,7 +85,7 @@ function animateCapturedEvent(event) {
     }
   };
   wave.addEventListener("animationend", removeWave, {once: true});
-  setTimeout(removeWave, 4000);
+  setTimeout(removeWave, (animationDuration * 1000) + 400);
 }
 
 async function updateStatus() {
@@ -113,7 +128,10 @@ async function updateEmittedCues() {
   try {
     const query = observedCueSequence === null ? "" : `?after=${observedCueSequence}`;
     const payload = await request(`/api/cues${query}`);
-    payload.cues.forEach((cue) => animateCapturedEvent(cue.event));
+    payload.cues.forEach((cue) => animateCapturedEvent(
+      cue.event, cue.instrument, cueRole(cue), cue.duration,
+    ));
+    if (payload.cues.length) await updateEvents();
     observedCueSequence = payload.latest_sequence;
   } catch (error) {
     console.warn("Unable to synchronize emitted cues", error);
@@ -128,15 +146,22 @@ async function updateEvents() {
   try {
     const hours = Number(byId("hours").value);
     const payload = await request(`/api/events?hours=${encodeURIComponent(hours)}&limit=100`);
-    const events = payload.events.slice().reverse();
+    const events = payload.events;
     byId("eventList").innerHTML = events.length ? events.map((event) => {
       const summary = eventSummary(event);
       const place = event.traits.place || `${event.latitude.toFixed(2)}, ${event.longitude.toFixed(2)}`;
-      return `<div class="event"><span class="magnitude">${escapeHtml(summary.badge)}</span><div><strong>${escapeHtml(place)}</strong><small>${escapeHtml(summary.detail)} · ${event.latitude.toFixed(2)}, ${event.longitude.toFixed(2)}</small></div><time>${when(event.timestamp)}</time></div>`;
+      const instrument = instrumentLabel(event.instrument);
+      return `<div class="event"><span class="magnitude">${escapeHtml(summary.badge)}</span><div><strong>${escapeHtml(place)}</strong><small>${escapeHtml(summary.detail)} · ${escapeHtml(instrument)} · ${event.latitude.toFixed(2)}, ${event.longitude.toFixed(2)}</small></div><time>${when(event.timestamp)}</time></div>`;
     }).join("") : '<p class="empty">No events in this history window.</p>';
   } catch (error) {
     message(error.message, true);
   }
+}
+
+function instrumentLabel(instrument) {
+  if (instrument === "seismic_bells") return "Seismic Bell";
+  if (instrument === "none") return "No instrument";
+  return String(instrument || "Unassigned").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function eventSummary(event) {
@@ -289,6 +314,7 @@ if (settingsDialog && settingsForm) {
           body: JSON.stringify({kind, instrument}),
         });
         status.textContent = "Previewed " + payload.instrument.replaceAll("_", " ") + ".";
+        await Promise.all([updateStatus(), updateEvents()]);
       } catch (error) {
         status.textContent = error.message;
         status.classList.add("error");

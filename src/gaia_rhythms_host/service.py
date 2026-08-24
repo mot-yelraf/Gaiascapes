@@ -56,8 +56,9 @@ class GaiaRhythmsService:
         self._continuous_task = None
         self._live_play_lock = asyncio.Lock()
         self._ambient_cursors = {
-            kind: 0 for kind in ("ocean_swell", "storm_potential", "tide_turn")
+            kind: 0 for kind in ("ocean_swell", "storm_potential")
         }
+        self._last_continuous_cycle_at = time.time()
         self.continuous_played_count = 0
         self.continuous_last_error = ""
         self.last_capture_at = None
@@ -75,6 +76,7 @@ class GaiaRhythmsService:
     async def start_continuous(self) -> None:
         """Start the ambient live-event stream without duplicating it."""
         if self._continuous_task is None or self._continuous_task.done():
+            self._last_continuous_cycle_at = time.time()
             self._continuous_task = asyncio.create_task(
                 self._continuous_loop(), name="gaia-rhythms-continuous"
             )
@@ -193,9 +195,34 @@ class GaiaRhythmsService:
         hours = self.config.replay_hours if hours is None else float(hours)
         hours = max(0.05, min(24.0, hours))
         events = await asyncio.to_thread(
-            self.store.events_since, time.time() - (hours * 3600.0), limit
+            self.store.events_since, time.time() - (hours * 3600.0), 20000
         )
-        return tuple(event.as_dict() for event in events)
+        emitted_instruments = {
+            (cue["event"]["provider"], cue["event"]["event_id"]): cue["instrument"]
+            for cue in self._emitted_cues
+        }
+        emitted_times = {
+            (cue["event"]["provider"], cue["event"]["event_id"]): cue["emitted_at"]
+            for cue in self._emitted_cues
+        }
+        history = []
+        for event in events:
+            item = event.as_dict()
+            key = (event.provider, event.event_id)
+            item["instrument"] = emitted_instruments.get(
+                key,
+                self.config.event_instruments.get(event.kind, event.kind),
+            )
+            item["emitted_at"] = emitted_times.get(key)
+            history.append(item)
+        history.sort(
+            key=lambda item: (
+                item["emitted_at"] is not None,
+                item["emitted_at"] or item["timestamp"],
+            ),
+            reverse=True,
+        )
+        return tuple(history[:max(1, min(20000, int(limit)))])
 
     async def status(self) -> dict:
         """Build the observable application status contract."""
@@ -233,7 +260,7 @@ class GaiaRhythmsService:
                 "played_count": self.continuous_played_count,
                 "last_error": self.continuous_last_error,
                 "interval_seconds": self.config.continuous_interval_seconds,
-                "location_strategy": "layered_global_rotation",
+                "location_strategy": "background_rotation_with_due_events",
             },
             "osc": self.renderer.status(),
             "supercollider": detect_supercollider(),
@@ -285,7 +312,9 @@ class GaiaRhythmsService:
         cue = ScoreCue(0, event, pitch=50, velocity=116, duration=2.4, pan=0.0)
         rendered = await asyncio.to_thread(self.renderer.play, cue, instrument)
         if rendered is not False:
-            self._record_emitted_cue(cue)
+            if kind in {"earthquake", "tide_turn"}:
+                await asyncio.to_thread(self.store.add_events, (event,))
+            self._record_emitted_cue(cue, instrument)
         return {"played": rendered is not False, "instrument": instrument, "kind": kind}
 
     async def emitted_cues(self, after=None) -> dict:
@@ -307,13 +336,20 @@ class GaiaRhythmsService:
             cues = tuple(cue for cue in self._emitted_cues if cue["sequence"] > cursor)
         return {"latest_sequence": self._cue_sequence, "cues": cues}
 
-    def _record_emitted_cue(self, cue) -> None:
+    def _record_emitted_cue(self, cue, instrument: str | None = None) -> None:
         """Journal a cue only after it has been sent to SuperCollider."""
+        instrument = instrument or self.config.event_instruments.get(cue.kind, cue.kind)
         self._cue_sequence += 1
         payload = cue.as_dict()
         payload.update(
             sequence=self._cue_sequence,
             emitted_at=time.time(),
+            instrument=instrument,
+            role=(
+                "background"
+                if cue.kind in {"ocean_swell", "storm_potential"}
+                else "event"
+            ),
             event=cue.event.as_dict(),
         )
         self._emitted_cues.append(payload)
@@ -340,17 +376,18 @@ class GaiaRhythmsService:
             await asyncio.sleep(self.config.continuous_interval_seconds)
 
     async def play_next_ambient_layers(self) -> tuple[str, ...]:
-        """Update every available ambient layer from independent global rotations."""
+        """Rotate the background and play Event 2 only when a tide turn is due."""
+        cycle_at = time.time()
         events = await asyncio.to_thread(
-            self.store.events_since, time.time() - 86400.0, 5000
+            self.store.events_since, cycle_at - 86400.0, 5000
         )
         latest_by_location = {}
         for event in events:
-            if event.kind not in {"ocean_swell", "tide_turn", "storm_potential"}:
+            if event.kind not in {"ocean_swell", "storm_potential"}:
                 continue
             place = str(event.traits.get("place", ""))
             latest_by_location[(event.kind, place)] = event
-        groups = {kind: [] for kind in ("ocean_swell", "storm_potential", "tide_turn")}
+        groups = {kind: [] for kind in ("ocean_swell", "storm_potential")}
         for event in latest_by_location.values():
             groups[event.kind].append(event)
         for events_for_kind in groups.values():
@@ -359,15 +396,25 @@ class GaiaRhythmsService:
             if not groups[kind]:
                 await asyncio.to_thread(self.renderer.stop_layer, kind)
         selected = []
-        for kind in ("ocean_swell", "storm_potential", "tide_turn"):
+        for kind in ("ocean_swell", "storm_potential"):
             choices = groups[kind]
             if not choices or self.config.event_instruments[kind] == "none":
                 continue
             cursor = self._ambient_cursors[kind]
             selected.append(choices[cursor % len(choices)])
             self._ambient_cursors[kind] = cursor + 1
+        due_tides = [
+            event
+            for event in events
+            if event.kind == "tide_turn"
+            and self._last_continuous_cycle_at < event.timestamp <= cycle_at
+            and self.config.event_instruments["tide_turn"] != "none"
+        ]
+        if due_tides:
+            selected.append(max(due_tides, key=lambda event: event.strength))
         if selected:
             await asyncio.gather(*(self._play_live_event(event) for event in selected))
+        self._last_continuous_cycle_at = cycle_at
         return tuple(event.kind for event in selected)
 
     async def play_next_ambient_event(self) -> bool:
@@ -405,7 +452,9 @@ class GaiaRhythmsService:
             )
             rendered = await asyncio.to_thread(render, cue)
             if rendered is not False:
-                self._record_emitted_cue(cue)
+                self._record_emitted_cue(
+                    cue, self.config.event_instruments[event.kind]
+                )
                 self.continuous_played_count += 1
 
 

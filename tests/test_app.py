@@ -75,9 +75,11 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert f'/static/app.js?v={app.version}' in home.text
         assert f'/static/app.css?v={app.version}' in home.text
         capture = client.post("/api/capture", json={})
+        events = client.get("/api/events")
         status = client.get("/api/status")
 
     assert capture.json()["inserted"] == 1
+    assert events.json()["events"][0]["instrument"] == "earthquake"
     assert status.json()["history"]["event_count"] == 1
     assert (tmp_path / "config.json").exists()
     assert (tmp_path / "gaia_rhythms.sqlite3").exists()
@@ -140,6 +142,12 @@ def test_continuous_cycle_overlays_independent_ambient_layers(tmp_path):
     reduced_amplitude = 0.08 + ((ocean_cue.velocity - 20) / 107.0 * 0.5)
     assert abs(reduced_amplitude - (original_amplitude * 0.75)) < 0.003
 
+    played.clear()
+    repeated_kinds = asyncio.run(app.state.service.play_next_ambient_layers())
+
+    assert repeated_kinds == ("ocean_swell",)
+    assert [cue.kind for _, cue in played] == ["ocean_swell"]
+
 
 
 def test_storm_background_replaces_ocean_with_persistent_rain_layer(tmp_path):
@@ -183,6 +191,27 @@ def test_storm_background_replaces_ocean_with_persistent_rain_layer(tmp_path):
     assert kinds == ("storm_potential", "tide_turn")
     assert [mode for mode, cue in played if cue.kind == "storm_potential"] == ["layer"]
     assert not any(cue.kind == "ocean_swell" for _, cue in played)
+
+    played.clear()
+    repeated_kinds = asyncio.run(app.state.service.play_next_ambient_layers())
+
+    assert repeated_kinds == ("storm_potential",)
+    assert [cue.kind for _, cue in played] == ["storm_potential"]
+
+
+def test_event_history_returns_newest_records_with_small_limit(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    now = time.time()
+    app.state.service.store.add_events(
+        tuple(
+            GaiaEvent("usgs", f"event-{index}", "earthquake", now + index)
+            for index in range(5)
+        )
+    )
+
+    history = asyncio.run(app.state.service.recent_events(hours=1, limit=2))
+
+    assert [item["event_id"] for item in history] == ["event-4", "event-3"]
 
 
 def test_audio_settings_persist_and_update_live_renderer(tmp_path):
@@ -276,7 +305,7 @@ def test_audio_settings_allow_silencing_each_event_kind(tmp_path):
     assert {"ocean_swell", "storm_potential"}.issubset(stopped)
 
 
-def test_instrument_preview_plays_selected_voice_without_saving(tmp_path):
+def test_instrument_preview_plays_and_adds_event_to_history(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
     played = []
     app.state.service.renderer.play = (
@@ -289,6 +318,7 @@ def test_instrument_preview_plays_selected_voice_without_saving(tmp_path):
             "/api/instruments/preview", json={"instrument": "seismic_bells"}
         )
         emitted = client.get("/api/cues", params={"after": 0})
+        history = client.get("/api/events")
         status = client.get("/api/status")
 
     assert initial_cues.json() == {"latest_sequence": 0, "cues": []}
@@ -301,13 +331,77 @@ def test_instrument_preview_plays_selected_voice_without_saving(tmp_path):
     assert played[0][0].event.traits["magnitude"] == 6.0
     assert played[0][1] == "seismic_bells"
     assert emitted.json()["latest_sequence"] == 1
+    assert emitted.json()["cues"][0]["instrument"] == "seismic_bells"
+    assert emitted.json()["cues"][0]["role"] == "event"
     assert emitted.json()["cues"][0]["event"]["kind"] == "earthquake"
     assert emitted.json()["cues"][0]["event"]["traits"]["magnitude"] == 6.0
+    assert history.json()["events"][0]["instrument"] == "seismic_bells"
+    assert history.json()["events"][0]["provider"] == "preview"
+    assert status.json()["history"]["event_count"] == 1
     assert status.json()["cues"]["latest_location"] == {
         "name": "Earthquake preview",
         "latitude": 18.0,
         "longitude": -35.0,
     }
+
+
+def test_event_history_identifies_seismic_bell_voice(tmp_path):
+    event = GaiaEvent(
+        "usgs", "bell-event", "earthquake", time.time(), strength=0.7
+    )
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs((event,)))
+
+    with TestClient(app) as client:
+        client.post("/api/capture", json={})
+        client.put(
+            "/api/settings/audio",
+            json={
+                "enabled_sources": ["usgs"],
+                "instrument_slots": {
+                    "event_1": "seismic_bells",
+                    "event_2": "tidal_bell",
+                    "background": "ocean_swell",
+                },
+            },
+        )
+        history = client.get("/api/events").json()["events"]
+
+    assert history[0]["instrument"] == "seismic_bells"
+
+
+def test_event_2_preview_adds_selected_voice_to_history(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.renderer.play = lambda cue, instrument=None: True
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/instruments/preview",
+            json={"kind": "tide_turn", "instrument": "tidal_bell"},
+        )
+        history = client.get("/api/events").json()["events"]
+        count = client.get("/api/status").json()["history"]["event_count"]
+
+    assert response.status_code == 200
+    assert count == 1
+    assert history[0]["kind"] == "tide_turn"
+    assert history[0]["instrument"] == "tidal_bell"
+
+
+def test_background_preview_does_not_add_captured_event(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.renderer.play = lambda cue, instrument=None: True
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/instruments/preview",
+            json={"kind": "ocean_swell", "instrument": "ocean_swell"},
+        )
+        emitted = client.get("/api/cues", params={"after": 0}).json()["cues"]
+        count = client.get("/api/status").json()["history"]["event_count"]
+
+    assert response.status_code == 200
+    assert count == 0
+    assert emitted[0]["role"] == "background"
 
 
 def test_cue_long_poll_releases_shutdown_connections_promptly(tmp_path, monkeypatch):
