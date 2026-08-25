@@ -88,6 +88,13 @@ fi
 if ! "$INSTALL_DIR/.venv/bin/python" -m pip install --disable-pip-version-check --upgrade "$SOURCE_DIR" 2>&1 | tee -a "$LOG_FILE"; then
   fail "Python package installation failed. Check $LOG_FILE for details."
 fi
+"$INSTALL_DIR/.venv/bin/python" -c 'import webview' \
+  || fail "pywebview could not be imported after installation."
+if [[ "$(uname -s)" == Linux ]]; then
+  "$INSTALL_DIR/.venv/bin/python" -c \
+    "import gi; gi.require_version('Gtk', '3.0'); gi.require_version('WebKit2', '4.1'); from gi.repository import Gtk, WebKit2" \
+    || fail "GTK/WebKit is missing. On Debian, Ubuntu, or Raspberry Pi OS install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 and run this installer again."
+fi
 "$INSTALL_DIR/.venv/bin/python" -m pip uninstall --yes earth-rhythms >/dev/null 2>&1 || true
 
 if [[ "$SOURCE_DIR" != "$INSTALL_DIR" ]]; then
@@ -139,7 +146,7 @@ fi
 
 printf '\nGaia Scape was installed in %s\n' "$INSTALL_DIR"
 printf 'Start audio: %s/run_supercollider.sh\n' "$INSTALL_DIR"
-printf 'Start the browser app: %s/run_gaia_scape_gui.sh\n' "$INSTALL_DIR"
+printf 'Start the desktop app: %s/run_gaia_scape_gui.sh\n' "$INSTALL_DIR"
 printf 'Start headless: %s/run_gaia_scape.sh\n' "$INSTALL_DIR"
 printf 'Open locally: http://127.0.0.1:8768\n'
 printf 'Open on LAN: http://<gaia-host-ip>:8768\n'

@@ -91,6 +91,18 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'id="sourceGlm"' in home.text
         assert "NOAA GOES GLM lightning" in home.text
         assert "<h2>Live Events</h2>" in home.text
+        assert "spatial soundscapes" not in home.text
+        assert 'id="systemPulse"' not in home.text
+        assert 'id="dashboardViewButton"' in home.text
+        assert 'id="mapViewButton"' in home.text
+        assert 'id="worldMap"' in home.text
+        assert 'id="mapPulseLayer"' in home.text
+        assert 'href="/static/gaia-scape-icon.svg#realistic-land"' in home.text
+        assert 'role="tablist"' in home.text
+        assert 'data-workspace-tab="live"' in home.text
+        assert 'data-workspace-tab="history"' in home.text
+        assert 'role="tabpanel"' in home.text
+        assert home.text.count('class="panel ') == 1
         assert "Waiting for application status" not in home.text
         assert home.text.index('class="actions"') < home.text.index(
             'class="mode-note continuous-only"'
@@ -112,6 +124,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         )
         assert 'id="liveMode"' in home.text
         assert '/static/gaia-scape-icon.svg' in home.text
+        assert "Created by Peace Hill Studios" in home.text
         assert f'/static/app.js?v={app.version}' in home.text
         assert f'/static/app.css?v={app.version}' in home.text
         script = client.get("/static/app.js").text
@@ -119,6 +132,19 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'instrument === "lightning_glass" ? "lightning_flash"' in script
         assert "cue.volume ?? 1" in script
         assert "baseScale * visualVolume" in script
+        assert "activateWorkspacePane" in script
+        assert "activateAppView" in script
+        assert "projectCoordinates" in script
+        assert "inverseProjectCoordinates" in script
+        assert "animateMapEvent" in script
+        assert 'role === "background" ? "3.1" : "2.8"' in script
+        assert "renderMapHistory(events)" in script
+        assert 'byId("systemPulse")' not in script
+        assert '"ArrowLeft", "ArrowRight", "Home", "End"' in script
+        stylesheet = client.get("/static/app.css").text
+        assert ".workspace { width: 57.5%; margin: 46px auto 0; }" in stylesheet
+        assert ".workspace { width: 100%; }" in stylesheet
+        assert "50% { opacity: .62; transform: scale(var(--map-pulse-scale, 2.8)); }" in stylesheet
         capture = client.post("/api/capture", json={})
         events = client.get("/api/events")
         status = client.get("/api/status")

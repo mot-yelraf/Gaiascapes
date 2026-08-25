@@ -5,68 +5,106 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gaia Scape</title>
   <link rel="stylesheet" href="/static/app.css?v={{ version }}">
+  <link rel="icon" href="/static/gaia-scape-icon.svg?v={{ version }}" type="image/svg+xml">
 </head>
 <body>
   <div class="event-pulse-layer" id="eventPulseLayer" aria-hidden="true"></div>
   <main>
     <header>
       <div class="heading-block">
-        <p class="eyebrow">Terrestrial sonification</p>
+        <p class="eyebrow">Live Terrestrial Sonification</p>
         <div class="title-line">
           <h1>Gaia Scape</h1>
           <small class="project-version">{{ version }}</small>
         </div>
-        <div class="intro-row">
-          <p class="intro">Earthquakes, ocean motion, and storm potential become a spatial musical score.</p>
-          <div class="pulse" id="systemPulse"><span></span><strong>Starting</strong></div>
-        </div>
       </div>
-      <button class="settings-trigger" type="button" data-open-settings><span aria-hidden="true">⚙</span> Settings</button>
+      <div class="header-actions">
+        <div class="view-selector" role="group" aria-label="Application view">
+          <button class="view-option is-active" id="dashboardViewButton" type="button" aria-pressed="true" data-app-view-button="dashboard">Dashboard</button>
+          <button class="view-option" id="mapViewButton" type="button" aria-pressed="false" data-app-view-button="map">Map</button>
+        </div>
+        <button class="settings-trigger" type="button" data-open-settings><span aria-hidden="true">⚙</span> Settings</button>
+      </div>
     </header>
 
-    <section class="workspace">
-      <article class="panel performance-panel">
-        <div class="panel-title">
-          <div><p class="eyebrow">Environmental stream</p><h2>Live Events</h2></div>
-          <span class="badge" id="performanceBadge">Idle</span>
-        </div>
-        <div class="controls">
-          <label>Mode
-            <select id="liveMode"><option value="capture" {% if live_mode == "capture" %}selected{% endif %}>Capture</option><option value="continuous" {% if live_mode == "continuous" %}selected{% endif %}>Continuous</option></select>
-          </label>
-          <label class="capture-only">History window
-            <span><input id="hours" type="number" min="0.05" max="24" step="0.25" value="{{ default_hours }}"> hours</span>
-          </label>
-          <label class="capture-only">Performance length
-            <span><input id="duration" type="number" min="1" max="3600" step="1" value="{{ default_duration }}"> seconds</span>
-          </label>
-        </div>
-        <div class="actions">
-          <button class="primary" id="startButton">Start</button>
-          <button id="stopButton">Stop</button>
-        </div>
-        <p class="mode-note continuous-only" hidden>The selected background instruments evolves continuously while new event voices layer over rotating global locations of the background instrument.</p>
-        <p class="message" id="message" aria-live="polite"></p>
-      </article>
+    <div id="dashboardView" data-app-view="dashboard">
+      <section class="workspace">
+        <article class="panel stream-panel">
+        <nav class="workspace-tabs" aria-label="Environmental stream views" role="tablist">
+          <button class="workspace-tab is-active" id="workspace-tab-live" type="button" role="tab" aria-selected="true" aria-controls="workspace-pane-live" tabindex="0" data-workspace-tab="live">Live Events</button>
+          <button class="workspace-tab" id="workspace-tab-history" type="button" role="tab" aria-selected="false" aria-controls="workspace-pane-history" tabindex="-1" data-workspace-tab="history">Event History</button>
+        </nav>
 
-      <article class="panel events-panel">
-        <div class="panel-title">
-          <div><p class="eyebrow">Recent activity</p><h2>Environmental event history</h2></div>
-        </div>
-        <div class="event-list" id="eventList"><p class="empty">No captured events yet.</p></div>
-      </article>
-    </section>
+        <section class="workspace-pane performance-panel is-active" id="workspace-pane-live" role="tabpanel" aria-labelledby="workspace-tab-live" data-workspace-pane="live">
+          <div class="panel-title">
+            <div><p class="eyebrow">Environmental stream</p><h2>Live Events</h2></div>
+            <span class="badge" id="performanceBadge">Idle</span>
+          </div>
+          <div class="controls">
+            <label>Mode
+              <select id="liveMode"><option value="capture" {% if live_mode == "capture" %}selected{% endif %}>Capture</option><option value="continuous" {% if live_mode == "continuous" %}selected{% endif %}>Continuous</option></select>
+            </label>
+            <label class="capture-only">History window
+              <span><input id="hours" type="number" min="0.05" max="24" step="0.25" value="{{ default_hours }}"> hours</span>
+            </label>
+            <label class="capture-only">Performance length
+              <span><input id="duration" type="number" min="1" max="3600" step="1" value="{{ default_duration }}"> seconds</span>
+            </label>
+          </div>
+          <div class="actions">
+            <button class="primary" id="startButton">Start</button>
+            <button id="stopButton">Stop</button>
+          </div>
+          <p class="mode-note continuous-only" hidden>The selected background instruments evolves continuously while new event voices layer over rotating global locations of the background instrument.</p>
+          <p class="message" id="message" aria-live="polite"></p>
+        </section>
 
-    <section class="metrics" aria-label="Application status">
-      <article><span>Background Sounds</span><strong id="backgroundSoundsStatus">—</strong></article>
-      <article><span>Events</span><strong id="eventCount">—</strong></article>
-      <article><span>Event Time</span><strong id="eventTimeStatus">—</strong></article>
-      <article><span>Event Sounds</span><strong id="eventSoundsStatus">—</strong></article>
+        <section class="workspace-pane events-panel" id="workspace-pane-history" role="tabpanel" aria-labelledby="workspace-tab-history" data-workspace-pane="history" hidden>
+          <div class="panel-title">
+            <div><p class="eyebrow">Recent activity</p><h2>Environmental event history</h2></div>
+          </div>
+          <div class="event-list" id="eventList"><p class="empty">No captured events yet.</p></div>
+        </section>
+        </article>
+      </section>
+
+      <section class="metrics" aria-label="Application status">
+        <article><span>Background Sounds</span><strong id="backgroundSoundsStatus">—</strong></article>
+        <article><span>Events</span><strong id="eventCount">—</strong></article>
+        <article><span>Event Time</span><strong id="eventTimeStatus">—</strong></article>
+        <article><span>Event Sounds</span><strong id="eventSoundsStatus">—</strong></article>
+      </section>
+    </div>
+
+    <section class="map-view" id="mapView" data-app-view="map" aria-labelledby="mapViewTitle" hidden>
+      <div class="map-heading">
+        <div><p class="eyebrow">Live coordinates</p><h2 id="mapViewTitle">Global event map</h2></div>
+        <div class="map-legend" aria-label="Map marker legend"><span><i class="map-legend-background"></i>Background</span><span><i class="map-legend-event"></i>Event</span></div>
+      </div>
+      <div class="map-stage">
+        <svg id="worldMap" viewBox="0 170 1024 684" role="img" aria-labelledby="worldMapTitle worldMapDescription">
+          <title id="worldMapTitle">Live Gaia Scape world map</title>
+          <desc id="worldMapDescription">Robinson projection with latitude and longitude grid, recent environmental locations, and animated sound cues.</desc>
+          <defs>
+            <radialGradient id="mapOcean" cx="50%" cy="44%" r="68%"><stop offset="0" stop-color="#173e48"/><stop offset=".62" stop-color="#0d2f39"/><stop offset="1" stop-color="#09232b"/></radialGradient>
+            <clipPath id="mapGlobeClip"><ellipse cx="512" cy="512" rx="443" ry="290"/></clipPath>
+          </defs>
+          <ellipse class="map-glow" cx="512" cy="512" rx="451" ry="298"/>
+          <ellipse class="map-ocean" cx="512" cy="512" rx="443" ry="290"/>
+          <g id="mapGridLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
+          <g class="map-land" clip-path="url(#mapGlobeClip)"><use href="/static/gaia-scape-icon.svg#realistic-land"/></g>
+          <g id="mapHistoryLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
+          <g id="mapBackgroundLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
+          <g id="mapPulseLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
+          <g id="mapCoordinateLabels" aria-hidden="true"></g>
+        </svg>
+        <output class="map-coordinate-readout" id="mapCoordinateReadout" aria-live="polite">Move over the map to inspect coordinates</output>
+      </div>
     </section>
 
   </main>
 
-  <footer class="site-footer"><img src="/static/gaia-scape-icon.svg?v={{ version }}" alt="Gaia Scape"></footer>
+  <footer class="site-footer"><img src="/static/gaia-scape-icon.svg?v={{ version }}" alt="Gaia Scape"><p>Created by Peace Hill Studios</p></footer>
 
   <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
     <form id="settingsForm">

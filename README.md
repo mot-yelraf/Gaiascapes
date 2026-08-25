@@ -82,7 +82,7 @@ On macOS:
 On Linux or Raspberry Pi OS:
 
 ```sh
-sudo apt install python3 python3-venv
+sudo apt install python3 python3-venv python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
 ./scripts/install_linux.sh
 ```
 
@@ -105,11 +105,18 @@ auto-start service while preserving captured data. To remove the data as well:
 GAIA_SCAPE_REMOVE_DATA=yes ./uninstall.sh
 ```
 
-The GUI launcher starts and supervises SuperCollider automatically:
+The GUI launcher starts and supervises SuperCollider automatically, starts the
+local web service when needed, and opens Gaia Scape in a native pywebview window:
 
 ```sh
 ./run_gaia_scape_gui.sh
 ```
+
+Closing the window stops the web service started by that window. If a Gaia Scape
+service is already listening on the configured port, the desktop app attaches to
+it and leaves it running. Window size and position can be overridden with
+`GAIA_SCAPE_GUI_WIDTH`, `GAIA_SCAPE_GUI_HEIGHT`, `GAIA_SCAPE_GUI_X`, and
+`GAIA_SCAPE_GUI_Y`.
 
 To select and remember a particular audio output, write its exact
 SuperCollider device name to `data/audio-device`. For example:

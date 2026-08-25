@@ -2,6 +2,124 @@ const byId = (id) => document.getElementById(id);
 let observedCueSequence = null;
 let cuePollInFlight = false;
 let observedHistorySignature = null;
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+
+const ROBINSON_X = [1, .9986, .9954, .99, .9822, .973, .96, .9427, .9216, .8962, .8679, .835, .7986, .7597, .7186, .6732, .6213, .5722, .5322];
+const ROBINSON_Y = [0, .062, .124, .186, .248, .31, .372, .434, .4958, .5571, .6176, .6769, .7346, .7903, .8435, .8936, .9394, .9761, 1];
+
+function interpolateRobinson(table, latitude) {
+  const position = Math.min(18, Math.abs(Number(latitude)) / 5);
+  const lower = Math.floor(position);
+  const upper = Math.min(18, lower + 1);
+  return table[lower] + ((table[upper] - table[lower]) * (position - lower));
+}
+
+function projectCoordinates(longitude, latitude) {
+  const safeLongitude = Math.max(-180, Math.min(180, Number(longitude) || 0));
+  const safeLatitude = Math.max(-90, Math.min(90, Number(latitude) || 0));
+  const xScale = interpolateRobinson(ROBINSON_X, safeLatitude);
+  const yScale = interpolateRobinson(ROBINSON_Y, safeLatitude);
+  return {
+    x: 512 + (443 * (safeLongitude / 180) * xScale),
+    y: 512 - (Math.sign(safeLatitude) * 290 * yScale),
+  };
+}
+
+function inverseProjectCoordinates(x, y) {
+  const normalizedY = Math.max(-1, Math.min(1, (512 - y) / 290));
+  const targetY = Math.abs(normalizedY);
+  let band = 0;
+  while (band < ROBINSON_Y.length - 2 && ROBINSON_Y[band + 1] < targetY) band += 1;
+  const span = ROBINSON_Y[band + 1] - ROBINSON_Y[band] || 1;
+  const latitude = Math.sign(normalizedY) * ((band + ((targetY - ROBINSON_Y[band]) / span)) * 5);
+  const xScale = interpolateRobinson(ROBINSON_X, latitude);
+  const longitude = ((x - 512) / (443 * xScale)) * 180;
+  return {latitude, longitude};
+}
+
+function createSvgElement(name, attributes = {}) {
+  const element = document.createElementNS(SVG_NAMESPACE, name);
+  Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
+  return element;
+}
+
+function mapPath(points) {
+  return points.map((point, index) => `${index ? "L" : "M"}${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
+}
+
+function renderMapGrid() {
+  const layer = byId("mapGridLayer");
+  const labels = byId("mapCoordinateLabels");
+  if (!layer || !labels) return;
+  for (let latitude = -60; latitude <= 60; latitude += 30) {
+    const points = [];
+    for (let longitude = -180; longitude <= 180; longitude += 4) points.push(projectCoordinates(longitude, latitude));
+    layer.append(createSvgElement("path", {d: mapPath(points), class: `map-grid-line${latitude === 0 ? " map-grid-equator" : ""}`}));
+    if (latitude !== 0) {
+      const position = projectCoordinates(-180, latitude);
+      const label = createSvgElement("text", {x: position.x - 8, y: position.y + 4, class: "map-coordinate-label", "text-anchor": "end"});
+      label.textContent = `${Math.abs(latitude)}°${latitude > 0 ? "N" : "S"}`;
+      labels.append(label);
+    }
+  }
+  for (let longitude = -180; longitude <= 180; longitude += 30) {
+    const points = [];
+    for (let latitude = -90; latitude <= 90; latitude += 3) points.push(projectCoordinates(longitude, latitude));
+    layer.append(createSvgElement("path", {d: mapPath(points), class: `map-grid-line${longitude === 0 ? " map-grid-prime" : ""}`}));
+    if (longitude % 60 === 0) {
+      const position = projectCoordinates(longitude, 0);
+      const label = createSvgElement("text", {x: position.x, y: 826, class: "map-coordinate-label", "text-anchor": "middle"});
+      label.textContent = longitude === 0 ? "0°" : `${Math.abs(longitude)}°${longitude > 0 ? "E" : "W"}`;
+      labels.append(label);
+    }
+  }
+}
+
+function updateMapBackgroundLocation(location, color = EVENT_PALETTES.ocean_swell[3]) {
+  const layer = byId("mapBackgroundLayer");
+  if (!layer) return;
+  layer.replaceChildren();
+  if (!location) return;
+  const position = projectCoordinates(location.longitude, location.latitude);
+  const ring = createSvgElement("circle", {cx: position.x, cy: position.y, r: 11, class: "map-background-marker", stroke: color});
+  ring.style.color = color;
+  const core = createSvgElement("circle", {cx: position.x, cy: position.y, r: 4, class: "map-background-core", fill: color});
+  const title = createSvgElement("title");
+  title.textContent = `${location.name || "Background sound"} · ${Number(location.latitude).toFixed(2)}, ${Number(location.longitude).toFixed(2)}`;
+  ring.append(title);
+  layer.append(ring, core);
+}
+
+function renderMapHistory(events) {
+  const layer = byId("mapHistoryLayer");
+  if (!layer) return;
+  layer.replaceChildren();
+  events.slice().reverse().forEach((event) => {
+    const position = projectCoordinates(event.longitude, event.latitude);
+    const colors = eventColors(event, event.instrument);
+    const marker = createSvgElement("circle", {cx: position.x, cy: position.y, r: 3.7, class: "map-history-marker", fill: colors.primary});
+    const title = createSvgElement("title");
+    title.textContent = `${event.traits?.place || event.kind} · ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`;
+    marker.append(title);
+    layer.append(marker);
+  });
+}
+
+function animateMapEvent(event, instrument, role, animationDuration) {
+  const layer = byId("mapPulseLayer");
+  if (!layer) return;
+  const colors = eventColors(event, instrument);
+  const position = projectCoordinates(event.longitude, event.latitude);
+  const group = createSvgElement("g", {class: `map-cue map-cue--${role}`});
+  const pulse = createSvgElement("circle", {cx: position.x, cy: position.y, r: role === "background" ? 10 : 7, class: "map-cue-pulse", stroke: colors.primary});
+  const core = createSvgElement("circle", {cx: position.x, cy: position.y, r: role === "background" ? 5 : 4, class: "map-cue-core", fill: colors.primary});
+  pulse.style.setProperty("--map-pulse-duration", `${animationDuration}s`);
+  pulse.style.setProperty("--map-pulse-scale", role === "background" ? "3.1" : "2.8");
+  group.append(pulse, core);
+  layer.append(group);
+  if (role === "background") updateMapBackgroundLocation({name: event.traits?.place || "", latitude: event.latitude, longitude: event.longitude}, colors.primary);
+  setTimeout(() => group.remove(), (animationDuration * 1000) + 400);
+}
 
 function applyLiveMode(mode) {
   const continuous = mode === "continuous";
@@ -37,6 +155,7 @@ function updateSoundLocation(location) {
     : "—";
   byId("backgroundSoundsStatus").textContent = locationText;
   byId("backgroundSoundsStatus").title = locationText === "—" ? "" : locationText;
+  updateMapBackgroundLocation(location);
 }
 
 const EVENT_PALETTES = {
@@ -67,11 +186,13 @@ function cueRole(cue) {
 }
 
 function animateCapturedEvent(event, instrument = "", role = "event", cueDuration = 3.6, volume = 1) {
-  const layer = byId("eventPulseLayer");
-  if (!layer) return;
   const animationDuration = role === "background"
     ? Math.max(3.6, Number(cueDuration) || 3.6)
     : 3.6;
+  animateMapEvent(event, instrument, role, animationDuration);
+  if (!byId("mapView")?.hidden) return;
+  const layer = byId("eventPulseLayer");
+  if (!layer) return;
   const longitude = Number(event?.longitude ?? 0);
   const latitude = Number(event?.latitude ?? 0);
   const magnitude = Number(event?.traits?.magnitude ?? 2);
@@ -114,8 +235,6 @@ async function updateStatus() {
     const eventSounds = (status.cues.latest_event_sounds || []).map(instrumentLabel).join(" + ") || "—";
     byId("eventSoundsStatus").textContent = eventSounds;
     byId("eventSoundsStatus").title = eventSounds === "—" ? "" : eventSounds;
-    byId("systemPulse").classList.add("online");
-    byId("systemPulse").querySelector("strong").textContent = status.capture.last_error ? "Capture warning" : "Online";
     const continuous = status.live.mode === "continuous";
     byId("liveMode").value = status.live.mode;
     applyLiveMode(status.live.mode);
@@ -127,8 +246,6 @@ async function updateStatus() {
     if (status.capture.last_error) message(status.capture.last_error, true);
     if (historyChanged) await updateEvents();
   } catch (error) {
-    byId("systemPulse").classList.remove("online");
-    byId("systemPulse").querySelector("strong").textContent = "Unavailable";
     message(error.message, true);
   }
 }
@@ -167,6 +284,7 @@ async function updateEvents() {
     const hours = Number(byId("hours").value);
     const payload = await request(`/api/events?hours=${encodeURIComponent(hours)}&limit=100`);
     const events = payload.events;
+    renderMapHistory(events);
     byId("eventList").innerHTML = events.length ? events.map((event) => {
       const summary = eventSummary(event);
       const place = event.traits.place || `${event.latitude.toFixed(2)}, ${event.longitude.toFixed(2)}`;
@@ -272,6 +390,73 @@ byId("liveMode").addEventListener("change", async (event) => {
 applyLiveMode(byId("liveMode").value);
 
 byId("hours").addEventListener("change", updateEvents);
+
+const appViewButtons = Array.from(document.querySelectorAll("[data-app-view-button]"));
+const appViews = Array.from(document.querySelectorAll("[data-app-view]"));
+
+function activateAppView(name) {
+  appViewButtons.forEach((button) => {
+    const active = button.dataset.appViewButton === name;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  appViews.forEach((view) => { view.hidden = view.dataset.appView !== name; });
+  document.body.dataset.appView = name;
+}
+
+appViewButtons.forEach((button) => {
+  button.addEventListener("click", () => activateAppView(button.dataset.appViewButton));
+});
+
+const worldMap = byId("worldMap");
+if (worldMap) {
+  renderMapGrid();
+  worldMap.addEventListener("pointermove", (event) => {
+    const point = worldMap.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    const mapPoint = point.matrixTransform(worldMap.getScreenCTM().inverse());
+    const normalized = (((mapPoint.x - 512) / 443) ** 2) + (((mapPoint.y - 512) / 290) ** 2);
+    const readout = byId("mapCoordinateReadout");
+    if (normalized > 1) {
+      readout.textContent = "Outside mapped coordinates";
+      return;
+    }
+    const coordinates = inverseProjectCoordinates(mapPoint.x, mapPoint.y);
+    readout.textContent = `${Math.abs(coordinates.latitude).toFixed(2)}°${coordinates.latitude >= 0 ? "N" : "S"} · ${Math.abs(coordinates.longitude).toFixed(2)}°${coordinates.longitude >= 0 ? "E" : "W"}`;
+  });
+  worldMap.addEventListener("pointerleave", () => { byId("mapCoordinateReadout").textContent = "Move over the map to inspect coordinates"; });
+}
+
+const workspaceTabs = Array.from(document.querySelectorAll("[data-workspace-tab]"));
+const workspacePanes = Array.from(document.querySelectorAll("[data-workspace-pane]"));
+
+function activateWorkspacePane(name, focusTab = false) {
+  workspaceTabs.forEach((tab) => {
+    const active = tab.dataset.workspaceTab === name;
+    tab.classList.toggle("is-active", active);
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+    if (active && focusTab) tab.focus();
+  });
+  workspacePanes.forEach((pane) => {
+    const active = pane.dataset.workspacePane === name;
+    pane.classList.toggle("is-active", active);
+    pane.hidden = !active;
+  });
+}
+
+workspaceTabs.forEach((tab, index) => {
+  tab.addEventListener("click", () => activateWorkspacePane(tab.dataset.workspaceTab));
+  tab.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    let next = event.key === "Home" ? 0 : event.key === "End" ? workspaceTabs.length - 1 : index;
+    if (event.key === "ArrowLeft") next = (index - 1 + workspaceTabs.length) % workspaceTabs.length;
+    if (event.key === "ArrowRight") next = (index + 1) % workspaceTabs.length;
+    activateWorkspacePane(workspaceTabs[next].dataset.workspaceTab, true);
+  });
+});
 
 const settingsDialog = byId("settingsDialog");
 const settingsForm = byId("settingsForm");

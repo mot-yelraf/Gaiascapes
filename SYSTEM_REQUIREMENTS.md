@@ -7,6 +7,19 @@ Gaia Scape supports macOS, Linux, and Raspberry Pi OS.
 - Python 3.10 or newer, including `venv` and `pip` support.
 - Internet access during installation and for environmental data feeds.
 
+## Desktop window
+
+The native desktop launcher uses pywebview. macOS supplies its web view through
+the operating system. On Debian, Ubuntu, and Raspberry Pi OS, install the GTK 3
+and WebKitGTK bindings:
+
+```sh
+sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+```
+
+The browser-accessible web UI and headless service continue to work without
+these desktop-window packages.
+
 ## Audio
 
 SuperCollider is required for sound output but not for capture, history, or the web UI.
@@ -24,7 +37,7 @@ On Debian-family systems:
 
 ```sh
 sudo apt update
-sudo apt install python3 python3-venv supercollider
+sudo apt install python3 python3-venv python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 supercollider
 ```
 
 `install.sh` verifies Python and reports whether SuperCollider was detected.

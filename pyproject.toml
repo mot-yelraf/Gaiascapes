@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gaia-scape"
-version = "v0.26.236.43"
+version = "v0.26.236.54"
 description = "Turn live terrestrial events into generative musical performances."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,6 +16,7 @@ dependencies = [
   "jinja2>=3.1,<4.0",
   "astral>=3.2,<4.0",
   "netCDF4>=1.7,<2.0",
+  "pywebview>=5.4,<6.0",
 ]
 
 [project.optional-dependencies]
@@ -36,7 +37,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-gaia_scape_host = ["templates/*.html", "static/*.css", "static/*.js", "static/*.svg"]
+gaia_scape_host = ["templates/*.html", "static/*.css", "static/*.js", "static/*.svg", "static/*.png", "static/*.ico"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
