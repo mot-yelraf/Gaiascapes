@@ -7,6 +7,7 @@ platform-specific application identity and icon behavior where available.
 from __future__ import annotations
 
 import ctypes
+import importlib.metadata
 import os
 import plistlib
 import shutil
@@ -30,6 +31,10 @@ MACOS_APP_NAME = "Gaia Scape"
 MACOS_BUNDLE_IDENTIFIER = "earth.gaiascape.GaiaScape"
 MACOS_RELAUNCH_MARKER = "GAIA_SCAPE_MACOS_APP_RELAUNCHED"
 MACOS_HEADLESS_MARKER = "GAIA_SCAPE_HEADLESS"
+MACOS_LSREGISTER_PATH = Path(
+    "/System/Library/Frameworks/CoreServices.framework/Frameworks/"
+    "LaunchServices.framework/Support/lsregister"
+)
 DEFAULT_WINDOW_WIDTH = 1500
 DEFAULT_WINDOW_HEIGHT = 960
 DEFAULT_MIN_WIDTH = 960
@@ -62,6 +67,22 @@ def _should_relaunch_for_macos_identity() -> bool:
     return not _path_is_in_app_bundle(Path(sys.executable))
 
 
+def _macos_bundle_version() -> str:
+    """Return a three-component numeric version suitable for bundle metadata."""
+    try:
+        raw_version = importlib.metadata.version("gaia-scape").removeprefix("v")
+    except importlib.metadata.PackageNotFoundError:
+        return "1.0.0"
+    components = raw_version.split(".")
+    if len(components) == 4 and components[0] == "0":
+        components = components[1:]
+    if not components or len(components) > 3 or not all(
+        component.isdigit() for component in components
+    ):
+        return "1.0.0"
+    return ".".join(components)
+
+
 def _ensure_macos_app_bundle() -> Path:
     """Create or repair the lightweight bundle used for macOS process identity."""
     bundle_path = _macos_application_support_dir() / f"{MACOS_APP_NAME}.app"
@@ -84,13 +105,17 @@ def _ensure_macos_app_bundle() -> Path:
         shutil.copyfile(MACOS_ICON_PATH, temporary_icon)
         temporary_icon.replace(icon_path)
 
+    bundle_version = _macos_bundle_version()
     document = {
         "CFBundleDisplayName": MACOS_APP_NAME,
         "CFBundleName": MACOS_APP_NAME,
         "CFBundleExecutable": MACOS_APP_NAME,
         "CFBundleIdentifier": MACOS_BUNDLE_IDENTIFIER,
-        "CFBundleIconFile": icon_name,
+        "CFBundleIconFile": MACOS_ICON_PATH.stem,
+        "CFBundleInfoDictionaryVersion": "6.0",
         "CFBundlePackageType": "APPL",
+        "CFBundleShortVersionString": bundle_version,
+        "CFBundleVersion": bundle_version,
     }
     plist_data = plistlib.dumps(document, sort_keys=True)
     if not info_path.is_file() or info_path.read_bytes() != plist_data:
@@ -112,12 +137,36 @@ def _ensure_macos_app_bundle() -> Path:
     return executable_path
 
 
+def _register_macos_app_bundle(bundle_path: Path) -> None:
+    """Refresh LaunchServices metadata so system UI sees the current bundle icon."""
+    try:
+        completed = subprocess.run(
+            [str(MACOS_LSREGISTER_PATH), "-f", str(bundle_path)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError as exc:
+        print(
+            f"Gaia Scape could not register its macOS application bundle: {exc}",
+            file=sys.stderr,
+        )
+        return
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or f"exit status {completed.returncode}"
+        print(
+            f"Gaia Scape could not refresh its macOS application icon: {detail}",
+            file=sys.stderr,
+        )
+
+
 def relaunch_for_macos_app_identity() -> bool:
     """Replace this process with one launched through the Gaia Scape bundle."""
     if not _should_relaunch_for_macos_identity():
         return False
     try:
         executable_path = _ensure_macos_app_bundle()
+        _register_macos_app_bundle(executable_path.parents[2])
         environment = os.environ.copy()
         environment[MACOS_RELAUNCH_MARKER] = "1"
         package_root = str(Path(__file__).resolve().parents[1])

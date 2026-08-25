@@ -102,6 +102,7 @@ def test_macos_identity_bundle_contains_plist_icon_and_python_link(
     monkeypatch.setattr(
         desktop, "_macos_application_support_dir", lambda: tmp_path
     )
+    monkeypatch.setattr(desktop, "_macos_bundle_version", lambda: "26.237.15")
 
     executable = desktop._ensure_macos_app_bundle()
     bundle_path = tmp_path / "Gaia Scape.app"
@@ -113,8 +114,11 @@ def test_macos_identity_bundle_contains_plist_icon_and_python_link(
         "CFBundleName": "Gaia Scape",
         "CFBundleExecutable": "Gaia Scape",
         "CFBundleIdentifier": "earth.gaiascape.GaiaScape",
-        "CFBundleIconFile": "gaia-scape-desktop-icon.icns",
+        "CFBundleIconFile": "gaia-scape-desktop-icon",
+        "CFBundleInfoDictionaryVersion": "6.0",
         "CFBundlePackageType": "APPL",
+        "CFBundleShortVersionString": "26.237.15",
+        "CFBundleVersion": "26.237.15",
     }
     assert executable.is_symlink()
     assert os.readlink(executable) == sys.executable
@@ -135,6 +139,9 @@ def test_macos_identity_relaunch_uses_module_arguments_and_recursion_guard(
     monkeypatch.delenv(desktop.MACOS_HEADLESS_MARKER, raising=False)
     monkeypatch.setattr(desktop, "_ensure_macos_app_bundle", lambda: executable)
     monkeypatch.setattr(
+        desktop, "_register_macos_app_bundle", lambda path: calls.append(("register", path))
+    )
+    monkeypatch.setattr(
         desktop.os,
         "execve",
         lambda path, arguments, environment: calls.append(
@@ -143,7 +150,8 @@ def test_macos_identity_relaunch_uses_module_arguments_and_recursion_guard(
     )
 
     assert desktop.relaunch_for_macos_app_identity() is True
-    path, arguments, environment = calls[0]
+    assert calls[0] == ("register", executable.parents[2])
+    path, arguments, environment = calls[1]
     assert path == str(executable)
     assert arguments == [
         str(executable),
@@ -158,7 +166,29 @@ def test_macos_identity_relaunch_uses_module_arguments_and_recursion_guard(
 
     monkeypatch.setenv(desktop.MACOS_RELAUNCH_MARKER, "1")
     assert desktop.relaunch_for_macos_app_identity() is False
-    assert len(calls) == 1
+    assert len(calls) == 2
+
+
+def test_macos_identity_registers_bundle_with_launch_services(tmp_path, monkeypatch):
+    calls = []
+    bundle_path = tmp_path / "Gaia Scape.app"
+    monkeypatch.setattr(
+        desktop.subprocess,
+        "run",
+        lambda *args, **kwargs: (
+            calls.append((args, kwargs)),
+            SimpleNamespace(returncode=0, stderr=""),
+        )[1],
+    )
+
+    desktop._register_macos_app_bundle(bundle_path)
+
+    assert calls == [
+        (
+            ([str(desktop.MACOS_LSREGISTER_PATH), "-f", str(bundle_path)],),
+            {"check": False, "capture_output": True, "text": True},
+        )
+    ]
 
 
 @pytest.mark.parametrize(
