@@ -29,6 +29,12 @@ MAX_LIST_BYTES = 2 * 1024 * 1024
 MAX_GRANULE_BYTES = 8 * 1024 * 1024
 MAX_FLASHES_PER_GRANULE = 4
 SONIFICATION_SAMPLE_STRIDE = 1
+MAX_SONIFIED_FLASHES_PER_FIELD = 120
+GOES19_FALSE_ALARM_START = datetime(2026, 7, 17, tzinfo=timezone.utc).timestamp()
+GOES19_FALSE_ALARM_HOURS_UTC = range(15, 19)
+GOES19_ANOMALOUS_FLASH_COUNT = 1000
+GOES19_TROPICAL_LATITUDE = 30.0
+GOES19_TROPICAL_FRACTION = 0.65
 SATELLITES = (
     ("G19", "GOES-19", "noaa-goes19"),
     ("G18", "GOES-18", "noaa-goes18"),
@@ -153,6 +159,17 @@ def parse_glm_document(payload: bytes, object_key: str) -> tuple[GaiaEvent, ...]
                 )
             )
     events.sort(key=lambda event: (event.timestamp, event.event_id))
+    if _is_degraded_goes19_field(platform, events):
+        tropical_count = sum(
+            abs(event.latitude) <= GOES19_TROPICAL_LATITUDE for event in events
+        )
+        LOGGER.warning(
+            "NOAA GOES-19 GLM field quarantined: %d accepted flashes, "
+            "%d tropical, during documented false-alarm window",
+            len(events),
+            tropical_count,
+        )
+        return ()
     return tuple(events)
 
 
@@ -163,12 +180,40 @@ def count_glm_flashes(payload: bytes) -> int:
         return len(dimension) if dimension is not None else 0
 
 
-def select_sonification_events(events, stride: int = SONIFICATION_SAMPLE_STRIDE):
-    """Select every nth accepted flash without disturbing its observed timing."""
+def select_sonification_events(
+    events,
+    stride: int = SONIFICATION_SAMPLE_STRIDE,
+    maximum: int = MAX_SONIFIED_FLASHES_PER_FIELD,
+):
+    """Select chronological flashes at the requested stride and a safe field limit."""
     ordered = tuple(
         sorted(events, key=lambda event: (event.timestamp, event.event_id))
     )
-    return ordered[::max(1, int(stride))]
+    selected = ordered[::max(1, int(stride))]
+    maximum = max(1, int(maximum))
+    if len(selected) <= maximum:
+        return selected
+    if maximum == 1:
+        return (selected[0],)
+    return tuple(
+        selected[int(index * (len(selected) - 1) / (maximum - 1))]
+        for index in range(maximum)
+    )
+
+
+def _is_degraded_goes19_field(platform: str, events) -> bool:
+    if platform != "G19" or len(events) < GOES19_ANOMALOUS_FLASH_COUNT:
+        return False
+    observed = datetime.fromtimestamp(events[0].timestamp, timezone.utc)
+    if (
+        events[0].timestamp < GOES19_FALSE_ALARM_START
+        or observed.hour not in GOES19_FALSE_ALARM_HOURS_UTC
+    ):
+        return False
+    tropical_count = sum(
+        abs(event.latitude) <= GOES19_TROPICAL_LATITUDE for event in events
+    )
+    return tropical_count / len(events) >= GOES19_TROPICAL_FRACTION
 
 
 class NoaaGlmClient:
@@ -221,9 +266,20 @@ class NoaaGlmClient:
         self.last_granule_count = len(granules)
         self.last_raw_flash_count = raw_flash_count
         self.last_sampled_flash_count = len(sampled_events)
+        sonification_candidates = select_sonification_events(
+            sonification_events,
+            self.sonification_sample_stride,
+            maximum=max(1, len(sonification_events)),
+        )
         sonification_events = select_sonification_events(
             sonification_events, self.sonification_sample_stride
         )
+        if len(sonification_candidates) > len(sonification_events):
+            LOGGER.warning(
+                "NOAA GLM sonification safety limit: %d selected flashes reduced to %d",
+                len(sonification_candidates),
+                len(sonification_events),
+            )
         self.last_sonification_events = tuple(sonification_events)
         self.last_sonified_flash_count = len(sonification_events)
         self.last_granules = [PurePosixPath(key).name for key in granules]

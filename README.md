@@ -45,8 +45,10 @@ Optional Open-Meteo sources add:
 
 The NOAA GLM source is enabled during installation or one-time configuration
 migration. Each granule may contain hundreds of flashes, so Gaia records a bounded
-database sample while this experiment chronologically selects every quality-accepted
-flash for sound by default. When either lightning voice is selected, its unlabeled sample-rate
+database sample while this experiment chronologically selects quality-accepted
+flashes for sound. A field-wide ceiling distributes at most 120 cues across each
+20-second update so corrupt or exceptional satellite data cannot overwhelm the audio
+engine. When either lightning voice is selected, its unlabeled sample-rate
 slider can select every first through every eleventh flash. The saved setting applies
 to the lightning feed regardless of which event slot displays the voice. Those notes
 retain their original observed time gaps, preserving
@@ -58,6 +60,8 @@ from Environmental Event History, its Events count, and the Event Sounds status
 field. Live yellow-gold pulses still show their observed positions. The console and
 `/api/status` report granules, raw flashes, sampled flashes, inserts, and errors, for
 example: `NOAA GLM update: 2 granules, 534 raw flashes, 8 sampled, 8 new, 47 sonified`.
+Gaia also quarantines exceptionally dense tropical GOES-19 fields during NOAA's
+documented 15:00–19:00 UTC false-alarm window, active since July 17, 2026.
 
 Storm potential is not an observed lightning-flash feed. Marine values are
 model output and are not suitable for navigation. Open-Meteo marine data

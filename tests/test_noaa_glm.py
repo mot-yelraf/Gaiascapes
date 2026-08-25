@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 
 from netCDF4 import Dataset
 
+from gaia_scape.events import GaiaEvent
+from gaia_scape_host import noaa_glm
 from gaia_scape_host.noaa_glm import (
     NoaaGlmClient,
     count_glm_flashes,
@@ -101,8 +103,6 @@ def test_glm_client_starts_with_latest_granule_and_deduplicates(tmp_path):
 
 
 def test_sonification_selects_every_flash_in_timestamp_order():
-    from gaia_scape.events import GaiaEvent
-
     events = tuple(
         GaiaEvent("noaa_glm", str(index), "lightning_flash", 100 + index)
         for index in reversed(range(25))
@@ -117,3 +117,47 @@ def test_sonification_selects_every_flash_in_timestamp_order():
 
     every_seventh = select_sonification_events(events, 7)
     assert [event.event_id for event in every_seventh] == ["0", "7", "14", "21"]
+
+
+def test_sonification_evenly_limits_an_extreme_flash_field():
+    events = tuple(
+        GaiaEvent("noaa_glm", str(index), "lightning_flash", 100 + index)
+        for index in reversed(range(300))
+    )
+
+    selected = select_sonification_events(events)
+
+    assert len(selected) == 120
+    assert selected[0].event_id == "0"
+    assert selected[-1].event_id == "299"
+    assert all(
+        earlier.timestamp < later.timestamp
+        for earlier, later in zip(selected, selected[1:])
+    )
+
+
+def test_goes19_quarantine_requires_documented_anomaly_signature(monkeypatch):
+    monkeypatch.setattr(noaa_glm, "GOES19_ANOMALOUS_FLASH_COUNT", 3)
+    observed_at = datetime(2026, 8, 25, 15, 30, tzinfo=timezone.utc).timestamp()
+    tropical = tuple(
+        GaiaEvent(
+            "noaa_glm", str(index), "lightning_flash", observed_at,
+            latitude=-10 + index, longitude=-80,
+        )
+        for index in range(3)
+    )
+
+    assert noaa_glm._is_degraded_goes19_field("G19", tropical) is True
+    assert noaa_glm._is_degraded_goes19_field("G18", tropical) is False
+    outside_window = tuple(
+        GaiaEvent(
+            event.provider,
+            event.event_id,
+            event.kind,
+            datetime(2026, 8, 25, 20, 0, tzinfo=timezone.utc).timestamp(),
+            latitude=event.latitude,
+            longitude=event.longitude,
+        )
+        for event in tropical
+    )
+    assert noaa_glm._is_degraded_goes19_field("G19", outside_window) is False
