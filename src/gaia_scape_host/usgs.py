@@ -1,4 +1,8 @@
-"""USGS GeoJSON retrieval and provider normalization."""
+"""USGS GeoJSON retrieval and provider normalization.
+
+The client bounds network responses and translates valid earthquake features
+into stable Gaia events without coupling downstream code to USGS field names.
+"""
 
 from __future__ import annotations
 
@@ -94,4 +98,3 @@ class UsgsClient:
         if len(payload) > MAX_DOCUMENT_BYTES:
             raise ValueError("USGS response exceeds size limit")
         return parse_document(json.loads(payload.decode("utf-8")))
-

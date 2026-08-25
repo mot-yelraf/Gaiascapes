@@ -1,3 +1,9 @@
+"""Tests for NOAA GLM retrieval and normalization.
+
+Synthetic netCDF granules verify flash filtering, timestamps, deduplication,
+client bookkeeping, and configurable sonification sampling.
+"""
+
 from datetime import datetime, timezone
 
 from netCDF4 import Dataset
@@ -91,10 +97,10 @@ def test_glm_client_starts_with_latest_granule_and_deduplicates(tmp_path):
     assert client.last_granule_count == 1
     assert client.last_raw_flash_count == 3
     assert client.last_sampled_flash_count == 2
-    assert client.last_sonified_flash_count == 1
+    assert client.last_sonified_flash_count == 2
 
 
-def test_sonification_selects_every_eleventh_flash_in_timestamp_order():
+def test_sonification_selects_every_flash_in_timestamp_order():
     from gaia_scape.events import GaiaEvent
 
     events = tuple(
@@ -104,5 +110,10 @@ def test_sonification_selects_every_eleventh_flash_in_timestamp_order():
 
     selected = select_sonification_events(events)
 
-    assert [event.event_id for event in selected] == ["0", "11", "22"]
-    assert [event.timestamp for event in selected] == [100.0, 111.0, 122.0]
+    assert [event.event_id for event in selected] == [str(index) for index in range(25)]
+    assert [event.timestamp for event in selected] == [
+        100.0 + index for index in range(25)
+    ]
+
+    every_seventh = select_sonification_events(events, 7)
+    assert [event.event_id for event in every_seventh] == ["0", "7", "14", "21"]

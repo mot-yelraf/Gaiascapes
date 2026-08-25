@@ -1,4 +1,8 @@
-"""Application orchestration for capture, history, and performance."""
+"""Application orchestration for capture, history, and performance.
+
+The service coordinates independent providers, persistent event history,
+continuous sound layers, live cues, replay scheduling, and status reporting.
+"""
 
 from __future__ import annotations
 
@@ -49,6 +53,7 @@ class GaiaScapeService:
         self.marine = marine_client or OpenMeteoMarineClient()
         self.storm = storm_client or OpenMeteoStormClient()
         self.glm = glm_client or NoaaGlmClient()
+        self.glm.sonification_sample_stride = config.lightning_sample_rate
         self.renderer = OscRenderer(
             config.osc_host,
             config.osc_port,
@@ -436,12 +441,14 @@ class GaiaScapeService:
         event_instruments,
         units: str | None = None,
         instrument_volumes=None,
+        lightning_sample_rate=None,
     ) -> None:
         """Apply validated capture and instrument settings to live components."""
         previous_sources = self.config.enabled_sources
         previous_instruments = self.config.event_instruments
         previous_units = self.config.units
         previous_volumes = self.config.instrument_volumes
+        previous_lightning_sample_rate = self.config.lightning_sample_rate
         try:
             self.config.enabled_sources = list(enabled_sources)
             self.config.event_instruments = dict(event_instruments)
@@ -449,13 +456,17 @@ class GaiaScapeService:
                 self.config.units = units
             if instrument_volumes is not None:
                 self.config.instrument_volumes = dict(instrument_volumes)
+            if lightning_sample_rate is not None:
+                self.config.lightning_sample_rate = lightning_sample_rate
             self.config.validate()
         except (TypeError, ValueError):
             self.config.enabled_sources = previous_sources
             self.config.event_instruments = previous_instruments
             self.config.units = previous_units
             self.config.instrument_volumes = previous_volumes
+            self.config.lightning_sample_rate = previous_lightning_sample_rate
             raise
+        self.glm.sonification_sample_stride = self.config.lightning_sample_rate
         self.renderer.instrument_mappings = self.config.background_mappings()
         for kind in ("ocean_swell", "storm_potential"):
             if self.renderer.instrument_mappings[kind] != kind:
@@ -475,8 +486,8 @@ class GaiaScapeService:
             "earthquake": (18.0, -35.0, 0.875, 6.0, 12.0, "Earthquake preview"),
             "ocean_swell": (-17.86, -149.28, 0.7, 4.2, 14.0, "Ocean swell preview"),
             "tide_turn": (39.60, -9.09, 0.55, 0.9, 0.0, "High tide preview"),
-            "lightning_flash": (-31.95, 115.86, 0.82, 5.4, 18.0, "Lightning preview"),
-            "storm_potential": (1.0, 35.0, 0.8, 2.4, 75.0, "Storm potential preview"),
+            "lightning_flash": (-31.95, 115.86, 0.82, 5.4, 18.0, "Lightning R2D2 preview"),
+            "storm_potential": (1.0, 35.0, 0.8, 2.4, 75.0, "Storm Outlook preview"),
         }
         latitude, longitude, strength, magnitude, depth, place = examples[kind]
         event = GaiaEvent(
@@ -489,7 +500,7 @@ class GaiaScapeService:
             strength=strength,
             traits={"magnitude": magnitude, "depth_km": depth, "place": place},
         )
-        preview_pitch = 54 if kind == "lightning_flash" else 50
+        preview_pitch = 42 if kind == "lightning_flash" else 50
         cue = ScoreCue(
             0, event, pitch=preview_pitch, velocity=116, duration=2.4, pan=0.0
         )

@@ -1,4 +1,8 @@
-"""Asynchronous score playback lifecycle."""
+"""Asynchronous score playback lifecycle.
+
+Playback schedules renderer-neutral cues against a monotonic clock, supports
+cancellation, and reports lightweight progress to the host service.
+"""
 
 from __future__ import annotations
 
@@ -40,6 +44,7 @@ class PerformancePlayer:
 
     @property
     def running(self) -> bool:
+        """Report whether a score playback task is currently active."""
         return self._task is not None and not self._task.done()
 
     async def start(self, score) -> None:
@@ -101,6 +106,7 @@ class PerformancePlayer:
         return tuple(voices)
 
     def status(self) -> dict:
+        """Return playback lifecycle, cue counts, and the latest error."""
         return {
             "running": self.running,
             "started_at": self.started_at,

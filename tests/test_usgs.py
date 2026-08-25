@@ -1,3 +1,9 @@
+"""Tests for USGS earthquake normalization.
+
+Representative GeoJSON features verify validation, ordering, strength bounds,
+and preservation of provider magnitude and location metadata.
+"""
+
 from gaia_scape_host.usgs import normalized_strength, parse_document
 
 
@@ -34,4 +40,3 @@ def test_parse_document_normalizes_valid_features_and_sorts():
 def test_magnitude_strength_is_bounded_but_raw_value_is_preserved():
     assert normalized_strength(-20) == (0.0, -20.0)
     assert normalized_strength(20) == (1.0, 20.0)
-

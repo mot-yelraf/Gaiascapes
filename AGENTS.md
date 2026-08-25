@@ -17,3 +17,49 @@
 - Run `python -m pytest -q` and `python -m compileall -q src tests` after code
   changes.
 - Version runtime changes in `pyproject.toml` using `v0.<yy>.<doy>.<patch>`.
+
+## Code Generation Rules
+
+- Keep edits minimal, targeted, and easy to review.
+- Do not reformat unrelated code.
+- Prefer clear, explicit naming over abstraction for its own sake.
+- Keep modules cohesive and avoid deep or circular import chains.
+- Prefer the Python standard library unless a dependency is clearly justified.
+- Avoid heavy dependencies unless necessary.
+- Prefer explicit error handling and clear operator-visible failures over
+  layered silent fallbacks.
+- Add concise docstrings to module level with explanatory paragraph after the concise description.
+- Add concise docstrings to public classes and functions when touching public
+  interfaces.
+- Do not add noisy logging in hot paths.
+
+
+## Safety Rules
+
+- Do not run destructive commands without explicit user request.
+- Prefer idempotent operations.
+- Avoid broad search-and-replace edits unless the task specifically requires
+  them.
+- Treat settings materialization, normalized metric names, SQLite persistence,
+  and gateway polling behavior as compatibility-sensitive.
+- Surface major concurrency or storage refactors before implementation.
+
+## Versioning Rule
+
+When you make a code content change, update the canonical `__version__` in
+`caelus/__init__.py` using:
+
+```text
+v0.<year>.<doy>.<x>
+```
+
+- `<year>`: 2-digit year.
+- `<doy>`: 3-digit day of year.
+- `<x>`: per-day incrementing patch counter.
+
+If the date matches today, increment `<x>` by 1. If the date has changed,
+reset `<x>` to `1`.
+
+Documentation-only changes, including edits to this file, do not require a
+version bump.
+

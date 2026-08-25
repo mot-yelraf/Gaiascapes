@@ -1,4 +1,10 @@
-"""Convert normalized Earth events into time-scaled musical cues."""
+"""Convert normalized Earth events into time-scaled musical cues.
+
+Mapping functions translate event time, geography, and strength into a
+renderer-neutral score while preserving the source events for attribution.
+"""
+
+LIGHTNING_OCTAVE_SHIFT = -12
 
 
 class ScoreCue:
@@ -48,7 +54,7 @@ def longitude_to_pan(longitude):
 
 
 def _lightning_pitch(event, geographic_pitch, note_max):
-    """Give individual flashes a higher, deterministic pentatonic contour."""
+    """Give individual flashes a lower, deterministic pentatonic contour."""
     scale = (0, 2, 4, 7, 9)
     try:
         identity = int(event.traits.get("flash_id"))
@@ -62,7 +68,7 @@ def _lightning_pitch(event, geographic_pitch, note_max):
     interval = 4 + scale[
         (identity + energy_step + longitude_step + satellite_step) % len(scale)
     ]
-    return min(int(note_max) + 8, geographic_pitch + interval)
+    return min(int(note_max) + 8, geographic_pitch + interval) + LIGHTNING_OCTAVE_SHIFT
 
 
 def build_score(

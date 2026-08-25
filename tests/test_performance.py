@@ -1,3 +1,9 @@
+"""Tests for asynchronous performance helpers.
+
+The focused coverage ensures per-slot gain changes renderer amplitude without
+altering the musical identity or timing of a score cue.
+"""
+
 from gaia_scape.events import GaiaEvent
 from gaia_scape.score import ScoreCue
 from gaia_scape_host.performance import cue_with_gain

@@ -1,3 +1,9 @@
+"""Tests for command-line and native desktop launch behavior.
+
+The suite verifies quiet server startup, packaged icons, process ownership,
+health probing, and platform-specific desktop integration.
+"""
+
 import sys
 import struct
 import zlib

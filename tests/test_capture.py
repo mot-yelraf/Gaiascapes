@@ -1,3 +1,9 @@
+"""Tests for SQLite event capture and history behavior.
+
+The cases cover chronological retrieval, deduplication, retention pruning,
+and migration from the legacy event-table schema.
+"""
+
 from gaia_scape.events import GaiaEvent
 from gaia_scape_host.capture import EventStore
 

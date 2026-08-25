@@ -1,4 +1,8 @@
-"""Write a path-safe macOS LaunchAgent plist for the installer."""
+"""Write a path-safe macOS LaunchAgent plist for the installer.
+
+The installer invokes this helper with resolved paths so plist serialization
+does not depend on fragile shell escaping.
+"""
 
 from __future__ import annotations
 
@@ -18,4 +22,3 @@ document = {
 }
 with destination.open("wb") as output:
     plistlib.dump(document, output)
-

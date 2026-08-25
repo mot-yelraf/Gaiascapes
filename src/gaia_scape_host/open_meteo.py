@@ -1,4 +1,8 @@
-"""Open-Meteo marine and forecast normalization."""
+"""Open-Meteo marine and forecast normalization.
+
+Provider clients retrieve modeled ocean, tide, and convective conditions from
+global sampling locations and normalize useful observations into Gaia events.
+"""
 
 from __future__ import annotations
 
@@ -219,6 +223,7 @@ class _OpenMeteoClient:
         self.timeout = float(timeout)
 
     def fetch(self):
+        """Retrieve and normalize one forecast update for all locations."""
         parameters = urllib.parse.urlencode(
             {
                 "latitude": ",".join(str(item[2]) for item in self.locations),
@@ -242,6 +247,8 @@ class _OpenMeteoClient:
 
 
 class OpenMeteoMarineClient(_OpenMeteoClient):
+    """Retrieve modeled swell and tide conditions from Open-Meteo Marine."""
+
     def __init__(self, url=MARINE_URL, timeout=20.0):
         super().__init__(
             url,
@@ -259,6 +266,8 @@ class OpenMeteoMarineClient(_OpenMeteoClient):
 
 
 class OpenMeteoStormClient(_OpenMeteoClient):
+    """Retrieve global convective forecasts from Open-Meteo Weather."""
+
     def __init__(self, url=WEATHER_URL, timeout=20.0):
         super().__init__(
             url,

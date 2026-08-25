@@ -1,4 +1,8 @@
-"""Write a path-safe user-level systemd service for the installer."""
+"""Write a path-safe user-level systemd service for the installer.
+
+The installer supplies resolved runtime paths and this helper safely encodes
+them into a service unit for the current user.
+"""
 
 from __future__ import annotations
 

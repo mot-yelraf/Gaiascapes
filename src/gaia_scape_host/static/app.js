@@ -47,6 +47,28 @@ function mapPath(points) {
   return points.map((point, index) => `${index ? "L" : "M"}${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
 }
 
+function mapProjectionBoundary() {
+  const points = [];
+  for (let latitude = -90; latitude <= 90; latitude += 2) points.push(projectCoordinates(180, latitude));
+  for (let latitude = 90; latitude >= -90; latitude -= 2) points.push(projectCoordinates(-180, latitude));
+  return `${mapPath(points)} Z`;
+}
+
+function renderMapProjection() {
+  const boundary = mapProjectionBoundary();
+  ["mapGlobeClipPath", "mapGlowPath", "mapOceanPath"].forEach((id) => {
+    byId(id)?.setAttribute("d", boundary);
+  });
+}
+
+function mapContainsPoint(x, y) {
+  const normalizedY = (512 - Number(y)) / 290;
+  if (Math.abs(normalizedY) > 1) return false;
+  const latitude = inverseProjectCoordinates(512, y).latitude;
+  const halfWidth = 443 * interpolateRobinson(ROBINSON_X, latitude);
+  return Math.abs(Number(x) - 512) <= halfWidth;
+}
+
 function renderMapGrid() {
   const layer = byId("mapGridLayer");
   const labels = byId("mapCoordinateLabels");
@@ -75,6 +97,15 @@ function renderMapGrid() {
   }
 }
 
+function mapMarkerTitle(event) {
+  const place = event.traits?.place || event.kind;
+  const magnitude = Number(event.traits?.magnitude);
+  const magnitudeText = event.kind === "earthquake" && Number.isFinite(magnitude)
+    ? ` · M${magnitude.toFixed(1)}`
+    : "";
+  return `${place}${magnitudeText} · ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`;
+}
+
 function updateMapBackgroundLocation(location, color = EVENT_PALETTES.ocean_swell[3]) {
   const layer = byId("mapBackgroundLayer");
   if (!layer) return;
@@ -99,7 +130,7 @@ function renderMapHistory(events) {
     const colors = eventColors(event, event.instrument);
     const marker = createSvgElement("circle", {cx: position.x, cy: position.y, r: 3.7, class: "map-history-marker", fill: colors.primary});
     const title = createSvgElement("title");
-    title.textContent = `${event.traits?.place || event.kind} · ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`;
+    title.textContent = mapMarkerTitle(event);
     marker.append(title);
     layer.append(marker);
   });
@@ -113,9 +144,11 @@ function animateMapEvent(event, instrument, role, animationDuration) {
   const group = createSvgElement("g", {class: `map-cue map-cue--${role}`});
   const pulse = createSvgElement("circle", {cx: position.x, cy: position.y, r: role === "background" ? 10 : 7, class: "map-cue-pulse", stroke: colors.primary});
   const core = createSvgElement("circle", {cx: position.x, cy: position.y, r: role === "background" ? 5 : 4, class: "map-cue-core", fill: colors.primary});
+  const title = createSvgElement("title");
+  title.textContent = mapMarkerTitle(event);
   pulse.style.setProperty("--map-pulse-duration", `${animationDuration}s`);
   pulse.style.setProperty("--map-pulse-scale", role === "background" ? "3.1" : "2.8");
-  group.append(pulse, core);
+  group.append(title, pulse, core);
   layer.append(group);
   if (role === "background") updateMapBackgroundLocation({name: event.traits?.place || "", latitude: event.latitude, longitude: event.longitude}, colors.primary);
   setTimeout(() => group.remove(), (animationDuration * 1000) + 400);
@@ -156,6 +189,16 @@ function updateSoundLocation(location) {
   byId("backgroundSoundsStatus").textContent = locationText;
   byId("backgroundSoundsStatus").title = locationText === "—" ? "" : locationText;
   updateMapBackgroundLocation(location);
+}
+
+function backgroundSoundLabel(instrument) {
+  if (instrument === "ocean_swell") return "Ocean Swells";
+  if (instrument === "storm_potential") return "Storm Outlook";
+  return "Background Sounds";
+}
+
+function updateBackgroundSoundsTitle(instrument) {
+  byId("backgroundSoundsTitle").textContent = backgroundSoundLabel(instrument);
 }
 
 const EVENT_PALETTES = {
@@ -302,6 +345,9 @@ async function updateEvents() {
 
 function instrumentLabel(instrument) {
   if (instrument === "seismic_bells") return "Seismic Bell";
+  if (instrument === "lightning_glass") return "Lightning R2D2";
+  if (instrument === "ocean_swell") return "Ocean Swells";
+  if (instrument === "storm_potential") return "Storm Outlook";
   if (instrument === "none") return "No instrument";
   return String(instrument || "Unassigned").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -324,7 +370,7 @@ function eventSummary(event) {
     return {badge: state, detail: `${level.toFixed(2)}${levelUnit} modeled sea level`};
   }
   if (event.kind === "storm_potential") {
-    return {badge: "CAPE", detail: `${Number(traits.cape_jkg ?? 0).toFixed(0)} J/kg forecast storm potential`};
+    return {badge: "CAPE", detail: `${Number(traits.cape_jkg ?? 0).toFixed(0)} J/kg Storm Outlook forecast`};
   }
   if (event.kind === "lightning_flash") {
     const area = Number(traits.flash_area_km2 ?? 0);
@@ -393,32 +439,55 @@ byId("hours").addEventListener("change", updateEvents);
 
 const appViewButtons = Array.from(document.querySelectorAll("[data-app-view-button]"));
 const appViews = Array.from(document.querySelectorAll("[data-app-view]"));
+const APP_VIEW_STORAGE_KEY = "gaia-scape-app-view";
 
-function activateAppView(name) {
+function savedAppView() {
+  try {
+    const name = window.localStorage.getItem(APP_VIEW_STORAGE_KEY);
+    return appViews.some((view) => view.dataset.appView === name) ? name : "dashboard";
+  } catch (_error) {
+    return "dashboard";
+  }
+}
+
+function saveAppView(name) {
+  try {
+    window.localStorage.setItem(APP_VIEW_STORAGE_KEY, name);
+  } catch (_error) {
+    // The view still works when storage is disabled or unavailable.
+  }
+}
+
+function activateAppView(name, persist = false) {
+  const selectedName = appViews.some((view) => view.dataset.appView === name)
+    ? name
+    : "dashboard";
   appViewButtons.forEach((button) => {
-    const active = button.dataset.appViewButton === name;
+    const active = button.dataset.appViewButton === selectedName;
     button.classList.toggle("is-active", active);
     button.setAttribute("aria-pressed", String(active));
   });
-  appViews.forEach((view) => { view.hidden = view.dataset.appView !== name; });
-  document.body.dataset.appView = name;
+  appViews.forEach((view) => { view.hidden = view.dataset.appView !== selectedName; });
+  document.body.dataset.appView = selectedName;
+  if (persist) saveAppView(selectedName);
 }
 
 appViewButtons.forEach((button) => {
-  button.addEventListener("click", () => activateAppView(button.dataset.appViewButton));
+  button.addEventListener("click", () => activateAppView(button.dataset.appViewButton, true));
 });
+activateAppView(savedAppView());
 
 const worldMap = byId("worldMap");
 if (worldMap) {
+  renderMapProjection();
   renderMapGrid();
   worldMap.addEventListener("pointermove", (event) => {
     const point = worldMap.createSVGPoint();
     point.x = event.clientX;
     point.y = event.clientY;
     const mapPoint = point.matrixTransform(worldMap.getScreenCTM().inverse());
-    const normalized = (((mapPoint.x - 512) / 443) ** 2) + (((mapPoint.y - 512) / 290) ** 2);
     const readout = byId("mapCoordinateReadout");
-    if (normalized > 1) {
+    if (!mapContainsPoint(mapPoint.x, mapPoint.y)) {
       readout.textContent = "Outside mapped coordinates";
       return;
     }
@@ -526,6 +595,27 @@ if (settingsDialog && settingsForm) {
     slider.addEventListener("input", updateVolumeLabel);
     updateVolumeLabel();
   });
+  const lightningSampleSliders = Array.from(
+    settingsDialog.querySelectorAll("[data-lightning-sample-rate]")
+  );
+  const syncLightningSampleRate = (value) => {
+    lightningSampleSliders.forEach((slider) => {
+      slider.value = value;
+      slider.parentElement.querySelector("output").textContent = value;
+    });
+  };
+  lightningSampleSliders.forEach((slider) => {
+    slider.addEventListener("input", () => syncLightningSampleRate(slider.value));
+  });
+  ["event1Instrument", "event2Instrument", "event3Instrument"].forEach((selectId) => {
+    const select = byId(selectId);
+    const control = select.parentElement.querySelector("[data-lightning-sample-control]");
+    const updateSampleRateVisibility = () => {
+      control.hidden = select.value !== "lightning_glass";
+    };
+    select.addEventListener("change", updateSampleRateVisibility);
+    updateSampleRateVisibility();
+  });
   settingsDialog.querySelectorAll(".preview-instrument-button").forEach((button) => {
     const instrumentSelect = byId(button.dataset.select);
     const updatePreviewState = () => { button.disabled = instrumentSelect.value === "none"; };
@@ -551,7 +641,7 @@ if (settingsDialog && settingsForm) {
             volume: Number(byId(button.dataset.volume).value) / 100,
           }),
         });
-        status.textContent = "Previewed " + payload.instrument.replaceAll("_", " ") + ".";
+        status.textContent = "Previewed " + instrumentLabel(payload.instrument) + ".";
         await Promise.all([updateStatus(), updateEvents()]);
       } catch (error) {
         status.textContent = error.message;
@@ -561,6 +651,10 @@ if (settingsDialog && settingsForm) {
       }
     });
   });
+  byId("backgroundInstrument").addEventListener("change", (event) => {
+    updateBackgroundSoundsTitle(event.target.value);
+  });
+  updateBackgroundSoundsTitle(byId("backgroundInstrument").value);
   byId("displayUnits").addEventListener("change", updateEvents);
   settingsForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -589,6 +683,7 @@ if (settingsDialog && settingsForm) {
             event_3: Number(byId("event3Volume").value) / 100,
             background: Number(byId("backgroundVolume").value) / 100,
           },
+          lightning_sample_rate: Number(lightningSampleSliders[0].value),
           units: byId("displayUnits").value,
         }),
       });

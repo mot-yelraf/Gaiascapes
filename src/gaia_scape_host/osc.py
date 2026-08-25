@@ -1,4 +1,8 @@
-"""Minimal Open Sound Control encoder and UDP renderer."""
+"""Minimal Open Sound Control encoder and UDP renderer.
+
+The renderer translates neutral score cues and persistent layers into the
+small OSC message surface understood by the optional SuperCollider process.
+"""
 
 from __future__ import annotations
 

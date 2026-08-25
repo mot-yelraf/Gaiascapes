@@ -1,4 +1,8 @@
-"""Provider-independent terrestrial event representation."""
+"""Provider-independent terrestrial event representation.
+
+Normalized events provide the stable boundary between external Earth-data
+providers, local persistence, score construction, and visual presentation.
+"""
 
 
 class GaiaEvent:
@@ -47,4 +51,3 @@ class GaiaEvent:
             "strength": self.strength,
             "traits": dict(self.traits),
         }
-

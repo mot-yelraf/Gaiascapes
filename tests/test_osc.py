@@ -1,3 +1,9 @@
+"""Tests for OSC encoding and renderer behavior.
+
+The cases verify byte-aligned messages, cue routing, disabled instruments,
+and lifecycle messages for persistent background layers.
+"""
+
 import socket
 import struct
 

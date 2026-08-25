@@ -1,4 +1,8 @@
-"""Runtime configuration and installed-data path handling."""
+"""Runtime configuration and installed-data path handling.
+
+Configuration loading migrates older installations, validates user settings,
+applies supported environment overrides, and saves state beside runtime data.
+"""
 
 from __future__ import annotations
 
@@ -54,7 +58,7 @@ SUPPORTED_INSTRUMENTS = tuple(
 class AppConfig:
     """Validated runtime settings stored alongside application data."""
 
-    config_revision: int = 3
+    config_revision: int = 4
     http_host: str = "0.0.0.0"
     http_port: int = 8768
     usgs_url: str = DEFAULT_USGS_URL
@@ -75,6 +79,7 @@ class AppConfig:
     instrument_volumes: dict[str, float] = field(
         default_factory=lambda: dict(DEFAULT_INSTRUMENT_VOLUMES)
     )
+    lightning_sample_rate: int = 1
 
     @classmethod
     def load(cls, path: Path) -> "AppConfig":
@@ -91,8 +96,8 @@ class AppConfig:
             if int(document.get("config_revision", 0)) < 2:
                 if "noaa_glm" not in config.enabled_sources:
                     config.enabled_sources.append("noaa_glm")
-            if int(document.get("config_revision", 0)) < 3:
-                config.config_revision = 3
+            if int(document.get("config_revision", 0)) < 4:
+                config.config_revision = 4
             config._migrate_legacy_instruments()
             # v0.26.236.36 lengthened the original, non-user-facing default.
             if document.get("continuous_interval_seconds") in {12, 12.0}:
@@ -115,7 +120,7 @@ class AppConfig:
     def validate(self) -> None:
         """Normalize values and reject unsafe ranges."""
         self.http_host = str(self.http_host).strip() or "0.0.0.0"
-        self.config_revision = max(3, int(self.config_revision))
+        self.config_revision = max(4, int(self.config_revision))
         self.osc_host = str(self.osc_host).strip() or "127.0.0.1"
         self.usgs_url = str(self.usgs_url).strip()
         if not self.usgs_url.startswith("https://"):
@@ -145,6 +150,9 @@ class AppConfig:
             raise ValueError("Event instrument mappings must be an object")
         self.event_instruments = event_mappings_for_slots(self.event_instruments)
         self.instrument_volumes = volume_mappings_for_slots(self.instrument_volumes)
+        self.lightning_sample_rate = max(
+            1, min(11, int(self.lightning_sample_rate))
+        )
 
     def instrument_slots(self) -> dict[str, str]:
         """Return the user-facing event and background musical roles."""

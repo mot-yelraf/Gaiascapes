@@ -6,20 +6,25 @@ Python on macOS, Linux, or Raspberry Pi. SuperCollider is the preferred audio
 engine; capture, history, and the web interface continue to work when it is not
 installed.
 
+## Who this is for
+
+- Makers and students who want a real-world python example.
+- Contributors who want a small, readable Python codebase.
+
 The first source is the USGS all-day earthquake feed. Events are normalized,
 deduplicated in SQLite, and retained locally. The Live Events tile offers two modes:
 Capture replays a selected history window, while Continuous sounds newly captured
 earthquakes immediately and rotates ambient data globally. The selected ocean-swell
-or storm-rain background remains continuous while event voices play over it.
+or Storm Outlook background remains continuous while event voices play over it.
 Event 1, Event 2, and Event 3 are independent: Earthquake and Seismic Bell voices
-follow USGS earthquakes, Tidal Bell follows modeled tide turns, and Lightning Glass
+follow USGS earthquakes, Tidal Bell follows modeled tide turns, and Lightning R2D2
 follows normalized lightning-flash observations. Selecting the same voice in
 multiple slots emits each configured cue for every matching event.
 Continuous mode does not derive ocean sound from the listener’s location. Ambient
 cues play at 75% of their mapped level so full-level earthquake cues remain distinct.
 The global Background Sounds location rotates every 23 seconds. Background cues span 24.5
 seconds, retaining a 1.5-second overlap while the next location fades in.
-Lightning Glass uses a short crack, descending pitch contour, glassy decay, and
+Lightning R2D2 uses a short crack, descending pitch contour, glassy decay, and
 pentatonic flash-by-flash pitch variation at least four semitones above other
 events, paired with a yellow-gold map pulse. Each slot's volume also scales its
 map-pulse radius, so quiet lightning remains visible as a compact burst without
@@ -32,12 +37,15 @@ Optional Open-Meteo sources add:
 
 - modeled swell conditions at twelve global surf locations;
 - modeled high and low tide turns when a local sea-level extremum is present;
-- global forecast storm potential derived from CAPE and thunderstorm weather codes.
+- global Storm Outlook forecasts derived from CAPE and thunderstorm weather codes.
 
 The NOAA GLM source is enabled during installation or one-time configuration
 migration. Each granule may contain hundreds of flashes, so Gaia records a bounded
-database sample while chronologically selecting every eleventh quality-accepted
-flash for sound. Those notes retain their original observed time gaps, preserving
+database sample while this experiment chronologically selects every quality-accepted
+flash for sound by default. When Lightning R2D2 is selected, its unlabeled sample-rate
+slider can select every first through every eleventh flash. The saved setting applies
+to the lightning feed regardless of which event slot displays the voice. Those notes
+retain their original observed time gaps, preserving
 the natural bursts and pauses in the lightning field. GLM
 flashes remain available for deduplication and replay but are intentionally omitted
 from Environmental Event History, its Events count, and the Event Sounds status
@@ -50,7 +58,7 @@ model output and are not suitable for navigation. Open-Meteo marine data
 combines models from DWD, ECMWF, Météo-France, NOAA, and other contributing
 agencies; source attribution is shown in Settings.
 
-Event History adds a storm-potential or ocean-swell location when the continuous
+Event History adds a Storm Outlook or ocean-swell location when the continuous
 background first visits it, then replaces that location only when its forecast
 values change. Unchanged global rotations still update Background Sounds without
 adding redundant history. Earthquake, tide-turn, and other event history remains
@@ -150,13 +158,13 @@ forecast strength controls rainfall density and intensity. `/gaia/layer/stop`
 releases the synth when continuous mode stops or the background selection changes.
 
 The included `supercollider/gaia-scape.scd` listens on UDP 57130 and provides
-earthquake, seismic-bell, lightning-glass, ocean-swell, tidal-bell, and storm-rain
+earthquake, seismic-bell, lightning-glass, ocean-swell, tidal-bell, and Storm Outlook
 voices. The
 Settings menu selects capture sources, three independent event voices, and one continuous
 background. Each musical role can also be set to None. The persisted Units setting
 displays swell and tide heights in meters or feet and earthquake depth in kilometers
 or miles. Independent 0–100% volume sliders sit beneath each Preview button for
-Event 1, Event 2, Event 3, and Background; the Lightning Glass default in Event 3
+Event 1, Event 2, Event 3, and Background; the Lightning R2D2 default in Event 3
 starts at 45% to leave headroom for dense flash fields. OSC host and port can be overridden with
 `GAIA_SCAPE_OSC_HOST` and `GAIA_SCAPE_OSC_PORT`; change `oscPort` in the
 SuperCollider script when selecting another receive port.

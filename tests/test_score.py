@@ -1,3 +1,9 @@
+"""Tests for renderer-neutral score construction.
+
+The cases protect event timing, geographic mapping, bounded dynamics, and the
+distinct octave and pitch variation assigned to lightning flashes.
+"""
+
 from gaia_scape.events import GaiaEvent
 from gaia_scape.score import build_score, longitude_to_pan
 
@@ -24,14 +30,15 @@ def test_event_strength_is_bounded():
     assert GaiaEvent("x", "2", "test", 1, strength=9).strength == 1.0
 
 
-def test_lightning_flash_is_four_semitones_higher_than_other_events():
+def test_lightning_flash_contour_is_shifted_down_one_octave():
     earthquake = GaiaEvent("x", "quake", "earthquake", 1, latitude=0)
     lightning = GaiaEvent("x", "flash", "lightning_flash", 1, latitude=0)
 
     score = build_score((earthquake, lightning), 1, 1, 1)
 
     pitches = {cue.kind: cue.pitch for cue in score}
-    assert pitches["lightning_flash"] >= pitches["earthquake"] + 4
+    assert pitches["earthquake"] == 60
+    assert pitches["lightning_flash"] == 56
 
 
 def test_lightning_flash_ids_create_pitch_variation_at_one_location():

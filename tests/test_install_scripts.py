@@ -1,3 +1,9 @@
+"""Tests for installation and service-launch scripts.
+
+Static assertions protect platform delegation, safe runtime paths, dedicated
+ports, data preservation, and optional SuperCollider configuration.
+"""
+
 from pathlib import Path
 
 
@@ -58,6 +64,7 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     assert "(duration - 0.08).max(1.0)" in synth
     assert "SynthDef(\\stormRainLayer" in synth
     assert "SynthDef(\\lightningGlass" in synth
+    assert 'if(instrument != "lightning_glass"' in synth
     assert "pitchContour = XLine.kr" in synth
     assert "Dust2.ar(8 + (strength * 28)" in synth
     assert "rainDensity = 10 + (smoothStrength * 110)" in synth

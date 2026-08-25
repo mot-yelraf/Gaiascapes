@@ -1,4 +1,8 @@
-"""SQLite-backed event capture and replay history."""
+"""SQLite-backed event capture and replay history.
+
+The event store owns schema migration, deduplication, retention, and ordered
+queries while keeping normalized event semantics independent of providers.
+"""
 
 from __future__ import annotations
 

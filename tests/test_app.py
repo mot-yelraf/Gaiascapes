@@ -1,3 +1,9 @@
+"""Integration tests for the Gaia Scape web application.
+
+These tests exercise HTTP routes and service coordination with deterministic
+provider doubles while verifying rendered controls and persisted settings.
+"""
+
 import asyncio
 import re
 import time
@@ -71,6 +77,8 @@ def test_web_app_captures_and_reports_status(tmp_path):
         ):
             assert f'id="{volume_id}" type="range"' in home.text
         assert 'id="event3Volume" type="range" min="0" max="100" step="1" value="45"' in home.text
+        assert home.text.count('data-lightning-sample-rate type="range" min="1" max="11"') == 3
+        assert 'id="event3LightningSampleRate" data-lightning-sample-rate type="range" min="1" max="11" step="1" value="1"' in home.text
         assert "The background remains continuous while its forecast location" not in home.text
         event_1_markup = home.text.split('id="event1Instrument"', 1)[1].split(
             "</select>", 1
@@ -87,6 +95,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert re.findall(r'<option value="([^"]+)"', event_1_markup) == expected_event_choices
         assert re.findall(r'<option value="([^"]+)"', event_2_markup) == expected_event_choices
         assert re.findall(r'<option value="([^"]+)"', event_3_markup) == expected_event_choices
+        assert home.text.count("Lightning R2D2") == 3
         assert "Open-Meteo surf & tides" in home.text
         assert 'id="sourceGlm"' in home.text
         assert "NOAA GOES GLM lightning" in home.text
@@ -114,7 +123,9 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'id="backgroundSoundsStatus"' in home.text
         assert 'id="eventTimeStatus"' in home.text
         assert 'id="eventSoundsStatus"' in home.text
-        assert "Background Sounds" in home.text
+        assert 'id="backgroundSoundsTitle">Ocean Swells</span>' in home.text
+        assert "Open-Meteo Storm Outlook" in home.text
+        assert '<option value="storm_potential" >Storm Outlook</option>' in home.text
         assert "Event Time" in home.text
         assert "Event Sounds" in home.text
         assert 'id="scStatus"' not in home.text
@@ -132,10 +143,22 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'instrument === "lightning_glass" ? "lightning_flash"' in script
         assert "cue.volume ?? 1" in script
         assert "baseScale * visualVolume" in script
+        assert 'return "Storm Outlook"' in script
+        assert 'return "Lightning R2D2"' in script
+        assert 'updateBackgroundSoundsTitle(event.target.value)' in script
+        assert 'control.hidden = select.value !== "lightning_glass"' in script
+        assert "lightning_sample_rate: Number(lightningSampleSliders[0].value)" in script
         assert "activateWorkspacePane" in script
         assert "activateAppView" in script
+        assert 'APP_VIEW_STORAGE_KEY = "gaia-scape-app-view"' in script
+        assert "activateAppView(savedAppView())" in script
+        assert "saveAppView(selectedName)" in script
         assert "projectCoordinates" in script
         assert "inverseProjectCoordinates" in script
+        assert "mapProjectionBoundary" in script
+        assert "mapContainsPoint" in script
+        assert "mapMarkerTitle" in script
+        assert 'event.kind === "earthquake"' in script
         assert "animateMapEvent" in script
         assert 'role === "background" ? "3.1" : "2.8"' in script
         assert "renderMapHistory(events)" in script
@@ -143,6 +166,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert '"ArrowLeft", "ArrowRight", "Home", "End"' in script
         stylesheet = client.get("/static/app.css").text
         assert ".workspace { width: 57.5%; margin: 46px auto 0; }" in stylesheet
+        assert "grid-template-columns: minmax(7.5rem, 1fr) 7rem" in stylesheet
         assert ".workspace { width: 100%; }" in stylesheet
         assert "50% { opacity: .62; transform: scale(var(--map-pulse-scale, 2.8)); }" in stylesheet
         capture = client.post("/api/capture", json={})
@@ -447,9 +471,11 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path):
                     "event_3": 0.35,
                     "background": 0.5,
                 },
+                "lightning_sample_rate": 7,
             },
         )
         capture = client.post("/api/capture", json={})
+        home = client.get("/")
 
     assert response.status_code == 200
     assert response.json()["instrument_slots"] == {
@@ -458,6 +484,7 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path):
         "event_3": "none",
         "background": "storm_potential",
     }
+    assert 'id="backgroundSoundsTitle">Storm Outlook</span>' in home.text
     assert response.json()["units"] == "imperial"
     assert response.json()["instrument_volumes"] == {
         "event_1": 0.8,
@@ -465,6 +492,8 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path):
         "event_3": 0.35,
         "background": 0.5,
     }
+    assert response.json()["lightning_sample_rate"] == 7
+    assert app.state.service.glm.sonification_sample_stride == 7
     assert app.state.config.units == "imperial"
     assert app.state.config.instruments_for_event("earthquake") == (
         "seismic_bells", "earthquake"
@@ -480,6 +509,9 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path):
     )
     assert capture.json()["disabled"] is True
     assert '"background": "storm_potential"' in (
+        tmp_path / "config.json"
+    ).read_text(encoding="utf-8")
+    assert '"lightning_sample_rate": 7' in (
         tmp_path / "config.json"
     ).read_text(encoding="utf-8")
     assert '"units": "imperial"' in (
@@ -803,7 +835,8 @@ def test_glm_capture_reports_raw_counts_and_sounds_each_satellite(
     assert [instrument for _cue, instrument in played] == [
         "lightning_glass", "lightning_glass"
     ]
-    assert min(cue.pitch for cue, _instrument in played) >= 64
+    assert min(cue.pitch for cue, _instrument in played) >= 52
+    assert max(cue.pitch for cue, _instrument in played) <= 61
     assert len({cue.pitch for cue, _instrument in played}) > 1
     assert status["glm"]["raw_flash_count"] == 389
     assert status["history"]["event_count"] == 0

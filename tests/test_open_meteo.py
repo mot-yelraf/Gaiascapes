@@ -1,3 +1,9 @@
+"""Tests for Open-Meteo forecast normalization.
+
+Representative marine and atmospheric documents verify that modeled swells,
+tide turns, and meaningful storm outlooks become normalized Gaia events.
+"""
+
 from datetime import datetime, timezone
 
 from gaia_scape_host.open_meteo import parse_marine_document, parse_storm_document

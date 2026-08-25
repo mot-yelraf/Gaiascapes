@@ -1,3 +1,9 @@
+"""Tests for configuration validation and migration.
+
+The cases protect defaults, legacy instrument mappings, independent volume
+controls, source migration, units, and lightning sampling bounds.
+"""
+
 import json
 
 import pytest
@@ -126,7 +132,7 @@ def test_existing_config_enables_glm_once_during_revision_migration(tmp_path):
     config.save(path)
     reloaded = AppConfig.load(path)
 
-    assert config.config_revision == 3
+    assert config.config_revision == 4
     assert config.enabled_sources == ["usgs", "noaa_glm"]
     assert reloaded.enabled_sources == ["usgs", "noaa_glm"]
 
@@ -169,3 +175,13 @@ def test_volume_slots_are_independent_and_zero_silences_only_that_slot():
 def test_volume_slots_reject_out_of_range_values():
     with pytest.raises(ValueError, match="Event 1 volume must be 0..1"):
         volume_mappings_for_slots({"event_1": 1.2})
+
+
+def test_lightning_sample_rate_defaults_to_one_and_is_bounded():
+    config = AppConfig()
+    config.validate()
+    assert config.lightning_sample_rate == 1
+
+    config.lightning_sample_rate = 99
+    config.validate()
+    assert config.lightning_sample_rate == 11

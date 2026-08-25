@@ -204,9 +204,11 @@ SynthDef(\stormRainLayer, {
             \depth, depth,
             \strength, strength
         ]);
-        ("Gaia cue " ++ eventId ++ " -> " ++ instrument ++ " M" ++ magnitude.round(0.1)
-            ++ " @ " ++ latitude.round(0.01) ++ ", "
-            ++ longitude.round(0.01)).postln;
+        if(instrument != "lightning_glass", {
+            ("Gaia cue " ++ eventId ++ " -> " ++ instrument ++ " M" ++ magnitude.round(0.1)
+                ++ " @ " ++ latitude.round(0.01) ++ ", "
+                ++ longitude.round(0.01)).postln;
+        });
     }, '/gaia/cue', recvPort: oscPort);
 
     OSCdef(\gaiaLayer, {

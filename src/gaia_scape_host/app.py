@@ -1,4 +1,8 @@
-"""FastAPI application and local web control surface."""
+"""FastAPI application and local web control surface.
+
+The application factory binds validated installation settings to the service
+layer and exposes the dashboard, status, capture, playback, and settings APIs.
+"""
 
 from __future__ import annotations
 
@@ -55,6 +59,7 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app):
+        """Start and stop background service tasks with the web application."""
         if auto_capture:
             await service.start_polling()
         if config.live_mode == "continuous":
@@ -70,6 +75,7 @@ def create_app(
 
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):
+        """Render the dashboard with the installation's current settings."""
         template = TEMPLATES.get_template("index.html")
         return template.render(
             request=request,
@@ -81,28 +87,34 @@ def create_app(
             units=config.units,
             instrument_slots=config.instrument_slots(),
             instrument_volumes=config.volume_slots(),
+            lightning_sample_rate=config.lightning_sample_rate,
             event_voice_options=EVENT_VOICE_OPTIONS,
             background_options=BACKGROUND_INSTRUMENT_OPTIONS,
         )
 
     @app.get("/healthz")
     async def healthz():
+        """Report process health and the running application version."""
         return {"status": "ok", "version": _version()}
 
     @app.get("/api/status")
     async def status():
+        """Return the current capture, playback, source, and renderer status."""
         return await service.status()
 
     @app.get("/api/events")
     async def events(hours: float | None = None, limit: int = 500):
+        """Return recent visible environmental events for the dashboard."""
         return {"events": await service.recent_events(hours=hours, limit=limit)}
 
     @app.get("/api/cues")
     async def cues(after: int | None = None):
+        """Long-poll for renderer cues emitted after an optional sequence."""
         return await service.emitted_cues(after=after)
 
     @app.post("/api/capture")
     async def capture():
+        """Run one capture cycle for the configured non-GLM providers."""
         try:
             return await service.capture_once()
         except Exception as exc:
@@ -110,6 +122,7 @@ def create_app(
 
     @app.post("/api/performance/replay")
     async def replay(request: Request):
+        """Start a time-scaled replay from the requested history window."""
         body = await _json_body(request)
         try:
             return await service.replay(
@@ -121,11 +134,13 @@ def create_app(
 
     @app.post("/api/performance/stop")
     async def stop_performance():
+        """Stop the active history replay, if any."""
         await service.player.stop()
         return {"stopped": True}
 
     @app.put("/api/live/mode")
     async def update_live_mode(request: Request):
+        """Validate, apply, and persist the selected live mode."""
         body = await _json_body(request)
         try:
             await service.set_live_mode(body.get("mode", ""))
@@ -136,6 +151,7 @@ def create_app(
 
     @app.post("/api/live/start")
     async def start_live():
+        """Start continuous environmental playback when that mode is selected."""
         if config.live_mode != "continuous":
             raise HTTPException(status_code=409, detail="Select Continuous mode first")
         await service.start_continuous()
@@ -143,17 +159,20 @@ def create_app(
 
     @app.post("/api/live/stop")
     async def stop_live():
+        """Stop continuous environmental playback without changing its mode."""
         await service.stop_continuous()
         return (await service.status())["live"]
 
     @app.get("/api/config")
     async def get_config():
+        """Return the validated installation configuration."""
         from dataclasses import asdict
 
         return asdict(config)
 
     @app.put("/api/settings/audio")
     async def update_audio_settings(request: Request):
+        """Validate, apply, and persist source and audio settings."""
         body = await _json_body(request)
         sources = body.get("enabled_sources", [])
         if not isinstance(sources, list):
@@ -173,6 +192,7 @@ def create_app(
                 mappings,
                 body.get("units", config.units),
                 body.get("instrument_volumes", config.instrument_volumes),
+                body.get("lightning_sample_rate", config.lightning_sample_rate),
             )
             config.save(config_path)
         except (TypeError, ValueError) as exc:
@@ -183,10 +203,12 @@ def create_app(
             "instrument_slots": config.instrument_slots(),
             "event_instruments": dict(config.event_instruments),
             "instrument_volumes": config.volume_slots(),
+            "lightning_sample_rate": config.lightning_sample_rate,
         }
 
     @app.post("/api/instruments/preview")
     async def preview_instrument(request: Request):
+        """Render one representative cue for a selected instrument."""
         body = await _json_body(request)
         try:
             instrument = body.get("instrument", "")

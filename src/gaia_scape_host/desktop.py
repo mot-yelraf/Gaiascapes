@@ -1,4 +1,8 @@
-"""Launch Gaia Scape in a native pywebview desktop window."""
+"""Launch Gaia Scape in a native pywebview desktop window.
+
+Desktop startup reuses or supervises the local web server and applies
+platform-specific application identity and icon behavior where available.
+"""
 
 from __future__ import annotations
 
@@ -219,6 +223,7 @@ def set_macos_app_icon() -> None:
         from PyObjCTools import AppHelper
 
         def apply_icon() -> None:
+            """Apply the packaged icon on the Cocoa application thread."""
             icon = NSImage.alloc().initWithContentsOfFile_(str(DESKTOP_ICON_PATH))
             if icon is not None:
                 NSApplication.sharedApplication().setApplicationIconImage_(icon)

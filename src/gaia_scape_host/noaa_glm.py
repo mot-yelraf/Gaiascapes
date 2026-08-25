@@ -1,4 +1,8 @@
-"""NOAA GOES GLM Level 2 flash retrieval and normalization."""
+"""NOAA GOES GLM Level 2 flash retrieval and normalization.
+
+The client discovers recent public satellite granules, validates bounded
+netCDF payloads, and converts accepted flashes into normalized Gaia events.
+"""
 
 from __future__ import annotations
 
@@ -24,7 +28,7 @@ GLM_POLL_SECONDS = 20.0
 MAX_LIST_BYTES = 2 * 1024 * 1024
 MAX_GRANULE_BYTES = 8 * 1024 * 1024
 MAX_FLASHES_PER_GRANULE = 4
-SONIFICATION_SAMPLE_STRIDE = 11
+SONIFICATION_SAMPLE_STRIDE = 1
 SATELLITES = (
     ("G19", "GOES-19", "noaa-goes19"),
     ("G18", "GOES-18", "noaa-goes18"),
@@ -182,6 +186,7 @@ class NoaaGlmClient:
         self.last_granules = []
         self.last_sonification_events = ()
         self.last_error = ""
+        self.sonification_sample_stride = SONIFICATION_SAMPLE_STRIDE
 
     def fetch(self) -> tuple[GaiaEvent, ...]:
         """Retrieve unseen 20-second granules and return bounded flash samples."""
@@ -216,7 +221,9 @@ class NoaaGlmClient:
         self.last_granule_count = len(granules)
         self.last_raw_flash_count = raw_flash_count
         self.last_sampled_flash_count = len(sampled_events)
-        sonification_events = select_sonification_events(sonification_events)
+        sonification_events = select_sonification_events(
+            sonification_events, self.sonification_sample_stride
+        )
         self.last_sonification_events = tuple(sonification_events)
         self.last_sonified_flash_count = len(sonification_events)
         self.last_granules = [PurePosixPath(key).name for key in granules]
@@ -229,6 +236,7 @@ class NoaaGlmClient:
         return tuple(sampled_events)
 
     def status(self) -> dict:
+        """Return counts, granules, and errors from the latest GLM update."""
         return {
             "granule_count": self.last_granule_count,
             "raw_flash_count": self.last_raw_flash_count,

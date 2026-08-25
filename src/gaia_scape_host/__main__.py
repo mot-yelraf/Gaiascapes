@@ -1,4 +1,8 @@
-"""Command-line entrypoint for the Gaia Scape web server."""
+"""Command-line entrypoint for the Gaia Scape web server.
+
+Command-line options select the HTTP bind address and delegate application
+serving to Uvicorn without enabling noisy access logs.
+"""
 
 from __future__ import annotations
 
