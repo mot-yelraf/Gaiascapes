@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ctypes
 import os
+import plistlib
 import shutil
 import subprocess
 import sys
@@ -23,7 +24,12 @@ from .config import AppConfig, resolve_data_dir
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 DESKTOP_ICON_PATH = STATIC_DIR / "gaia-scape-desktop-icon.png"
 WINDOWS_ICON_PATH = STATIC_DIR / "gaia-scape-desktop-icon.ico"
+MACOS_ICON_PATH = STATIC_DIR / "gaia-scape-desktop-icon.icns"
 LINUX_APP_ID = "earth.gaia_scape.GaiaScape"
+MACOS_APP_NAME = "Gaia Scape"
+MACOS_BUNDLE_IDENTIFIER = "earth.gaiascape.GaiaScape"
+MACOS_RELAUNCH_MARKER = "GAIA_SCAPE_MACOS_APP_RELAUNCHED"
+MACOS_HEADLESS_MARKER = "GAIA_SCAPE_HEADLESS"
 DEFAULT_WINDOW_WIDTH = 1500
 DEFAULT_WINDOW_HEIGHT = 960
 DEFAULT_MIN_WIDTH = 960
@@ -31,6 +37,112 @@ DEFAULT_MIN_HEIGHT = 640
 
 _direct_opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 _windows_icon: Any = None
+
+
+def _macos_application_support_dir() -> Path:
+    """Return the per-user directory containing macOS integration metadata."""
+    return Path.home() / "Library" / "Application Support" / MACOS_APP_NAME
+
+
+def _path_is_in_app_bundle(path: Path) -> bool:
+    """Return whether a lexical path is inside a macOS application bundle."""
+    return any(parent.suffix.lower() == ".app" for parent in path.parents)
+
+
+def _should_relaunch_for_macos_identity() -> bool:
+    """Return whether this desktop process needs a macOS bundle identity."""
+    if sys.platform != "darwin":
+        return False
+    if os.environ.get(MACOS_RELAUNCH_MARKER):
+        return False
+    if os.environ.get(MACOS_HEADLESS_MARKER):
+        return False
+    if getattr(sys, "frozen", False):
+        return False
+    return not _path_is_in_app_bundle(Path(sys.executable))
+
+
+def _ensure_macos_app_bundle() -> Path:
+    """Create or repair the lightweight bundle used for macOS process identity."""
+    bundle_path = _macos_application_support_dir() / f"{MACOS_APP_NAME}.app"
+    contents_path = bundle_path / "Contents"
+    executable_dir = contents_path / "MacOS"
+    resources_dir = contents_path / "Resources"
+    executable_path = executable_dir / MACOS_APP_NAME
+    info_path = contents_path / "Info.plist"
+
+    executable_dir.mkdir(parents=True, exist_ok=True)
+    resources_dir.mkdir(parents=True, exist_ok=True)
+
+    icon_name = MACOS_ICON_PATH.name
+    icon_path = resources_dir / icon_name
+    if (
+        not icon_path.is_file()
+        or icon_path.read_bytes() != MACOS_ICON_PATH.read_bytes()
+    ):
+        temporary_icon = icon_path.with_name(f".{icon_name}.{os.getpid()}.tmp")
+        shutil.copyfile(MACOS_ICON_PATH, temporary_icon)
+        temporary_icon.replace(icon_path)
+
+    document = {
+        "CFBundleDisplayName": MACOS_APP_NAME,
+        "CFBundleName": MACOS_APP_NAME,
+        "CFBundleExecutable": MACOS_APP_NAME,
+        "CFBundleIdentifier": MACOS_BUNDLE_IDENTIFIER,
+        "CFBundleIconFile": icon_name,
+        "CFBundlePackageType": "APPL",
+    }
+    plist_data = plistlib.dumps(document, sort_keys=True)
+    if not info_path.is_file() or info_path.read_bytes() != plist_data:
+        temporary_info = info_path.with_name(f".Info.plist.{os.getpid()}.tmp")
+        temporary_info.write_bytes(plist_data)
+        temporary_info.replace(info_path)
+
+    python_path = Path(sys.executable)
+    if not python_path.is_absolute():
+        python_path = Path.cwd() / python_path
+    target = str(python_path)
+    if not executable_path.is_symlink() or os.readlink(executable_path) != target:
+        temporary_executable = executable_path.with_name(
+            f".{MACOS_APP_NAME}.{os.getpid()}.tmp"
+        )
+        temporary_executable.unlink(missing_ok=True)
+        temporary_executable.symlink_to(target)
+        temporary_executable.replace(executable_path)
+    return executable_path
+
+
+def relaunch_for_macos_app_identity() -> bool:
+    """Replace this process with one launched through the Gaia Scape bundle."""
+    if not _should_relaunch_for_macos_identity():
+        return False
+    try:
+        executable_path = _ensure_macos_app_bundle()
+        environment = os.environ.copy()
+        environment[MACOS_RELAUNCH_MARKER] = "1"
+        package_root = str(Path(__file__).resolve().parents[1])
+        python_paths = [
+            item
+            for item in environment.get("PYTHONPATH", "").split(os.pathsep)
+            if item
+        ]
+        if package_root not in python_paths:
+            python_paths.insert(0, package_root)
+        environment["PYTHONPATH"] = os.pathsep.join(python_paths)
+        arguments = [
+            str(executable_path),
+            "-m",
+            "gaia_scape_host.desktop",
+            *sys.argv[1:],
+        ]
+        os.execve(str(executable_path), arguments, environment)
+    except OSError as exc:
+        print(
+            f"Gaia Scape could not establish its macOS application identity: {exc}",
+            file=sys.stderr,
+        )
+        return False
+    return True
 
 
 def _base_url() -> str:
@@ -249,6 +361,8 @@ def set_windows_app_icon(window: Any) -> None:
 
 def main() -> int:
     """Start or attach to Gaia Scape and display its native desktop window."""
+    if relaunch_for_macos_app_identity():
+        return 0
     base_url = _base_url()
     owned_server: subprocess.Popen[Any] | None = None
     os.environ.setdefault("WEBKIT_DISABLE_COMPOSITING_MODE", "1")

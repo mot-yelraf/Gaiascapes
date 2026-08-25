@@ -39,6 +39,7 @@ def test_uninstaller_preserves_data_by_default_and_rejects_broad_targets():
     assert '""|/|"$HOME"' in script
     assert 'GAIA_SCAPE_REMOVE_DATA:-no' in script
     assert 'rm -rf "$INSTALL_DIR/data"' in script
+    assert 'Library/Application Support/Gaia Scape/Gaia Scape.app' in script
     assert 'Application data remains in %s/data' in script
 
 

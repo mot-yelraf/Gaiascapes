@@ -21,6 +21,8 @@ elif [[ "$(uname -s)" == Darwin ]]; then
   plist="$HOME/Library/LaunchAgents/local.gaia-scape.plist"
   launchctl unload "$plist" >/dev/null 2>&1 || true
   rm -f "$plist"
+  rm -rf "$HOME/Library/Application Support/Gaia Scape/Gaia Scape.app"
+  rmdir "$HOME/Library/Application Support/Gaia Scape" >/dev/null 2>&1 || true
   legacy_plist="$HOME/Library/LaunchAgents/local.earth-rhythms.plist"
   launchctl unload "$legacy_plist" >/dev/null 2>&1 || true
   rm -f "$legacy_plist"

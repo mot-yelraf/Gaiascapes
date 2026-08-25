@@ -138,6 +138,12 @@ it and leaves it running. Window size and position can be overridden with
 `GAIA_SCAPE_GUI_WIDTH`, `GAIA_SCAPE_GUI_HEIGHT`, `GAIA_SCAPE_GUI_X`, and
 `GAIA_SCAPE_GUI_Y`.
 
+On macOS, the GUI creates a lightweight identity bundle at
+`~/Library/Application Support/Gaia Scape/Gaia Scape.app` and relaunches through
+it so system interfaces identify the process as Gaia Scape instead of Python.
+Set `GAIA_SCAPE_HEADLESS=1` to suppress this GUI-only relaunch when embedding the
+desktop module in an unattended process.
+
 To select and remember a particular audio output, write its exact
 SuperCollider device name to `data/audio-device`. For example:
 

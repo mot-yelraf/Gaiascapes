@@ -4,11 +4,18 @@ The suite verifies quiet server startup, packaged icons, process ownership,
 health probing, and platform-specific desktop integration.
 """
 
+import importlib.util
+import json
+import os
+import plistlib
+import subprocess
 import sys
 import struct
 import zlib
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
+
+import pytest
 
 from gaia_scape_host import __main__ as cli
 from gaia_scape_host import desktop
@@ -69,6 +76,7 @@ def _fake_webview(calls):
 def test_desktop_icon_assets_are_packaged():
     png = desktop.DESKTOP_ICON_PATH.read_bytes()
     ico = desktop.WINDOWS_ICON_PATH.read_bytes()
+    icns = desktop.MACOS_ICON_PATH.read_bytes()
 
     assert png.startswith(b"\x89PNG\r\n\x1a\n")
     assert struct.unpack(">II", png[16:24]) == (1024, 1024)
@@ -85,6 +93,165 @@ def test_desktop_icon_assets_are_packaged():
     assert first_scanline[4] == 0  # Upper-left pixel alpha is transparent.
     assert ico[:4] == b"\x00\x00\x01\x00"
     assert struct.unpack("<H", ico[4:6])[0] >= 7
+    assert icns[:4] == b"icns"
+
+
+def test_macos_identity_bundle_contains_plist_icon_and_python_link(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        desktop, "_macos_application_support_dir", lambda: tmp_path
+    )
+
+    executable = desktop._ensure_macos_app_bundle()
+    bundle_path = tmp_path / "Gaia Scape.app"
+    with (bundle_path / "Contents" / "Info.plist").open("rb") as source:
+        document = plistlib.load(source)
+
+    assert document == {
+        "CFBundleDisplayName": "Gaia Scape",
+        "CFBundleName": "Gaia Scape",
+        "CFBundleExecutable": "Gaia Scape",
+        "CFBundleIdentifier": "earth.gaiascape.GaiaScape",
+        "CFBundleIconFile": "gaia-scape-desktop-icon.icns",
+        "CFBundlePackageType": "APPL",
+    }
+    assert executable.is_symlink()
+    assert os.readlink(executable) == sys.executable
+    installed_icon = (
+        bundle_path / "Contents" / "Resources" / desktop.MACOS_ICON_PATH.name
+    )
+    assert installed_icon.read_bytes() == desktop.MACOS_ICON_PATH.read_bytes()
+
+
+def test_macos_identity_relaunch_uses_module_arguments_and_recursion_guard(
+    tmp_path, monkeypatch
+):
+    calls = []
+    executable = tmp_path / "Gaia Scape.app" / "Contents" / "MacOS" / "Gaia Scape"
+    monkeypatch.setattr(desktop.sys, "platform", "darwin")
+    monkeypatch.setattr(desktop.sys, "argv", ["desktop.py", "--example"])
+    monkeypatch.delenv(desktop.MACOS_RELAUNCH_MARKER, raising=False)
+    monkeypatch.delenv(desktop.MACOS_HEADLESS_MARKER, raising=False)
+    monkeypatch.setattr(desktop, "_ensure_macos_app_bundle", lambda: executable)
+    monkeypatch.setattr(
+        desktop.os,
+        "execve",
+        lambda path, arguments, environment: calls.append(
+            (path, arguments, environment)
+        ),
+    )
+
+    assert desktop.relaunch_for_macos_app_identity() is True
+    path, arguments, environment = calls[0]
+    assert path == str(executable)
+    assert arguments == [
+        str(executable),
+        "-m",
+        "gaia_scape_host.desktop",
+        "--example",
+    ]
+    assert environment[desktop.MACOS_RELAUNCH_MARKER] == "1"
+    assert environment["PYTHONPATH"].split(os.pathsep)[0] == str(
+        Path(desktop.__file__).resolve().parents[1]
+    )
+
+    monkeypatch.setenv(desktop.MACOS_RELAUNCH_MARKER, "1")
+    assert desktop.relaunch_for_macos_app_identity() is False
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("platform", "headless", "frozen", "executable", "expected"),
+    (
+        ("linux", False, False, "/usr/bin/python3", False),
+        ("darwin", True, False, "/usr/bin/python3", False),
+        ("darwin", False, True, "/usr/bin/python3", False),
+        (
+            "darwin",
+            False,
+            False,
+            "/Applications/Gaia Scape.app/Contents/MacOS/Gaia Scape",
+            False,
+        ),
+        ("darwin", False, False, "/usr/bin/python3", True),
+    ),
+)
+def test_macos_identity_relaunch_platform_headless_and_package_guards(
+    monkeypatch, platform, headless, frozen, executable, expected
+):
+    monkeypatch.setattr(desktop.sys, "platform", platform)
+    monkeypatch.setattr(desktop.sys, "executable", executable)
+    monkeypatch.setattr(desktop.sys, "frozen", frozen, raising=False)
+    monkeypatch.delenv(desktop.MACOS_RELAUNCH_MARKER, raising=False)
+    if headless:
+        monkeypatch.setenv(desktop.MACOS_HEADLESS_MARKER, "1")
+    else:
+        monkeypatch.delenv(desktop.MACOS_HEADLESS_MARKER, raising=False)
+
+    assert desktop._should_relaunch_for_macos_identity() is expected
+
+
+@pytest.mark.skipif(
+    sys.platform != "darwin" or importlib.util.find_spec("Foundation") is None,
+    reason="requires macOS and PyObjC",
+)
+def test_macos_symlinked_executable_resolves_as_main_bundle(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        desktop, "_macos_application_support_dir", lambda: tmp_path
+    )
+    executable = desktop._ensure_macos_app_bundle()
+    probe = """
+import json
+from Foundation import NSBundle
+bundle = NSBundle.mainBundle()
+print(json.dumps({
+    "name": bundle.objectForInfoDictionaryKey_("CFBundleDisplayName"),
+    "identifier": bundle.bundleIdentifier(),
+    "bundle": str(bundle.bundlePath()),
+    "executable": str(bundle.executablePath()),
+}))
+"""
+
+    completed = subprocess.run(
+        [str(executable), "-c", probe],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    identity = json.loads(completed.stdout.strip())
+
+    assert identity["name"] == desktop.MACOS_APP_NAME
+    assert identity["identifier"] == desktop.MACOS_BUNDLE_IDENTIFIER
+    assert identity["bundle"] == str(tmp_path / "Gaia Scape.app")
+    assert identity["executable"] == str(executable)
+
+
+def test_macos_symlinked_executable_imports_installed_desktop_module(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        desktop, "_macos_application_support_dir", lambda: tmp_path
+    )
+    executable = desktop._ensure_macos_app_bundle()
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(Path(desktop.__file__).resolve().parents[1])
+
+    completed = subprocess.run(
+        [
+            str(executable),
+            "-c",
+            "from gaia_scape_host import desktop; print(desktop.MACOS_APP_NAME)",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=environment,
+        timeout=15,
+    )
+
+    assert completed.stdout.strip() == desktop.MACOS_APP_NAME
 
 
 def test_desktop_starts_native_window_and_stops_owned_server(tmp_path, monkeypatch):
@@ -95,6 +262,7 @@ def test_desktop_starts_native_window_and_stops_owned_server(tmp_path, monkeypat
     monkeypatch.delenv("GAIA_SCAPE_GUI_URL", raising=False)
     monkeypatch.setitem(sys.modules, "webview", fake_webview)
     monkeypatch.setattr(desktop.sys, "platform", "darwin")
+    monkeypatch.setenv(desktop.MACOS_RELAUNCH_MARKER, "1")
     monkeypatch.setattr(desktop, "_is_healthy", lambda _url: False)
     monkeypatch.setattr(desktop, "_wait_for_health", lambda _url, _process: True)
     monkeypatch.setattr(desktop, "_start_server", lambda: process)
@@ -120,6 +288,7 @@ def test_desktop_attaches_without_stopping_existing_server(tmp_path, monkeypatch
     monkeypatch.setenv("GAIA_SCAPE_DATA_DIR", str(tmp_path))
     monkeypatch.setitem(sys.modules, "webview", fake_webview)
     monkeypatch.setattr(desktop.sys, "platform", "darwin")
+    monkeypatch.setenv(desktop.MACOS_RELAUNCH_MARKER, "1")
     monkeypatch.setattr(desktop, "_is_healthy", lambda _url: True)
     monkeypatch.setattr(desktop, "_wait_for_health", lambda _url, process: process is None)
     monkeypatch.setattr(desktop, "_start_server", lambda: (_ for _ in ()).throw(AssertionError))
