@@ -177,17 +177,27 @@ function when(timestamp) {
     : "Not yet";
 }
 
-function message(text, error = false) {
-  byId("message").textContent = text;
-  byId("message").classList.toggle("error", error);
+function message(text, error = false, source = "") {
+  const banner = byId("message");
+  banner.textContent = text;
+  banner.classList.toggle("error", error);
+  banner.dataset.messageSource = source;
+}
+
+function updateStatusField(field, text, title = null) {
+  document.querySelectorAll(`[data-status-field="${field}"]`).forEach((element) => {
+    element.textContent = text;
+    if (title !== null) element.title = title;
+  });
 }
 
 function updateSoundLocation(location) {
   const locationText = location
     ? (location.name || `${Number(location.latitude).toFixed(2)}, ${Number(location.longitude).toFixed(2)}`)
     : "—";
-  byId("backgroundSoundsStatus").textContent = locationText;
-  byId("backgroundSoundsStatus").title = locationText === "—" ? "" : locationText;
+  updateStatusField(
+    "background-location", locationText, locationText === "—" ? "" : locationText
+  );
   updateMapBackgroundLocation(location);
 }
 
@@ -198,7 +208,7 @@ function backgroundSoundLabel(instrument) {
 }
 
 function updateBackgroundSoundsTitle(instrument) {
-  byId("backgroundSoundsTitle").textContent = backgroundSoundLabel(instrument);
+  updateStatusField("background-title", backgroundSoundLabel(instrument));
 }
 
 const EVENT_PALETTES = {
@@ -269,15 +279,14 @@ function animateCapturedEvent(event, instrument = "", role = "event", cueDuratio
 async function updateStatus() {
   try {
     const status = await request("/api/status");
-    byId("eventCount").textContent = status.history.event_count.toLocaleString();
+    updateStatusField("event-count", status.history.event_count.toLocaleString());
     const historySignature = `${status.history.event_count}:${status.history.latest_timestamp ?? ""}`;
     const historyChanged = observedHistorySignature !== null && observedHistorySignature !== historySignature;
     observedHistorySignature = historySignature;
-    byId("eventTimeStatus").textContent = when(status.capture.last_at);
+    updateStatusField("event-time", when(status.capture.last_at));
     updateSoundLocation(status.cues.latest_background_location);
     const eventSounds = (status.cues.latest_event_sounds || []).map(instrumentLabel).join(" + ") || "—";
-    byId("eventSoundsStatus").textContent = eventSounds;
-    byId("eventSoundsStatus").title = eventSounds === "—" ? "" : eventSounds;
+    updateStatusField("event-sounds", eventSounds, eventSounds === "—" ? "" : eventSounds);
     const continuous = status.live.mode === "continuous";
     byId("liveMode").value = status.live.mode;
     applyLiveMode(status.live.mode);
@@ -286,7 +295,11 @@ async function updateStatus() {
       ? (status.live.running ? `Continuous · ${status.live.played_count} cues` : "Paused")
       : (status.performance.running ? `Playing ${status.performance.played_count}/${status.performance.cue_count}` : "Capture");
     byId("performanceBadge").classList.toggle("running", active);
-    if (status.capture.last_error) message(status.capture.last_error, true);
+    if (status.capture.last_error) {
+      message(status.capture.last_error, true, "capture");
+    } else if (byId("message").dataset.messageSource === "capture") {
+      message("");
+    }
     if (historyChanged) await updateEvents();
   } catch (error) {
     message(error.message, true);
@@ -346,6 +359,7 @@ async function updateEvents() {
 function instrumentLabel(instrument) {
   if (instrument === "seismic_bells") return "Seismic Bell";
   if (instrument === "lightning_glass") return "Lightning R2D2";
+  if (instrument === "natural_thunder") return "Natural Thunder";
   if (instrument === "ocean_swell") return "Ocean Swells";
   if (instrument === "storm_potential") return "Storm Outlook";
   if (instrument === "none") return "No instrument";
@@ -611,7 +625,7 @@ if (settingsDialog && settingsForm) {
     const select = byId(selectId);
     const control = select.parentElement.querySelector("[data-lightning-sample-control]");
     const updateSampleRateVisibility = () => {
-      control.hidden = select.value !== "lightning_glass";
+      control.hidden = !["lightning_glass", "natural_thunder"].includes(select.value);
     };
     select.addEventListener("change", updateSampleRateVisibility);
     updateSampleRateVisibility();
@@ -632,7 +646,9 @@ if (settingsDialog && settingsForm) {
           ? instrument
           : (instrument === "tidal_bell"
             ? "tide_turn"
-            : (instrument === "lightning_glass" ? "lightning_flash" : "earthquake"));
+            : (["lightning_glass", "natural_thunder"].includes(instrument)
+              ? "lightning_flash"
+              : "earthquake"));
         const payload = await request("/api/instruments/preview", {
           method: "POST",
           body: JSON.stringify({

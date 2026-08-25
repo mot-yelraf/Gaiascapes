@@ -5,6 +5,7 @@ var oscPort = 57130;
 var audioDevice = "GAIA_SCAPE_AUDIO_DEVICE".getenv;
 
 thisProcess.openUDPPort(oscPort);
+s.options.memSize = 65536;
 
 if(audioDevice.notNil and: { audioDevice.size > 0 }, {
     s.options.numInputBusChannels = 0;
@@ -70,6 +71,65 @@ SynthDef(\lightningGlass, {
     lowPulse = SinOsc.ar((pitchContour * 0.5).max(42), 0, 0.09 * strength);
     signal = crack + ((shimmer + sparkle + lowPulse) * glassEnvelope);
     Out.ar(out, Pan2.ar(signal.tanh * amp * 0.52, pan));
+}).add;
+
+SynthDef(\naturalThunder, {
+    |out=0, freq=110, amp=0.35, duration=1.2, pan=0, depth=10, strength=0.5|
+    var life, crackEnvelope, crackSource, crack, rumbleEnvelope, rumbleMotion;
+    var rumble, deepBody, reflectionEnvelopeA, reflectionEnvelopeB;
+    var reflectionA, reflectionB, reflections, drySignal, signal;
+    life = duration.clip(0.45, 2.4) * (1.15 + (strength * 1.65));
+    crackEnvelope = EnvGen.ar(
+        Env([0, 1, 0.52, 0], [0.001, 0.018, 0.15], [-8, -3, -6])
+    );
+    crackSource = WhiteNoise.ar(0.85) + Dust2.ar(38 + (strength * 54), 0.24);
+    crack = Mix(BPF.ar(
+        crackSource,
+        [Rand(170, 310), Rand(420, 720), Rand(850, 1500), Rand(1900, 3600)],
+        [0.72, 0.52, 0.38, 0.26],
+        [0.46, 0.36, 0.25, 0.14]
+    )) * crackEnvelope;
+    rumbleEnvelope = EnvGen.kr(
+        Env([0, 1, 0.72, 0], [0.018, life * 0.32, life * 0.68], [-2, -1, -4]),
+        doneAction: Done.freeSelf
+    );
+    rumbleMotion = LFNoise1.kr(Rand(3.0, 6.5)).range(0.28, 1).squared;
+    rumble = RLPF.ar(
+        BrownNoise.ar(0.9),
+        LFNoise1.kr(Rand(0.35, 0.9)).exprange(65, 310),
+        0.48
+    ) * rumbleMotion * rumbleEnvelope * (0.12 + (strength.squared * 0.62));
+    deepBody = LPF.ar(
+        HPF.ar(BrownNoise.ar(0.8), 30),
+        92 + (strength * 38)
+    ) * rumbleEnvelope * strength.squared * 0.72;
+    reflectionEnvelopeA = EnvGen.kr(Env(
+        [0, 0, 1, 0],
+        [Rand(0.055, 0.19), 0.006, life * 0.24],
+        [-4, -8, -5]
+    ));
+    reflectionEnvelopeB = EnvGen.kr(Env(
+        [0, 0, 1, 0],
+        [Rand(0.16, 0.34), 0.008, life * 0.31],
+        [-4, -8, -5]
+    ));
+    reflectionA = BPF.ar(
+        PinkNoise.ar(0.48),
+        Rand(250, 520),
+        0.68
+    ) * reflectionEnvelopeA * strength;
+    reflectionB = BPF.ar(
+        BrownNoise.ar(0.52),
+        Rand(115, 290),
+        0.74
+    ) * reflectionEnvelopeB * strength;
+    reflections = Pan2.ar(reflectionA, (pan - 0.24).clip(-1, 1));
+    reflections = reflections + Pan2.ar(reflectionB, (pan + 0.28).clip(-1, 1));
+    reflections = reflections * 0.3;
+    drySignal = Pan2.ar(crack + rumble + deepBody, pan);
+    signal = LeakDC.ar(drySignal + reflections) * amp * 0.92;
+    signal = Compander.ar(signal, signal, 0.42, 1, 0.34, 0.002, 0.22);
+    Out.ar(out, Limiter.ar(signal, 0.82, 0.005));
 }).add;
 
 SynthDef(\tectonicDrone, {
@@ -192,6 +252,7 @@ SynthDef(\stormRainLayer, {
 
         if(instrument == "seismic_bells", { synthName = \seismicBells });
         if(instrument == "lightning_glass", { synthName = \lightningGlass });
+        if(instrument == "natural_thunder", { synthName = \naturalThunder });
         if(instrument == "tectonic_drone", { synthName = \tectonicDrone });
         if(instrument == "ocean_swell", { synthName = \oceanSwell });
         if(instrument == "tidal_bell", { synthName = \tidalBell });
@@ -204,7 +265,7 @@ SynthDef(\stormRainLayer, {
             \depth, depth,
             \strength, strength
         ]);
-        if(instrument != "lightning_glass", {
+        if(kind != "lightning_flash", {
             ("Gaia cue " ++ eventId ++ " -> " ++ instrument ++ " M" ++ magnitude.round(0.1)
                 ++ " @ " ++ latitude.round(0.01) ++ ", "
                 ++ longitude.round(0.01)).postln;

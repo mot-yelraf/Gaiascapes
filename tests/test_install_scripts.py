@@ -56,6 +56,7 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     assert 'GAIA_SCAPE_HTTP_HOST="${GAIA_SCAPE_HTTP_HOST:-0.0.0.0}"' in gui
     assert '\"GAIA_SCAPE_AUDIO_DEVICE\".getenv' in synth
     assert "s.options.outDevice = audioDevice" in synth
+    assert "s.options.memSize = 65536" in synth
     assert synth.index("s.waitForBoot") < synth.index("SynthDef")
     assert synth.index("s.sync") < synth.index("OSCdef")
     assert "msg[2].asString" in synth
@@ -64,8 +65,16 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     assert "(duration - 0.08).max(1.0)" in synth
     assert "SynthDef(\\stormRainLayer" in synth
     assert "SynthDef(\\lightningGlass" in synth
-    assert 'if(instrument != "lightning_glass"' in synth
+    assert "SynthDef(\\naturalThunder" in synth
+    assert 'if(instrument == "natural_thunder", { synthName = \\naturalThunder })' in synth
+    assert 'if(kind != "lightning_flash"' in synth
     assert "pitchContour = XLine.kr" in synth
     assert "Dust2.ar(8 + (strength * 28)" in synth
+    assert "BrownNoise.ar(0.9)" in synth
+    assert "Compander.ar(signal, signal" in synth
+    assert "Limiter.ar(signal, 0.82" in synth
+    natural_thunder = synth.split("SynthDef(\\naturalThunder", 1)[1].split("}).add;", 1)[0]
+    assert "DelayC.ar" not in natural_thunder
+    assert "AllpassC.ar" not in natural_thunder
     assert "rainDensity = 10 + (smoothStrength * 110)" in synth
     assert "Dust2.ar(rainDensity" in synth

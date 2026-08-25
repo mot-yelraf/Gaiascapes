@@ -21,6 +21,7 @@ EVENT_VOICE_OPTIONS = (
     "tidal_bell",
     "seismic_bells",
     "lightning_glass",
+    "natural_thunder",
     "none",
 )
 BACKGROUND_INSTRUMENT_OPTIONS = ("ocean_swell", "storm_potential", "none")
@@ -28,7 +29,7 @@ EVENT_INSTRUMENT_OPTIONS = {
     "earthquake": ("earthquake", "seismic_bells", "none"),
     "ocean_swell": ("ocean_swell", "none"),
     "tide_turn": ("tidal_bell", "none"),
-    "lightning_flash": ("lightning_glass", "none"),
+    "lightning_flash": ("lightning_glass", "natural_thunder", "none"),
     "storm_potential": ("storm_potential", "none"),
 }
 EVENT_KIND_BY_VOICE = {
@@ -36,6 +37,7 @@ EVENT_KIND_BY_VOICE = {
     "seismic_bells": "earthquake",
     "tidal_bell": "tide_turn",
     "lightning_glass": "lightning_flash",
+    "natural_thunder": "lightning_flash",
 }
 DEFAULT_INSTRUMENT_SLOTS = {
     "event_1": "earthquake",

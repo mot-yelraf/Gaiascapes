@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import math
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -17,6 +18,8 @@ from gaia_scape.events import GaiaEvent
 
 
 MAX_DOCUMENT_BYTES = 4 * 1024 * 1024
+REFRESH_SECONDS = 60 * 60
+RATE_LIMIT_COOLDOWN_SECONDS = 15 * 60
 MARINE_URL = "https://marine-api.open-meteo.com/v1/marine"
 WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 
@@ -215,15 +218,38 @@ def _at(hourly, name, index):
 
 
 class _OpenMeteoClient:
-    def __init__(self, url, locations, parser, variables, timeout=20.0):
+    def __init__(
+        self,
+        url,
+        locations,
+        parser,
+        variables,
+        timeout=20.0,
+        refresh_seconds=REFRESH_SECONDS,
+    ):
         self.url = str(url)
         self.locations = tuple(locations)
         self.parser = parser
         self.variables = tuple(variables)
         self.timeout = float(timeout)
+        self.refresh_seconds = max(60.0, float(refresh_seconds))
+        self._cached_events = ()
+        self._cache_updated_at = 0.0
+        self._has_cache = False
+        self._retry_not_before = 0.0
 
     def fetch(self):
         """Retrieve and normalize one forecast update for all locations."""
+        now = time.monotonic()
+        if self._has_cache and (
+            now - self._cache_updated_at < self.refresh_seconds
+            or now < self._retry_not_before
+        ):
+            return self._cached_events
+        if now < self._retry_not_before:
+            raise RuntimeError(
+                "Open-Meteo is temporarily limiting requests; Gaia Scape will retry automatically."
+            )
         parameters = urllib.parse.urlencode(
             {
                 "latitude": ",".join(str(item[2]) for item in self.locations),
@@ -239,11 +265,37 @@ class _OpenMeteoClient:
             f"{self.url}?{parameters}",
             headers={"User-Agent": "Gaia-Scape/0.1 (+local environmental music app)"},
         )
-        with urllib.request.urlopen(request, timeout=self.timeout) as response:
-            payload = response.read(MAX_DOCUMENT_BYTES + 1)
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                payload = response.read(MAX_DOCUMENT_BYTES + 1)
+        except urllib.error.HTTPError as exc:
+            if exc.code != 429:
+                raise
+            retry_after = _retry_after_seconds(exc.headers)
+            self._retry_not_before = now + retry_after
+            if self._has_cache:
+                return self._cached_events
+            raise RuntimeError(
+                "Open-Meteo is temporarily limiting requests; Gaia Scape will retry automatically."
+            ) from exc
         if len(payload) > MAX_DOCUMENT_BYTES:
             raise ValueError("Open-Meteo response exceeds size limit")
-        return self.parser(json.loads(payload.decode("utf-8")), self.locations)
+        self._cached_events = self.parser(
+            json.loads(payload.decode("utf-8")), self.locations
+        )
+        self._cache_updated_at = now
+        self._has_cache = True
+        self._retry_not_before = 0.0
+        return self._cached_events
+
+
+def _retry_after_seconds(headers) -> float:
+    value = headers.get("Retry-After") if headers is not None else None
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError):
+        seconds = RATE_LIMIT_COOLDOWN_SECONDS
+    return max(60.0, min(3600.0, seconds))
 
 
 class OpenMeteoMarineClient(_OpenMeteoClient):

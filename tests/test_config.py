@@ -78,6 +78,20 @@ def test_lightning_glass_routes_only_lightning_flashes():
     assert config.instruments_for_event("lightning_flash") == ("lightning_glass",)
 
 
+def test_natural_thunder_routes_only_lightning_flashes():
+    config = AppConfig(
+        event_instruments={
+            "event_1": "earthquake",
+            "event_2": "tidal_bell",
+            "event_3": "natural_thunder",
+            "background": "storm_potential",
+        }
+    )
+    config.validate()
+
+    assert config.instruments_for_event("lightning_flash") == ("natural_thunder",)
+
+
 def test_duplicate_event_slots_are_preserved():
     config = AppConfig(
         event_instruments={

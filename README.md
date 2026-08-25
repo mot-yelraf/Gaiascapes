@@ -1,7 +1,7 @@
 # Gaia Scape
 
 Gaia Scape captures live terrestrial events and turns their time, location,
-and intensity into generative musical performances. The primary runtime is
+and intensity into generative soundscapes. The primary runtime is
 Python on macOS, Linux, or Raspberry Pi. SuperCollider is the preferred audio
 engine; capture, history, and the web interface continue to work when it is not
 installed.
@@ -18,8 +18,8 @@ earthquakes immediately and rotates ambient data globally. The selected ocean-sw
 or Storm Outlook background remains continuous while event voices play over it.
 Event 1, Event 2, and Event 3 are independent: Earthquake and Seismic Bell voices
 follow USGS earthquakes, Tidal Bell follows modeled tide turns, and Lightning R2D2
-follows normalized lightning-flash observations. Selecting the same voice in
-multiple slots emits each configured cue for every matching event.
+or Natural Thunder follows normalized lightning-flash observations. Selecting the
+same voice in multiple slots emits each configured cue for every matching event.
 Continuous mode does not derive ocean sound from the listener’s location. Ambient
 cues play at 75% of their mapped level so full-level earthquake cues remain distinct.
 The global Background Sounds location rotates every 23 seconds. Background cues span 24.5
@@ -28,8 +28,12 @@ Lightning R2D2 uses a short crack, descending pitch contour, glassy decay, and
 pentatonic flash-by-flash pitch variation at least four semitones above other
 events, paired with a yellow-gold map pulse. Each slot's volume also scales its
 map-pulse radius, so quiet lightning remains visible as a compact burst without
-overwhelming the background animation. NOAA GOES-East and GOES-West GLM
-LCFA granules are checked independently every 20 seconds. Quality-accepted flashes
+overwhelming the background animation. Natural Thunder replaces pitched oscillators with an irregular filtered-noise
+crack, strength-weighted brown-noise rumble, deep body, randomized envelope-shaped
+reflections, compression, and peak limiting. The reflections avoid per-cue delay
+buffers, and the audio server reserves additional real-time memory so the voice remains
+lightweight enough for dense lightning fields. NOAA GOES-East and GOES-West GLM LCFA granules are checked
+independently every 20 seconds. Quality-accepted flashes
 are normalized with their observation timestamp, position, optical energy, area,
 duration, satellite, and granule identity.
 
@@ -42,11 +46,13 @@ Optional Open-Meteo sources add:
 The NOAA GLM source is enabled during installation or one-time configuration
 migration. Each granule may contain hundreds of flashes, so Gaia records a bounded
 database sample while this experiment chronologically selects every quality-accepted
-flash for sound by default. When Lightning R2D2 is selected, its unlabeled sample-rate
+flash for sound by default. When either lightning voice is selected, its unlabeled sample-rate
 slider can select every first through every eleventh flash. The saved setting applies
 to the lightning feed regardless of which event slot displays the voice. Those notes
 retain their original observed time gaps, preserving
-the natural bursts and pauses in the lightning field. GLM
+the natural bursts and pauses in the lightning field. If NOAA has not published
+a newer granule by the next polling cycle, Gaia replays the last non-empty flash
+field with the same relative timing until fresh lightning information replaces it. GLM
 flashes remain available for deduplication and replay but are intentionally omitted
 from Environmental Event History, its Events count, and the Event Sounds status
 field. Live yellow-gold pulses still show their observed positions. The console and
@@ -56,7 +62,9 @@ example: `NOAA GLM update: 2 granules, 534 raw flashes, 8 sampled, 8 new, 47 son
 Storm potential is not an observed lightning-flash feed. Marine values are
 model output and are not suitable for navigation. Open-Meteo marine data
 combines models from DWD, ECMWF, Météo-France, NOAA, and other contributing
-agencies; source attribution is shown in Settings.
+agencies; source attribution is shown in Settings. Gaia refreshes these forecasts
+once per hour and honors provider throttling while retaining the last
+successful forecast.
 
 Event History adds a Storm Outlook or ocean-swell location when the continuous
 background first visits it, then replaces that location only when its forecast
@@ -158,7 +166,7 @@ forecast strength controls rainfall density and intensity. `/gaia/layer/stop`
 releases the synth when continuous mode stops or the background selection changes.
 
 The included `supercollider/gaia-scape.scd` listens on UDP 57130 and provides
-earthquake, seismic-bell, lightning-glass, ocean-swell, tidal-bell, and Storm Outlook
+earthquake, seismic-bell, Lightning R2D2, Natural Thunder, ocean-swell, tidal-bell, and Storm Outlook
 voices. The
 Settings menu selects capture sources, three independent event voices, and one continuous
 background. Each musical role can also be set to None. The persisted Units setting

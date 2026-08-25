@@ -42,6 +42,24 @@ class FakeGlm:
         }
 
 
+class RecoveringMarine:
+    def __init__(self):
+        self.calls = 0
+
+    def fetch(self):
+        self.calls += 1
+        if self.calls == 1:
+            raise RuntimeError(
+                "Open-Meteo is temporarily limiting requests; Gaia Scape will retry automatically."
+            )
+        return (
+            GaiaEvent(
+                "open_meteo_marine", "recovered", "ocean_swell", time.time(),
+                latitude=-27.68, longitude=-48.45, strength=0.5,
+            ),
+        )
+
+
 def test_web_app_captures_and_reports_status(tmp_path):
     source = FakeUsgs(
         (
@@ -90,12 +108,14 @@ def test_web_app_captures_and_reports_status(tmp_path):
             "</select>", 1
         )[0]
         expected_event_choices = [
-            "earthquake", "tidal_bell", "seismic_bells", "lightning_glass", "none"
+            "earthquake", "tidal_bell", "seismic_bells", "lightning_glass",
+            "natural_thunder", "none"
         ]
         assert re.findall(r'<option value="([^"]+)"', event_1_markup) == expected_event_choices
         assert re.findall(r'<option value="([^"]+)"', event_2_markup) == expected_event_choices
         assert re.findall(r'<option value="([^"]+)"', event_3_markup) == expected_event_choices
         assert home.text.count("Lightning R2D2") == 3
+        assert home.text.count("Natural Thunder") == 3
         assert "Open-Meteo surf & tides" in home.text
         assert 'id="sourceGlm"' in home.text
         assert "NOAA GOES GLM lightning" in home.text
@@ -123,7 +143,12 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'id="backgroundSoundsStatus"' in home.text
         assert 'id="eventTimeStatus"' in home.text
         assert 'id="eventSoundsStatus"' in home.text
-        assert 'id="backgroundSoundsTitle">Ocean Swells</span>' in home.text
+        assert 'id="backgroundSoundsTitle" data-status-field="background-title">Ocean Swells</span>' in home.text
+        assert home.text.count('data-status-field="background-location"') == 2
+        assert home.text.count('data-status-field="event-count"') == 2
+        assert home.text.count('data-status-field="event-time"') == 2
+        assert home.text.count('data-status-field="event-sounds"') == 2
+        assert 'aria-label="Map application status"' in home.text
         assert "Open-Meteo Storm Outlook" in home.text
         assert '<option value="storm_potential" >Storm Outlook</option>' in home.text
         assert "Event Time" in home.text
@@ -139,14 +164,17 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert f'/static/app.js?v={app.version}' in home.text
         assert f'/static/app.css?v={app.version}' in home.text
         script = client.get("/static/app.js").text
+        assert 'message(status.capture.last_error, true, "capture")' in script
+        assert 'dataset.messageSource === "capture"' in script
         assert 'lightning_flash: ["#79500a"' in script
-        assert 'instrument === "lightning_glass" ? "lightning_flash"' in script
+        assert '["lightning_glass", "natural_thunder"].includes(instrument)' in script
         assert "cue.volume ?? 1" in script
         assert "baseScale * visualVolume" in script
         assert 'return "Storm Outlook"' in script
         assert 'return "Lightning R2D2"' in script
+        assert 'return "Natural Thunder"' in script
         assert 'updateBackgroundSoundsTitle(event.target.value)' in script
-        assert 'control.hidden = select.value !== "lightning_glass"' in script
+        assert '!["lightning_glass", "natural_thunder"].includes(select.value)' in script
         assert "lightning_sample_rate: Number(lightningSampleSliders[0].value)" in script
         assert "activateWorkspacePane" in script
         assert "activateAppView" in script
@@ -166,7 +194,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert '"ArrowLeft", "ArrowRight", "Home", "End"' in script
         stylesheet = client.get("/static/app.css").text
         assert ".workspace { width: 57.5%; margin: 46px auto 0; }" in stylesheet
-        assert "grid-template-columns: minmax(7.5rem, 1fr) 7rem" in stylesheet
+        assert "grid-template-columns: minmax(7.5rem, 1fr) 6rem" in stylesheet
         assert ".workspace { width: 100%; }" in stylesheet
         assert "50% { opacity: .62; transform: scale(var(--map-pulse-scale, 2.8)); }" in stylesheet
         capture = client.post("/api/capture", json={})
@@ -178,6 +206,27 @@ def test_web_app_captures_and_reports_status(tmp_path):
     assert status.json()["history"]["event_count"] == 1
     assert (tmp_path / "config.json").exists()
     assert (tmp_path / "gaia_scape.sqlite3").exists()
+
+
+def test_open_meteo_message_clears_after_provider_recovers(tmp_path):
+    marine = RecoveringMarine()
+    app = create_app(
+        tmp_path,
+        auto_capture=False,
+        usgs_client=FakeUsgs(),
+        marine_client=marine,
+    )
+    app.state.config.enabled_sources = ["open_meteo_marine"]
+
+    with pytest.raises(RuntimeError, match="temporarily limiting requests"):
+        asyncio.run(app.state.service.capture_once())
+    failed_status = asyncio.run(app.state.service.status())
+    recovered = asyncio.run(app.state.service.capture_once())
+    recovered_status = asyncio.run(app.state.service.status())
+
+    assert failed_status["capture"]["last_error"]
+    assert recovered["received"] == 1
+    assert recovered_status["capture"]["last_error"] == ""
 
 
 def test_live_mode_persists_and_controls_continuous_task(tmp_path):
@@ -484,7 +533,7 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path):
         "event_3": "none",
         "background": "storm_potential",
     }
-    assert 'id="backgroundSoundsTitle">Storm Outlook</span>' in home.text
+    assert 'id="backgroundSoundsTitle" data-status-field="background-title">Storm Outlook</span>' in home.text
     assert response.json()["units"] == "imperial"
     assert response.json()["instrument_volumes"] == {
         "event_1": 0.8,
@@ -642,6 +691,30 @@ def test_instrument_preview_uses_unsaved_slider_volume(tmp_path):
     assert response.status_code == 200
     assert played[0].velocity < 116
     assert emitted[0]["volume"] == 0.25
+
+
+def test_natural_thunder_preview_routes_to_lightning(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    played = []
+    app.state.service.renderer.play = (
+        lambda cue, instrument=None: played.append((cue, instrument)) or True
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/instruments/preview",
+            json={"instrument": "natural_thunder", "volume": 0.4},
+        )
+        history = client.get("/api/events").json()["events"]
+
+    assert response.json() == {
+        "played": True,
+        "instrument": "natural_thunder",
+        "kind": "lightning_flash",
+    }
+    assert played[0][0].kind == "lightning_flash"
+    assert played[0][1] == "natural_thunder"
+    assert history == []
 
 
 def test_event_history_identifies_seismic_bell_voice(tmp_path):
@@ -879,6 +952,54 @@ def test_glm_sonification_can_play_a_hundred_hidden_notes(tmp_path, monkeypatch)
     assert {cue["volume"] for cue in app.state.service._emitted_cues} == {0.2}
     assert status["history"]["event_count"] == 0
     assert status["cues"]["latest_event_sounds"] == []
+
+
+def test_glm_replays_last_flash_field_when_no_new_granule_arrives(
+    tmp_path, caplog, monkeypatch
+):
+    now = time.time()
+    flashes = (
+        GaiaEvent(
+            "noaa_glm", "repeat-east", "lightning_flash", now,
+            latitude=12, longitude=-72, strength=0.7,
+        ),
+        GaiaEvent(
+            "noaa_glm", "repeat-west", "lightning_flash", now + 0.2,
+            latitude=28, longitude=-140, strength=0.8,
+        ),
+    )
+    glm = FakeGlm(flashes, raw_count=2)
+    app = create_app(
+        tmp_path, auto_capture=False, usgs_client=FakeUsgs(), glm_client=glm
+    )
+    app.state.config.live_mode = "continuous"
+    monkeypatch.setattr(service, "GLM_SONIFICATION_TIME_SCALE", 0.0)
+    played = []
+    app.state.service.renderer.play = (
+        lambda cue, instrument=None: played.append(cue.event.event_id) or True
+    )
+
+    async def capture_new_then_unchanged():
+        await app.state.service.capture_glm_once()
+        await app.state.service._glm_sonification_task
+        glm.events = ()
+        glm.last_raw_flash_count = 0
+        glm.last_granule_count = 0
+        with caplog.at_level("INFO", logger="uvicorn.error"):
+            result = await app.state.service.capture_glm_once()
+        await app.state.service._glm_sonification_task
+        return result, await app.state.service.status()
+
+    result, status = asyncio.run(capture_new_then_unchanged())
+
+    assert result == {"received": 0, "raw_flashes": 0, "inserted": 0, "pruned": 0}
+    assert played == ["repeat-east", "repeat-west", "repeat-east", "repeat-west"]
+    assert status["glm"]["replaying_cached_field"] is True
+    assert status["glm"]["cached_flash_count"] == 2
+    assert (
+        "NOAA GLM unchanged: replaying previous field with 2 sonified flashes"
+        in caplog.text
+    )
 
 
 def test_background_preview_does_not_add_captured_event(tmp_path):

@@ -75,6 +75,8 @@ class GaiaScapeService:
         self._poll_task = None
         self._glm_poll_task = None
         self._glm_sonification_task = None
+        self._last_glm_sonification_events = ()
+        self._glm_replaying_cached_field = False
         self._continuous_task = None
         self._glm_capture_lock = asyncio.Lock()
         self._live_play_lock = asyncio.Lock()
@@ -131,6 +133,7 @@ class GaiaScapeService:
             except asyncio.CancelledError:
                 pass
         self._glm_sonification_task = None
+        self._glm_replaying_cached_field = False
         await asyncio.to_thread(self.renderer.stop_layer, "ocean_swell")
         await asyncio.to_thread(self.renderer.stop_layer, "storm_potential")
 
@@ -188,7 +191,9 @@ class GaiaScapeService:
                 ("open_meteo_storm", self.storm),
             )
             enabled_clients = tuple(
-                client for source, client in clients if source in self.config.enabled_sources
+                (source, client)
+                for source, client in clients
+                if source in self.config.enabled_sources
             )
             if not enabled_clients:
                 self.last_capture_count = 0
@@ -198,11 +203,13 @@ class GaiaScapeService:
             try:
                 events = []
                 errors = []
-                for client in enabled_clients:
+                for source, client in enabled_clients:
                     try:
                         events.extend(await asyncio.to_thread(client.fetch))
                     except Exception as exc:
-                        errors.append(f"{type(exc).__name__}: {exc}")
+                        error = _capture_error_message(source, exc)
+                        if error not in errors:
+                            errors.append(error)
                 if errors and not events:
                     raise RuntimeError("; ".join(errors))
                 inserted_events = await asyncio.to_thread(self.store.add_new_events, events)
@@ -236,6 +243,7 @@ class GaiaScapeService:
                 self.last_glm_received = 0
                 self.last_glm_inserted = 0
                 self.last_glm_error = ""
+                self._glm_replaying_cached_field = False
                 return {"received": 0, "inserted": 0, "disabled": True}
             try:
                 events = await asyncio.to_thread(self.glm.fetch)
@@ -263,8 +271,13 @@ class GaiaScapeService:
                     len(inserted_events),
                     len(sonification_events),
                 )
-                if self.config.live_mode == "continuous" and sonification_events:
-                    self._start_glm_sonification(sonification_events)
+                if sonification_events:
+                    self._last_glm_sonification_events = sonification_events
+                    self._glm_replaying_cached_field = False
+                    if self.config.live_mode == "continuous":
+                        self._start_glm_sonification(sonification_events)
+                else:
+                    self._replay_last_glm_sonification()
                 return {
                     "received": len(events),
                     "raw_flashes": raw_count,
@@ -274,6 +287,7 @@ class GaiaScapeService:
             except Exception as exc:
                 self.last_glm_error = f"{type(exc).__name__}: {exc}"
                 LOGGER.warning("NOAA GLM update failed: %s", self.last_glm_error)
+                self._replay_last_glm_sonification()
                 raise
 
     async def replay(self, hours=None, performance_seconds=None) -> dict:
@@ -411,6 +425,8 @@ class GaiaScapeService:
                 "last_at": self.last_glm_capture_at,
                 "last_received": self.last_glm_received,
                 "last_inserted": self.last_glm_inserted,
+                "replaying_cached_field": self._glm_replaying_cached_field,
+                "cached_flash_count": len(self._last_glm_sonification_events),
                 "last_error": self.last_glm_error
                 or str(glm_status.get("last_error", "")),
             },
@@ -628,6 +644,25 @@ class GaiaScapeService:
             name="gaia-scape-glm-sonification",
         )
 
+    def _replay_last_glm_sonification(self) -> bool:
+        """Restart the latest flash field when NOAA has not published a newer one."""
+        events = self._last_glm_sonification_events
+        can_replay = (
+            bool(events)
+            and self.config.live_mode == "continuous"
+            and "noaa_glm" in self.config.enabled_sources
+            and bool(self._instruments_for_kind("lightning_flash"))
+        )
+        self._glm_replaying_cached_field = can_replay
+        if not can_replay:
+            return False
+        LOGGER.info(
+            "NOAA GLM unchanged: replaying previous field with %d sonified flashes",
+            len(events),
+        )
+        self._start_glm_sonification(events)
+        return True
+
     async def _run_glm_sonification(self, events) -> None:
         """Replay observed flash timing as a dense but bounded glass-note field."""
         if not events or not self._instruments_for_kind("lightning_flash"):
@@ -756,6 +791,15 @@ class GaiaScapeService:
         instrument = self.config.background_mappings().get(kind, "none")
         gain = self.config.instrument_volumes["background"]
         return () if instrument == "none" or gain <= 0 else ((instrument, gain),)
+
+
+def _capture_error_message(source: str, error: Exception) -> str:
+    message = str(error)
+    if source.startswith("open_meteo") and message.startswith(
+        "Open-Meteo is temporarily limiting requests"
+    ):
+        return message
+    return f"{source}: {type(error).__name__}: {error}"
 
 
 def _resolve_event_database(data_dir: Path) -> Path:

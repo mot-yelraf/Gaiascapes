@@ -69,10 +69,10 @@
       </section>
 
       <section class="metrics" aria-label="Application status">
-        <article><span id="backgroundSoundsTitle">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong id="backgroundSoundsStatus">—</strong></article>
-        <article><span>Events</span><strong id="eventCount">—</strong></article>
-        <article><span>Event Time</span><strong id="eventTimeStatus">—</strong></article>
-        <article><span>Event Sounds</span><strong id="eventSoundsStatus">—</strong></article>
+        <article><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong></article>
+        <article><span>Events</span><strong id="eventCount" data-status-field="event-count">—</strong></article>
+        <article><span>Event Time</span><strong id="eventTimeStatus" data-status-field="event-time">—</strong></article>
+        <article><span>Event Sounds</span><strong id="eventSoundsStatus" data-status-field="event-sounds">—</strong></article>
       </section>
     </div>
 
@@ -100,6 +100,12 @@
         </svg>
         <output class="map-coordinate-readout" id="mapCoordinateReadout" aria-live="polite">Move over the map to inspect coordinates</output>
       </div>
+      <section class="metrics map-status" aria-label="Map application status">
+        <article><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong data-status-field="background-location">—</strong></article>
+        <article><span>Events</span><strong data-status-field="event-count">—</strong></article>
+        <article><span>Event Time</span><strong data-status-field="event-time">—</strong></article>
+        <article><span>Event Sounds</span><strong data-status-field="event-sounds">—</strong></article>
+      </section>
     </section>
 
   </main>
