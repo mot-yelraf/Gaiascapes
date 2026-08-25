@@ -1,4 +1,4 @@
-"""Provider- and renderer-independent Gaia Rhythms domain logic."""
+"""Provider- and renderer-independent Gaia Scape domain logic."""
 
 from .events import GaiaEvent
 from .score import ScoreCue, build_score

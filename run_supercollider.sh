@@ -2,16 +2,16 @@
 set -euo pipefail
 
 RUNTIME_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-SC_SCRIPT="$RUNTIME_DIR/supercollider/gaia-rhythms.scd"
+SC_SCRIPT="$RUNTIME_DIR/supercollider/gaia-scape.scd"
 AUDIO_DEVICE_FILE="$RUNTIME_DIR/data/audio-device"
 
 if [[ "${1:-}" == "--audio-device" ]]; then
   [[ -n "${2:-}" ]] || { printf '%s\n' 'Usage: run_supercollider.sh --audio-device "Device Name"' >&2; exit 2; }
-  export GAIA_RHYTHMS_AUDIO_DEVICE="$2"
+  export GAIA_SCAPE_AUDIO_DEVICE="$2"
   shift 2
-elif [[ -z "${GAIA_RHYTHMS_AUDIO_DEVICE:-}" && -f "$AUDIO_DEVICE_FILE" ]]; then
-  IFS= read -r GAIA_RHYTHMS_AUDIO_DEVICE < "$AUDIO_DEVICE_FILE" || true
-  export GAIA_RHYTHMS_AUDIO_DEVICE
+elif [[ -z "${GAIA_SCAPE_AUDIO_DEVICE:-}" && -f "$AUDIO_DEVICE_FILE" ]]; then
+  IFS= read -r GAIA_SCAPE_AUDIO_DEVICE < "$AUDIO_DEVICE_FILE" || true
+  export GAIA_SCAPE_AUDIO_DEVICE
 fi
 
 if command -v sclang >/dev/null 2>&1; then
@@ -25,9 +25,9 @@ else
   exit 1
 fi
 
-if [[ -n "${GAIA_RHYTHMS_AUDIO_DEVICE:-}" ]]; then
-  printf 'Requesting SuperCollider output device: %s\n' "$GAIA_RHYTHMS_AUDIO_DEVICE"
+if [[ -n "${GAIA_SCAPE_AUDIO_DEVICE:-}" ]]; then
+  printf 'Requesting SuperCollider output device: %s\n' "$GAIA_SCAPE_AUDIO_DEVICE"
 fi
 
-SCLANG_PORT="${GAIA_RHYTHMS_SCLANG_PORT:-57131}"
+SCLANG_PORT="${GAIA_SCAPE_SCLANG_PORT:-57131}"
 exec "$SCLANG" -u "$SCLANG_PORT" "$SC_SCRIPT" "$@"

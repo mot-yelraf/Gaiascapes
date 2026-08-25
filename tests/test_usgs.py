@@ -1,4 +1,4 @@
-from gaia_rhythms_host.usgs import normalized_strength, parse_document
+from gaia_scape_host.usgs import normalized_strength, parse_document
 
 
 def test_parse_document_normalizes_valid_features_and_sorts():

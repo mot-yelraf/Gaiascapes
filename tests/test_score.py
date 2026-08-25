@@ -1,5 +1,5 @@
-from gaia_rhythms.events import GaiaEvent
-from gaia_rhythms.score import build_score, longitude_to_pan
+from gaia_scape.events import GaiaEvent
+from gaia_scape.score import build_score, longitude_to_pan
 
 
 def test_score_preserves_relative_time_and_maps_geography():

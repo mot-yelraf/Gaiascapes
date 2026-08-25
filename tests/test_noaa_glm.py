@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from netCDF4 import Dataset
 
-from gaia_rhythms_host.noaa_glm import (
+from gaia_scape_host.noaa_glm import (
     NoaaGlmClient,
     count_glm_flashes,
     parse_glm_document,
@@ -95,7 +95,7 @@ def test_glm_client_starts_with_latest_granule_and_deduplicates(tmp_path):
 
 
 def test_sonification_selects_every_eleventh_flash_in_timestamp_order():
-    from gaia_rhythms.events import GaiaEvent
+    from gaia_scape.events import GaiaEvent
 
     events = tuple(
         GaiaEvent("noaa_glm", str(index), "lightning_flash", 100 + index)

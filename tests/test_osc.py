@@ -1,9 +1,9 @@
 import socket
 import struct
 
-from gaia_rhythms.events import GaiaEvent
-from gaia_rhythms.score import ScoreCue
-from gaia_rhythms_host.osc import (
+from gaia_scape.events import GaiaEvent
+from gaia_scape.score import ScoreCue
+from gaia_scape_host.osc import (
     CUE_ADDRESS,
     LAYER_ADDRESS,
     LAYER_STOP_ADDRESS,

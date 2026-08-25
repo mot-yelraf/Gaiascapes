@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 
-from gaia_rhythms.score import ScoreCue
+from gaia_scape.score import ScoreCue
 
 
 def cue_with_gain(cue, gain: float):
@@ -51,7 +51,7 @@ class PerformancePlayer:
         self.cue_count = sum(len(self._voices(cue)) for cue in score)
         self.played_count = 0
         self.last_error = ""
-        self._task = asyncio.create_task(self._run(score), name="gaia-rhythms-performance")
+        self._task = asyncio.create_task(self._run(score), name="gaia-scape-performance")
 
     async def stop(self) -> None:
         """Stop current playback promptly."""

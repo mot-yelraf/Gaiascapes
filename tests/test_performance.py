@@ -1,6 +1,6 @@
-from gaia_rhythms.events import GaiaEvent
-from gaia_rhythms.score import ScoreCue
-from gaia_rhythms_host.performance import cue_with_gain
+from gaia_scape.events import GaiaEvent
+from gaia_scape.score import ScoreCue
+from gaia_scape_host.performance import cue_with_gain
 
 
 def test_cue_gain_scales_renderer_amplitude_without_changing_music():

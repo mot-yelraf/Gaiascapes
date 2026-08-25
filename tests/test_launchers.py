@@ -1,10 +1,10 @@
-from gaia_rhythms_host import __main__ as cli
-from gaia_rhythms_host import desktop
+from gaia_scape_host import __main__ as cli
+from gaia_scape_host import desktop
 
 
 def test_cli_disables_uvicorn_access_log(tmp_path, monkeypatch):
     calls = []
-    monkeypatch.setenv("GAIA_RHYTHMS_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("GAIA_SCAPE_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(cli.uvicorn, "run", lambda *args, **kwargs: calls.append(kwargs))
 
     cli.main(["--no-capture"])
@@ -24,7 +24,7 @@ def test_desktop_disables_uvicorn_access_log(tmp_path, monkeypatch):
         def start(self):
             pass
 
-    monkeypatch.setenv("GAIA_RHYTHMS_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("GAIA_SCAPE_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(desktop.threading, "Timer", FakeTimer)
     monkeypatch.setattr(
         desktop.uvicorn, "run", lambda *args, **kwargs: calls.append(kwargs)

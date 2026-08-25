@@ -1,4 +1,4 @@
-"""Command-line entrypoint for the Gaia Rhythms web server."""
+"""Command-line entrypoint for the Gaia Scape web server."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from .config import AppConfig, resolve_data_dir
 def main(argv=None) -> None:
     """Run the installed web application."""
     defaults = AppConfig.load(resolve_data_dir() / "config.json")
-    parser = argparse.ArgumentParser(description="Run Gaia Rhythms")
+    parser = argparse.ArgumentParser(description="Run Gaia Scape")
     parser.add_argument("--host", default=defaults.http_host)
     parser.add_argument("--port", default=defaults.http_port, type=int)
     parser.add_argument("--no-capture", action="store_true")
@@ -21,7 +21,7 @@ def main(argv=None) -> None:
     from .app import create_app
 
     app = create_app(auto_capture=not args.no_capture)
-    print(f"Gaia Rhythms is listening on http://127.0.0.1:{args.port}")
+    print(f"Gaia Scape is listening on http://127.0.0.1:{args.port}")
     if args.host not in {"127.0.0.1", "localhost", "::1"}:
         print(f"LAN access: http://<this-computer-ip>:{args.port}")
     uvicorn.run(

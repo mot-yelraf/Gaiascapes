@@ -39,7 +39,7 @@ def encode_message(address: str, arguments) -> bytes:
 
 
 class OscRenderer:
-    """Send the documented Gaia Rhythms cue contract over UDP."""
+    """Send the documented Gaia Scape cue contract over UDP."""
 
     def __init__(self, host: str, port: int, enabled: bool = True, instrument_mappings=None):
         self.host = str(host)

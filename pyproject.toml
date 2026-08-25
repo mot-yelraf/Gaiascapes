@@ -3,8 +3,8 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gaia-rhythms"
-version = "v0.26.236.42"
+name = "gaia-scape"
+version = "v0.26.236.43"
 description = "Turn live terrestrial events into generative musical performances."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -25,8 +25,8 @@ dev = [
 ]
 
 [project.scripts]
-gaia-rhythms-server = "gaia_rhythms_host.__main__:main"
-gaia-rhythms-gui = "gaia_rhythms_host.desktop:main"
+gaia-scape-server = "gaia_scape_host.__main__:main"
+gaia-scape-gui = "gaia_scape_host.desktop:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -36,7 +36,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-gaia_rhythms_host = ["templates/*.html", "static/*.css", "static/*.js", "static/*.svg"]
+gaia_scape_host = ["templates/*.html", "static/*.css", "static/*.js", "static/*.svg"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

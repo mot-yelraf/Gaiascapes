@@ -1,15 +1,15 @@
-// Gaia Rhythms SuperCollider receiver.
+// Gaia Scape SuperCollider receiver.
 // Python sends /gaia/cue to UDP 57130 by default.
 (
 var oscPort = 57130;
-var audioDevice = "GAIA_RHYTHMS_AUDIO_DEVICE".getenv;
+var audioDevice = "GAIA_SCAPE_AUDIO_DEVICE".getenv;
 
 thisProcess.openUDPPort(oscPort);
 
 if(audioDevice.notNil and: { audioDevice.size > 0 }, {
     s.options.numInputBusChannels = 0;
     s.options.outDevice = audioDevice;
-    ("Gaia Rhythms selected audio output: " ++ audioDevice).postln;
+    ("Gaia Scape selected audio output: " ++ audioDevice).postln;
 });
 
 s.waitForBoot({
@@ -260,6 +260,6 @@ SynthDef(\stormRainLayer, {
         ("Gaia layer " ++ key ++ " released").postln;
     }, '/gaia/layer/stop', recvPort: oscPort);
 
-    ("Gaia Rhythms listening for OSC on UDP " ++ oscPort).postln;
+    ("Gaia Scape listening for OSC on UDP " ++ oscPort).postln;
 });
 )

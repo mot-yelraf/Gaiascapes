@@ -1,6 +1,6 @@
-# Gaia Rhythms
+# Gaia Scape
 
-Gaia Rhythms captures live terrestrial events and turns their time, location,
+Gaia Scape captures live terrestrial events and turns their time, location,
 and intensity into generative musical performances. The primary runtime is
 Python on macOS, Linux, or Raspberry Pi. SuperCollider is the preferred audio
 engine; capture, history, and the web interface continue to work when it is not
@@ -58,12 +58,12 @@ chronological. Captured forecast records remain available to the replay engine.
 
 ## Ports
 
-- HTTP: `8768` (`GAIA_RHYTHMS_HTTP_PORT`)
-- OSC UDP: `57130` (`GAIA_RHYTHMS_OSC_PORT`)
+- HTTP: `8768` (`GAIA_SCAPE_HTTP_PORT`)
+- OSC UDP: `57130` (`GAIA_SCAPE_OSC_PORT`)
 
 The supplied launchers bind to `0.0.0.0` for private-LAN access by default. Browse
 to `http://<gaia-host-ip>:8768` from another computer. Set
-`GAIA_RHYTHMS_HTTP_HOST=127.0.0.1` for access from this computer only.
+`GAIA_SCAPE_HTTP_HOST=127.0.0.1` for access from this computer only.
 
 ## Installation
 
@@ -71,7 +71,7 @@ Python 3.10 or newer and internet access are required during installation.
 Python packages are declared in `pyproject.toml` and mirrored in `requirements.txt`.
 Astral 3.2 is included for location-aware solar and lunar calculations. System and
 SuperCollider prerequisites are listed in `SYSTEM_REQUIREMENTS.md`. SuperCollider
-may be installed before or after Gaia Rhythms.
+may be installed before or after Gaia Scape.
 
 On macOS:
 
@@ -92,23 +92,23 @@ preserves the selected installation's `data/` directory during updates. For an
 unattended installation:
 
 ```sh
-GAIA_RHYTHMS_INSTALL_DIR=/absolute/path/Gaia_Rhythms ./install.sh
+GAIA_SCAPE_INSTALL_DIR=/absolute/path/Gaia_Scape ./install.sh
 ```
 
-Set `GAIA_RHYTHMS_AUTO_START=yes` to install a user-level systemd service on
+Set `GAIA_SCAPE_AUTO_START=yes` to install a user-level systemd service on
 Linux/Raspberry Pi or a LaunchAgent on macOS.
 
 Run `./uninstall.sh` from the installed directory to remove the application and
 auto-start service while preserving captured data. To remove the data as well:
 
 ```sh
-GAIA_RHYTHMS_REMOVE_DATA=yes ./uninstall.sh
+GAIA_SCAPE_REMOVE_DATA=yes ./uninstall.sh
 ```
 
 The GUI launcher starts and supervises SuperCollider automatically:
 
 ```sh
-./run_gaia_rhythms_gui.sh
+./run_gaia_scape_gui.sh
 ```
 
 To select and remember a particular audio output, write its exact
@@ -119,17 +119,17 @@ printf '%s\n' 'DELL S2725QC' > data/audio-device
 ```
 
 For separate-process operation, run `./run_supercollider.sh` in one terminal
-and `./run_gaia_rhythms_gui.sh` in another. You can override the remembered
-device for one launch with `GAIA_RHYTHMS_AUDIO_DEVICE` or `--audio-device`.
-Passing `GAIA_RHYTHMS_AUDIO_DEVICE` to the installer saves that selection in
+and `./run_gaia_scape_gui.sh` in another. You can override the remembered
+device for one launch with `GAIA_SCAPE_AUDIO_DEVICE` or `--audio-device`.
+Passing `GAIA_SCAPE_AUDIO_DEVICE` to the installer saves that selection in
 the installed data directory.
 
-For unattended operation, use `./run_gaia_rhythms.sh`. Open
+For unattended operation, use `./run_gaia_scape.sh`. Open
 `http://127.0.0.1:8768` locally or `http://<computer-ip>:8768` on the same LAN.
 
 ## OSC cue contract
 
-Gaia Rhythms sends immediate UDP messages to `/gaia/cue` with these ordered
+Gaia Scape sends immediate UDP messages to `/gaia/cue` with these ordered
 arguments:
 
 ```text
@@ -142,7 +142,7 @@ messages smoothly update one persistent synth instead of replacing it. Storm
 forecast strength controls rainfall density and intensity. `/gaia/layer/stop`
 releases the synth when continuous mode stops or the background selection changes.
 
-The included `supercollider/gaia-rhythms.scd` listens on UDP 57130 and provides
+The included `supercollider/gaia-scape.scd` listens on UDP 57130 and provides
 earthquake, seismic-bell, lightning-glass, ocean-swell, tidal-bell, and storm-rain
 voices. The
 Settings menu selects capture sources, three independent event voices, and one continuous
@@ -151,7 +151,7 @@ displays swell and tide heights in meters or feet and earthquake depth in kilome
 or miles. Independent 0–100% volume sliders sit beneath each Preview button for
 Event 1, Event 2, Event 3, and Background; the Lightning Glass default in Event 3
 starts at 45% to leave headroom for dense flash fields. OSC host and port can be overridden with
-`GAIA_RHYTHMS_OSC_HOST` and `GAIA_RHYTHMS_OSC_PORT`; change `oscPort` in the
+`GAIA_SCAPE_OSC_HOST` and `GAIA_SCAPE_OSC_PORT`; change `oscPort` in the
 SuperCollider script when selecting another receive port.
 
 ## Development
@@ -160,8 +160,8 @@ SuperCollider script when selecting another receive port.
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
 .venv/bin/python -m pytest -q
-GAIA_RHYTHMS_DATA_DIR=/tmp/gaia-rhythms-dev .venv/bin/python Gaia_Rhythms.py
+GAIA_SCAPE_DATA_DIR=/tmp/gaia-scape-dev .venv/bin/python Gaia_Scape.py
 ```
 
-Runtime state consists of `config.json` and `gaia_rhythms.sqlite3` under the
+Runtime state consists of `config.json` and `gaia_scape.sqlite3` under the
 installation's `data/` directory.

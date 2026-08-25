@@ -103,13 +103,13 @@ class AppConfig:
 
     def apply_environment(self) -> None:
         """Apply supported process-level overrides."""
-        if value := os.environ.get("GAIA_RHYTHMS_HTTP_HOST"):
+        if value := os.environ.get("GAIA_SCAPE_HTTP_HOST"):
             self.http_host = value
-        if value := os.environ.get("GAIA_RHYTHMS_HTTP_PORT"):
+        if value := os.environ.get("GAIA_SCAPE_HTTP_PORT"):
             self.http_port = int(value)
-        if value := os.environ.get("GAIA_RHYTHMS_OSC_HOST"):
+        if value := os.environ.get("GAIA_SCAPE_OSC_HOST"):
             self.osc_host = value
-        if value := os.environ.get("GAIA_RHYTHMS_OSC_PORT"):
+        if value := os.environ.get("GAIA_SCAPE_OSC_PORT"):
             self.osc_port = int(value)
 
     def validate(self) -> None:
@@ -221,7 +221,7 @@ class AppConfig:
 
 def resolve_data_dir() -> Path:
     """Resolve writable state without depending on the source checkout."""
-    override = os.environ.get("GAIA_RHYTHMS_DATA_DIR")
+    override = os.environ.get("GAIA_SCAPE_DATA_DIR")
     return Path(override).expanduser().resolve() if override else Path.cwd() / "data"
 
 

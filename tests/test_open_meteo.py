@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from gaia_rhythms_host.open_meteo import parse_marine_document, parse_storm_document
+from gaia_scape_host.open_meteo import parse_marine_document, parse_storm_document
 
 
 LOCATION = (("test-coast", "Test Coast", 10.0, 20.0),)

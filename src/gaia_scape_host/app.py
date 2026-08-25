@@ -19,7 +19,7 @@ from .config import (
     event_mappings_for_slots,
     resolve_data_dir,
 )
-from .service import GaiaRhythmsService
+from .service import GaiaScapeService
 
 
 PACKAGE_DIR = Path(__file__).resolve().parent
@@ -44,7 +44,7 @@ def create_app(
     config = AppConfig.load(config_path)
     if not config_path.exists():
         config.save(config_path)
-    service = GaiaRhythmsService(
+    service = GaiaScapeService(
         config,
         runtime_data,
         usgs_client=usgs_client,
@@ -62,7 +62,7 @@ def create_app(
         yield
         await service.stop()
 
-    app = FastAPI(title="Gaia Rhythms", version=_version(), lifespan=lifespan)
+    app = FastAPI(title="Gaia Scape", version=_version(), lifespan=lifespan)
     app.state.config = config
     app.state.config_path = config_path
     app.state.service = service
@@ -216,7 +216,7 @@ async def _json_body(request: Request) -> dict:
 
 def _version() -> str:
     try:
-        value = metadata.version("gaia-rhythms")
+        value = metadata.version("gaia-scape")
     except metadata.PackageNotFoundError:
         return "development"
     return value if value.startswith("v") else f"v{value}"

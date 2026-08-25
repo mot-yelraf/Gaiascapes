@@ -16,7 +16,7 @@ from pathlib import PurePosixPath
 
 from netCDF4 import Dataset, num2date
 
-from gaia_rhythms.events import GaiaEvent
+from gaia_scape.events import GaiaEvent
 
 
 LOGGER = logging.getLogger(__name__)
@@ -264,7 +264,7 @@ class NoaaGlmClient:
     def _request(self, url: str, maximum_bytes: int) -> bytes:
         request = urllib.request.Request(
             url,
-            headers={"User-Agent": "Gaia-Rhythms/0.1 (+local environmental music app)"},
+            headers={"User-Agent": "Gaia-Scape/0.1 (+local environmental music app)"},
         )
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
             content_length = response.headers.get("Content-Length")

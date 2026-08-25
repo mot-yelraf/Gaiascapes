@@ -1,5 +1,5 @@
-from gaia_rhythms.events import GaiaEvent
-from gaia_rhythms_host.capture import EventStore
+from gaia_scape.events import GaiaEvent
+from gaia_scape_host.capture import EventStore
 
 
 def event(event_id, timestamp):
@@ -39,7 +39,7 @@ def test_store_prunes_only_events_before_cutoff(tmp_path):
 def test_store_migrates_legacy_table_without_losing_events(tmp_path):
     import sqlite3
 
-    database = tmp_path / "gaia_rhythms.sqlite3"
+    database = tmp_path / "gaia_scape.sqlite3"
     connection = sqlite3.connect(database)
     connection.execute(
         """CREATE TABLE earth_events (

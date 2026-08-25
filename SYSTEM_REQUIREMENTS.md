@@ -1,6 +1,6 @@
 # System requirements
 
-Gaia Rhythms supports macOS, Linux, and Raspberry Pi OS.
+Gaia Scape supports macOS, Linux, and Raspberry Pi OS.
 
 ## Required
 

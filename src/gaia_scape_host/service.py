@@ -10,8 +10,8 @@ import time
 from collections import deque
 from pathlib import Path
 
-from gaia_rhythms.events import GaiaEvent
-from gaia_rhythms.score import ScoreCue, build_score
+from gaia_scape.events import GaiaEvent
+from gaia_scape.score import ScoreCue, build_score
 
 from .capture import EventStore
 from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS
@@ -29,7 +29,7 @@ LOGGER = logging.getLogger("uvicorn.error")
 GLM_SONIFICATION_TIME_SCALE = 1.0
 
 
-class GaiaRhythmsService:
+class GaiaScapeService:
     """Coordinate provider polling without coupling it to HTTP routes."""
 
     def __init__(
@@ -92,11 +92,11 @@ class GaiaRhythmsService:
         """Start one idempotent background polling loop."""
         if self._poll_task is None or self._poll_task.done():
             self._poll_task = asyncio.create_task(
-                self._poll_loop(), name="gaia-rhythms-capture"
+                self._poll_loop(), name="gaia-scape-capture"
             )
         if self._glm_poll_task is None or self._glm_poll_task.done():
             self._glm_poll_task = asyncio.create_task(
-                self._glm_poll_loop(), name="gaia-rhythms-glm-capture"
+                self._glm_poll_loop(), name="gaia-scape-glm-capture"
             )
 
     async def start_continuous(self) -> None:
@@ -104,7 +104,7 @@ class GaiaRhythmsService:
         if self._continuous_task is None or self._continuous_task.done():
             self._last_continuous_cycle_at = time.time()
             self._continuous_task = asyncio.create_task(
-                self._continuous_loop(), name="gaia-rhythms-continuous"
+                self._continuous_loop(), name="gaia-scape-continuous"
             )
 
     async def stop_continuous(self) -> None:
@@ -614,7 +614,7 @@ class GaiaRhythmsService:
             self._glm_sonification_task.cancel()
         self._glm_sonification_task = asyncio.create_task(
             self._run_glm_sonification(tuple(events)),
-            name="gaia-rhythms-glm-sonification",
+            name="gaia-scape-glm-sonification",
         )
 
     async def _run_glm_sonification(self, events) -> None:
@@ -748,11 +748,15 @@ class GaiaRhythmsService:
 
 
 def _resolve_event_database(data_dir: Path) -> Path:
-    """Move the pre-Gaia database name in place without losing captured history."""
-    current = data_dir / "gaia_rhythms.sqlite3"
-    legacy = data_dir / "earth_rhythms.sqlite3"
-    if not current.exists() and legacy.exists():
-        legacy.replace(current)
+    """Move a database from an earlier project name without losing history."""
+    current = data_dir / "gaia_scape.sqlite3"
+    legacy_names = ("gaia_rhythms.sqlite3", "earth_rhythms.sqlite3")
+    if not current.exists():
+        for legacy_name in legacy_names:
+            legacy = data_dir / legacy_name
+            if legacy.exists():
+                legacy.replace(current)
+                break
     return current
 
 

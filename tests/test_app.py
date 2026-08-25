@@ -2,12 +2,13 @@ import asyncio
 import re
 import time
 
+import pytest
 from fastapi.testclient import TestClient
 
-from gaia_rhythms.events import GaiaEvent
-from gaia_rhythms.score import ScoreCue
-from gaia_rhythms_host import service
-from gaia_rhythms_host.app import create_app
+from gaia_scape.events import GaiaEvent
+from gaia_scape.score import ScoreCue
+from gaia_scape_host import service
+from gaia_scape_host.app import create_app
 
 
 class FakeUsgs:
@@ -110,7 +111,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
             '<section class="metrics"'
         )
         assert 'id="liveMode"' in home.text
-        assert '/static/gaia-rhythms-icon.svg' in home.text
+        assert '/static/gaia-scape-icon.svg' in home.text
         assert f'/static/app.js?v={app.version}' in home.text
         assert f'/static/app.css?v={app.version}' in home.text
         script = client.get("/static/app.js").text
@@ -126,7 +127,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
     assert events.json()["events"][0]["instrument"] == "earthquake"
     assert status.json()["history"]["event_count"] == 1
     assert (tmp_path / "config.json").exists()
-    assert (tmp_path / "gaia_rhythms.sqlite3").exists()
+    assert (tmp_path / "gaia_scape.sqlite3").exists()
 
 
 def test_live_mode_persists_and_controls_continuous_task(tmp_path):
@@ -889,16 +890,17 @@ def test_homebrew_supercollider_bundle_is_detected(tmp_path, monkeypatch):
     assert status["scsynth"].endswith("SuperCollider.app/Contents/Resources/scsynth")
 
 
-def test_app_migrates_legacy_database_filename(tmp_path):
+@pytest.mark.parametrize("legacy_name", ["gaia_rhythms.sqlite3", "earth_rhythms.sqlite3"])
+def test_app_migrates_legacy_database_filename(tmp_path, legacy_name):
     initial_app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
     initial_app.state.service.store.add_events(
         (GaiaEvent("usgs", "saved", "earthquake", 100, strength=0.4),)
     )
-    legacy_path = tmp_path / "earth_rhythms.sqlite3"
+    legacy_path = tmp_path / legacy_name
     initial_app.state.service.store.path.replace(legacy_path)
 
     migrated_app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
 
     assert migrated_app.state.service.store.count() == 1
-    assert (tmp_path / "gaia_rhythms.sqlite3").exists()
+    assert (tmp_path / "gaia_scape.sqlite3").exists()
     assert not legacy_path.exists()

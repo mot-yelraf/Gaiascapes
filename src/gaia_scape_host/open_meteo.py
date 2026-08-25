@@ -9,7 +9,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
-from gaia_rhythms.events import GaiaEvent
+from gaia_scape.events import GaiaEvent
 
 
 MAX_DOCUMENT_BYTES = 4 * 1024 * 1024
@@ -232,7 +232,7 @@ class _OpenMeteoClient:
         )
         request = urllib.request.Request(
             f"{self.url}?{parameters}",
-            headers={"User-Agent": "Gaia-Rhythms/0.1 (+local environmental music app)"},
+            headers={"User-Agent": "Gaia-Scape/0.1 (+local environmental music app)"},
         )
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
             payload = response.read(MAX_DOCUMENT_BYTES + 1)

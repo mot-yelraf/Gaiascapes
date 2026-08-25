@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from gaia_rhythms_host.config import (
+from gaia_scape_host.config import (
     AppConfig,
     event_mappings_for_slots,
     volume_mappings_for_slots,
