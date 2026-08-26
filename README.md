@@ -97,9 +97,11 @@ to `http://<gaia-host-ip>:8768` from another computer. Set
 
 Python 3.10 or newer and internet access are required during installation.
 Python packages are declared in `pyproject.toml` and mirrored in `requirements.txt`.
-Astral 3.2 is included for location-aware solar and lunar calculations. System and
-SuperCollider prerequisites are listed in `SYSTEM_REQUIREMENTS.md`. SuperCollider
-may be installed before or after Gaia Scape.
+The map uses an approximate public-IP location from `ipapi.co`, with `ipwho.is`
+as an HTTPS fallback, to mark the host system with a small green circle. The
+result is held only in process memory. System and SuperCollider prerequisites
+are listed in `SYSTEM_REQUIREMENTS.md`. SuperCollider may be installed before
+or after Gaia Scape.
 
 On macOS:
 

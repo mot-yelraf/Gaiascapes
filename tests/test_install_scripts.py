@@ -22,7 +22,6 @@ def test_installer_uses_dedicated_ports_and_chosen_runtime():
     assert "8767" not in installer
     assert "requirements.txt" in installer
     assert "SYSTEM_REQUIREMENTS.md" in installer
-    assert "astral>=3.2,<4.0" in Path("requirements.txt").read_text(encoding="utf-8")
     assert "pywebview>=5.4,<6.0" in Path("requirements.txt").read_text(encoding="utf-8")
     assert "import webview" in installer
     assert "gir1.2-webkit2-4.1" in installer

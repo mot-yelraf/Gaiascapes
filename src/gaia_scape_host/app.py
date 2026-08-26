@@ -6,6 +6,7 @@ layer and exposes the dashboard, status, capture, playback, and settings APIs.
 
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 from importlib import metadata
 from pathlib import Path
@@ -24,6 +25,7 @@ from .config import (
     event_mappings_for_slots,
     resolve_data_dir,
 )
+from .geoip import GeoIpLocationResolver
 from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
 from .service import GaiaScapeService
 
@@ -42,6 +44,7 @@ def create_app(
     marine_client=None,
     storm_client=None,
     glm_client=None,
+    geoip_resolver=None,
 ) -> FastAPI:
     """Create an isolated application, optionally disabling network polling."""
     runtime_data = Path(data_dir) if data_dir is not None else resolve_data_dir()
@@ -58,6 +61,7 @@ def create_app(
         storm_client=storm_client,
         glm_client=glm_client,
     )
+    system_location = geoip_resolver or GeoIpLocationResolver()
 
     @asynccontextmanager
     async def lifespan(app):
@@ -73,6 +77,7 @@ def create_app(
     app.state.config = config
     app.state.config_path = config_path
     app.state.service = service
+    app.state.system_location = system_location
     app.mount("/static", StaticFiles(directory=PACKAGE_DIR / "static"), name="static")
 
     @app.get("/", response_class=HTMLResponse)
@@ -112,6 +117,12 @@ def create_app(
     async def status():
         """Return the current capture, playback, source, and renderer status."""
         return await service.status()
+
+    @app.get("/api/system-location")
+    async def system_location_status():
+        """Return the host's approximate, session-cached public-IP location."""
+        location = await asyncio.to_thread(system_location.resolve)
+        return {"location": location}
 
     @app.get("/api/events")
     async def events(hours: float | None = None, limit: int = 500):

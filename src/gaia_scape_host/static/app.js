@@ -126,6 +126,36 @@ function updateMapBackgroundLocation(location, color = EVENT_PALETTES.ocean_swel
   layer.append(ring, core);
 }
 
+function updateMapSystemLocation(location) {
+  const layer = byId("mapSystemLocationLayer");
+  if (!layer) return;
+  layer.replaceChildren();
+  const latitude = Number(location?.latitude);
+  const longitude = Number(location?.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+  const position = projectCoordinates(longitude, latitude);
+  const group = createSvgElement("g", {class: "map-system-location"});
+  const title = createSvgElement("title");
+  title.textContent = `Approximate system location: ${location.name || `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`}`;
+  const marker = createSvgElement("circle", {
+    cx: position.x,
+    cy: position.y,
+    r: 4.5,
+    class: "map-system-location-marker",
+  });
+  group.append(title, marker);
+  layer.append(group);
+}
+
+async function updateSystemLocation() {
+  try {
+    const payload = await request("/api/system-location");
+    updateMapSystemLocation(payload.location);
+  } catch (error) {
+    updateMapSystemLocation(null);
+  }
+}
+
 function renderMapHistory(events) {
   const layer = byId("mapHistoryLayer");
   if (!layer) return;
@@ -1205,5 +1235,5 @@ if (settingsDialog && settingsForm) {
   });
 }
 
-Promise.all([updateStatus(), updateEvents(), updateEmittedCues()]);
+Promise.all([updateStatus(), updateEvents(), updateEmittedCues(), updateSystemLocation()]);
 setInterval(updateStatus, 3000);

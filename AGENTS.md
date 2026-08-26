@@ -40,6 +40,18 @@
 - Prefer idempotent operations.
 - Avoid broad search-and-replace edits unless the task specifically requires
   them.
+- Never run previews, browser checks, tests, or diagnostic servers against the
+  installed runtime's `data/` directory. Create a dedicated temporary data
+  directory and set `GAIA_SCAPE_DATA_DIR` to that exact directory before
+  starting the test process.
+- Treat test-only HTTP, OSC, host, audio-device, and other environment
+  overrides as process-local values. Never save, copy, migrate, or otherwise
+  materialize them into the installed `config.json` or other runtime state.
+- Do not use the installed Gaia Scape process for UI tests that can persist
+  settings. After any test involving runtime overrides, verify that the
+  installed configuration still uses the intended production parameters,
+  including HTTP port `8768` and OSC port `57130`, before installation or
+  handoff.
 - Treat settings materialization, normalized metric names, SQLite persistence,
   and gateway polling behavior as compatibility-sensitive.
 - Surface major concurrency or storage refactors before implementation.
@@ -62,4 +74,3 @@ reset `<x>` to `1`.
 
 Documentation-only changes, including edits to this file, do not require a
 version bump.
-

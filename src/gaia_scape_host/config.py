@@ -127,15 +127,21 @@ class AppConfig:
         return config
 
     def apply_environment(self) -> None:
-        """Apply supported process-level overrides."""
+        """Apply process-only overrides without making them persistent settings."""
+        persisted_values = getattr(self, "_persisted_environment_values", {})
         if value := os.environ.get("GAIA_SCAPE_HTTP_HOST"):
+            persisted_values.setdefault("http_host", self.http_host)
             self.http_host = value
         if value := os.environ.get("GAIA_SCAPE_HTTP_PORT"):
+            persisted_values.setdefault("http_port", self.http_port)
             self.http_port = int(value)
         if value := os.environ.get("GAIA_SCAPE_OSC_HOST"):
+            persisted_values.setdefault("osc_host", self.osc_host)
             self.osc_host = value
         if value := os.environ.get("GAIA_SCAPE_OSC_PORT"):
+            persisted_values.setdefault("osc_port", self.osc_port)
             self.osc_port = int(value)
+        self._persisted_environment_values = persisted_values
 
     def validate(self) -> None:
         """Normalize values and reject unsafe ranges."""
@@ -252,7 +258,9 @@ class AppConfig:
         self.validate()
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(path.suffix + ".tmp")
-        temporary.write_text(json.dumps(asdict(self), indent=2) + "\n", encoding="utf-8")
+        document = asdict(self)
+        document.update(getattr(self, "_persisted_environment_values", {}))
+        temporary.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
         temporary.replace(path)
 
 

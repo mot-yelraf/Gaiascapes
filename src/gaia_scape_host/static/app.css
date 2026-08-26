@@ -41,6 +41,21 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 1.45rem; }
 .metrics span { display: block; margin-bottom: 8px; color: var(--muted); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
 .metrics strong { display: block; overflow: hidden; font-size: clamp(1rem, 2.1vw, 1.3rem); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .metrics small { display: block; min-height: 1.2em; margin-top: 8px; overflow: hidden; color: var(--muted); font-size: .76rem; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.status-card--background { --status-accent: #6ab5bd; }
+.status-card--event { --status-accent: #e5aa2b; }
+.status-card--earthquake { --status-accent: #b98258; }
+.status-card > span, .status-card > strong, .status-card > small,
+.status-card .forecast-characteristics-details,
+.status-card .lightning-characteristics-details,
+.status-card .lightning-characteristics-location,
+.status-card .earthquake-characteristics-location { color: var(--status-accent); }
+.status-card--earthquake > span,
+.status-card--earthquake > strong,
+.status-card--earthquake .earthquake-characteristics-location {
+  -webkit-text-stroke: .25px rgba(255,255,255,.72);
+  paint-order: stroke fill;
+  text-shadow: 0 0 1px rgba(255,255,255,.85);
+}
 .metrics small.forecast-characteristics { display: flex; align-items: center; justify-content: center; gap: 7px; flex-wrap: wrap; overflow: visible; white-space: normal; }
 .metrics .storm-cape-pill, .metrics .swell-height-pill { display: inline-block; max-width: 100%; padding: 6px 11px; overflow: hidden; color: #fff; border-radius: 999px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
 .forecast-characteristics-details { white-space: nowrap; }
@@ -119,6 +134,7 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .map-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
 .map-legend-background { border: 2px solid #6ab5bd; box-shadow: 0 0 8px rgba(106,181,189,.6); }
 .map-legend-event { background: var(--earth); box-shadow: 0 0 8px rgba(216,167,109,.6); }
+.map-legend-system { display: inline-block; width: 9px; height: 9px; border: 1.5px solid rgba(255,255,255,.9); border-radius: 50%; background: #53b86b; box-shadow: 0 0 5px rgba(83,184,107,.75); }
 .map-stage { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: rgba(8,16,17,.74); box-shadow: 0 22px 70px rgba(0,0,0,.2); }
 #worldMap { display: block; width: 100%; height: auto; min-height: 30rem; }
 .map-glow { fill: rgba(83,167,168,.12); filter: drop-shadow(0 0 22px rgba(64,152,158,.22)); }
@@ -130,6 +146,7 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .map-history-marker { stroke: rgba(234,241,232,.7); stroke-width: 1.1; opacity: .72; vector-effect: non-scaling-stroke; }
 .map-background-marker { fill: rgba(12,31,34,.85); stroke-width: 4; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 8px currentColor); }
 .map-background-core { stroke: rgba(234,241,232,.82); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.map-system-location-marker { fill: #53b86b; stroke: rgba(255,255,255,.95); stroke-width: 1.5; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 4px rgba(83,184,107,.8)); }
 .map-cue-core { stroke: rgba(234,241,232,.88); stroke-width: 1.3; vector-effect: non-scaling-stroke; }
 .map-cue-pulse { fill: none; stroke-width: 3; opacity: 0; transform-box: fill-box; transform-origin: center; vector-effect: non-scaling-stroke; animation: map-cue-pulse var(--map-pulse-duration, 3.6s) ease-out forwards; }
 .map-cue--background .map-cue-pulse { stroke-width: 4; }

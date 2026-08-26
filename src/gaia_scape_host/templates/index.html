@@ -69,21 +69,21 @@
       </section>
 
       <section class="metrics" aria-label="Application status">
-        <article><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting forecast</small></article>
-        <article><span>Last Event</span><strong id="lastEventType" data-status-field="last-event-type">—</strong><small id="lastEventTime" data-status-field="last-event-time">Not yet</small></article>
-        <article><span>Last Earthquake Event</span><strong id="lastEarthquakeLocation" data-status-field="last-earthquake-location">—</strong><small id="lastEarthquakeDetail" data-status-field="last-earthquake-detail">Not yet</small></article>
+        <article class="status-card status-card--background"><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting forecast</small></article>
+        <article class="status-card status-card--event"><span>Last Event</span><strong id="lastEventType" data-status-field="last-event-type">—</strong><small id="lastEventTime" data-status-field="last-event-time">Not yet</small></article>
+        <article class="status-card status-card--earthquake"><span>Last Earthquake Event</span><strong id="lastEarthquakeLocation" data-status-field="last-earthquake-location">—</strong><small id="lastEarthquakeDetail" data-status-field="last-earthquake-detail">Not yet</small></article>
       </section>
     </div>
 
     <section class="map-view" id="mapView" data-app-view="map" aria-labelledby="mapViewTitle"{% if app_view != 'map' %} hidden{% endif %}>
       <div class="map-heading">
         <div><p class="eyebrow">Live coordinates</p><h2 id="mapViewTitle">Global event map</h2></div>
-        <div class="map-legend" aria-label="Map marker legend"><span><i class="map-legend-background"></i>Background</span><span><i class="map-legend-event"></i>Event</span></div>
+        <div class="map-legend" aria-label="Map marker legend"><span><i class="map-legend-background"></i>Background</span><span><i class="map-legend-event"></i>Event</span><span><b class="map-legend-system" aria-hidden="true"></b>System location</span></div>
       </div>
       <div class="map-stage">
         <svg id="worldMap" viewBox="0 170 1024 684" role="img" aria-labelledby="worldMapTitle worldMapDescription">
           <title id="worldMapTitle">Live Gaia Scape world map</title>
-          <desc id="worldMapDescription">Robinson projection with latitude and longitude grid, recent environmental locations, and animated sound cues.</desc>
+          <desc id="worldMapDescription">Robinson projection with latitude and longitude grid, approximate system location, recent environmental locations, and animated sound cues.</desc>
           <defs>
             <radialGradient id="mapOcean" cx="50%" cy="44%" r="68%"><stop offset="0" stop-color="#173e48"/><stop offset=".62" stop-color="#0d2f39"/><stop offset="1" stop-color="#09232b"/></radialGradient>
             <clipPath id="mapGlobeClip"><path id="mapGlobeClipPath"/></clipPath>
@@ -95,14 +95,15 @@
           <g id="mapHistoryLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
           <g id="mapBackgroundLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
           <g id="mapPulseLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
+          <g id="mapSystemLocationLayer" clip-path="url(#mapGlobeClip)"></g>
           <g id="mapCoordinateLabels" aria-hidden="true"></g>
         </svg>
         <output class="map-coordinate-readout" id="mapCoordinateReadout" aria-live="polite">Move over the map to inspect coordinates</output>
       </div>
       <section class="metrics map-status" aria-label="Map application status">
-        <article><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting forecast</small></article>
-        <article><span>Last Event</span><strong data-status-field="last-event-type">—</strong><small data-status-field="last-event-time">Not yet</small></article>
-        <article><span>Last Earthquake Event</span><strong data-status-field="last-earthquake-location">—</strong><small data-status-field="last-earthquake-detail">Not yet</small></article>
+        <article class="status-card status-card--background"><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting forecast</small></article>
+        <article class="status-card status-card--event"><span>Last Event</span><strong data-status-field="last-event-type">—</strong><small data-status-field="last-event-time">Not yet</small></article>
+        <article class="status-card status-card--earthquake"><span>Last Earthquake Event</span><strong data-status-field="last-earthquake-location">—</strong><small data-status-field="last-earthquake-detail">Not yet</small></article>
       </section>
     </section>
 

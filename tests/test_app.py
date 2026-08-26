@@ -42,6 +42,17 @@ class FakeGlm:
         }
 
 
+class FakeGeoIpResolver:
+    def resolve(self):
+        return {
+            "name": "Test City, Test Region",
+            "latitude": 39.7392,
+            "longitude": -104.9903,
+            "timezone": "America/Denver",
+            "provider": "test",
+        }
+
+
 class RecoveringMarine:
     def __init__(self):
         self.calls = 0
@@ -126,6 +137,8 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'id="mapViewButton"' in home.text
         assert 'id="worldMap"' in home.text
         assert 'id="mapPulseLayer"' in home.text
+        assert 'id="mapSystemLocationLayer"' in home.text
+        assert "System location" in home.text
         assert 'href="/static/gaia-scape-icon.svg#realistic-land"' in home.text
         assert 'role="tablist"' in home.text
         assert 'data-workspace-tab="live"' in home.text
@@ -154,6 +167,9 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert home.text.count('data-status-field="last-earthquake-detail"') == 2
         assert home.text.count(">Last Event</span>") == 2
         assert home.text.count(">Last Earthquake Event</span>") == 2
+        assert home.text.count('class="status-card status-card--background"') == 2
+        assert home.text.count('class="status-card status-card--event"') == 2
+        assert home.text.count('class="status-card status-card--earthquake"') == 2
         assert 'aria-label="Map application status"' in home.text
         assert "Open-Meteo Storm Outlook" in home.text
         assert '<option value="storm_potential" >Storm Outlook</option>' in home.text
@@ -225,6 +241,10 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert ".lightning-intensity--intense" in stylesheet
         assert ".earthquake-magnitude--micro" in stylesheet
         assert ".earthquake-magnitude--great" in stylesheet
+        assert ".status-card--background { --status-accent: #6ab5bd; }" in stylesheet
+        assert ".status-card--event { --status-accent: #e5aa2b; }" in stylesheet
+        assert ".status-card--earthquake { --status-accent: #b98258; }" in stylesheet
+        assert ".map-system-location-marker { fill: #53b86b;" in stylesheet
         assert "backgroundCharacteristics" in script
         assert "updateLastEventStatus" in script
         assert "updateLastEarthquakeStatus" in script
@@ -240,6 +260,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert "projectCoordinates" in script
         assert "inverseProjectCoordinates" in script
         assert "mapProjectionBoundary" in script
+        assert 'class: "map-system-location-marker"' in script
         assert "mapContainsPoint" in script
         assert "mapMarkerTitle" in script
         assert 'event.kind === "earthquake"' in script
@@ -263,6 +284,29 @@ def test_web_app_captures_and_reports_status(tmp_path):
     assert status.json()["history"]["event_count"] == 1
     assert (tmp_path / "config.json").exists()
     assert (tmp_path / "gaia_scape.sqlite3").exists()
+
+
+def test_system_location_api_returns_normalized_location(tmp_path):
+    app = create_app(
+        tmp_path,
+        auto_capture=False,
+        usgs_client=FakeUsgs(),
+        geoip_resolver=FakeGeoIpResolver(),
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/api/system-location")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "location": {
+            "name": "Test City, Test Region",
+            "latitude": 39.7392,
+            "longitude": -104.9903,
+            "timezone": "America/Denver",
+            "provider": "test",
+        }
+    }
 
 
 def test_selected_app_view_persists_across_restart(tmp_path):

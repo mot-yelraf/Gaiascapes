@@ -163,6 +163,37 @@ def test_existing_config_enables_glm_once_during_revision_migration(tmp_path):
     assert reloaded.enabled_sources == ["usgs", "noaa_glm"]
 
 
+def test_environment_port_overrides_are_not_persisted(tmp_path, monkeypatch):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(
+            {
+                "http_host": "0.0.0.0",
+                "http_port": 8768,
+                "osc_host": "127.0.0.1",
+                "osc_port": 57130,
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GAIA_SCAPE_HTTP_HOST", "127.0.0.1")
+    monkeypatch.setenv("GAIA_SCAPE_HTTP_PORT", "8878")
+    monkeypatch.setenv("GAIA_SCAPE_OSC_HOST", "127.0.0.2")
+    monkeypatch.setenv("GAIA_SCAPE_OSC_PORT", "57999")
+
+    config = AppConfig.load(path)
+    assert (config.http_host, config.http_port) == ("127.0.0.1", 8878)
+    assert (config.osc_host, config.osc_port) == ("127.0.0.2", 57999)
+
+    config.app_view = "map"
+    config.save(path)
+    persisted = json.loads(path.read_text(encoding="utf-8"))
+
+    assert (persisted["http_host"], persisted["http_port"]) == ("0.0.0.0", 8768)
+    assert (persisted["osc_host"], persisted["osc_port"]) == ("127.0.0.1", 57130)
+    assert persisted["app_view"] == "map"
+
+
 def test_forecast_location_catalogs_default_to_nineteen_and_persist(tmp_path):
     path = tmp_path / "config.json"
     config = AppConfig()

@@ -15,7 +15,6 @@ mirrors them in `requirements.txt`:
 | FastAPI | HTTP application and API routing | MIT |
 | Uvicorn | ASGI server | BSD-3-Clause |
 | Jinja2 | HTML template rendering | BSD-3-Clause |
-| Astral | Solar and lunar calculations | Apache-2.0 |
 | netCDF4 | NOAA GLM NetCDF parsing | MIT |
 | pywebview | Native desktop web-view window | BSD-3-Clause |
 
@@ -100,6 +99,14 @@ Open-Meteo marine and forecast values are model output. They are not observed
 lightning strikes and are not suitable for navigation. Individual upstream
 datasets named on the Open-Meteo license page may carry additional attribution
 or source terms that remain applicable.
+
+## Approximate system location
+
+Gaia Scape requests an approximate location for the host's public IP from
+`ipapi.co`, with `ipwho.is` as an HTTPS fallback. The normalized city,
+coordinates, and timezone are held only in process memory; Gaia Scape does not
+store the IP address returned by either provider. Their respective terms and
+privacy policies apply to these requests.
 
 ## Natural Earth map data
 
