@@ -42,6 +42,38 @@ def test_store_prunes_only_events_before_cutoff(tmp_path):
     assert [item.event_id for item in store.events_since(0)] == ["keep"]
 
 
+def test_store_queries_required_kinds_and_latest_places(tmp_path):
+    store = EventStore(tmp_path / "events.sqlite3")
+    store.initialize()
+    store.add_events(
+        (
+            event("unrelated", 400),
+            GaiaEvent(
+                "open_meteo_marine", "raglan-old", "ocean_swell", 100,
+                traits={"place": "Raglan, New Zealand"},
+            ),
+            GaiaEvent(
+                "open_meteo_marine", "raglan-new", "ocean_swell", 300,
+                traits={"place": "Raglan, New Zealand"},
+            ),
+            GaiaEvent(
+                "open_meteo_marine", "shonan", "ocean_swell", 200,
+                traits={"place": "Shōnan, Japan"},
+            ),
+            GaiaEvent(
+                "open_meteo_marine", "raglan-tide", "tide_turn", 250,
+                traits={"place": "Raglan, New Zealand"},
+            ),
+        )
+    )
+
+    latest = store.latest_events_by_kind_and_place(("ocean_swell",))
+    assert [item.event_id for item in latest] == ["raglan-new", "shonan"]
+    assert [item.event_id for item in store.events_of_kinds_since(("tide_turn",), 200)] == [
+        "raglan-tide"
+    ]
+
+
 def test_store_migrates_legacy_table_without_losing_events(tmp_path):
     import sqlite3
 

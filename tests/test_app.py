@@ -347,6 +347,41 @@ def test_continuous_cycle_overlays_independent_ambient_layers(tmp_path):
     assert app.state.service._emitted_cues[-1]["history_updated"] is False
 
 
+def test_ambient_rotation_ignores_unrelated_event_query_volume(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    now = time.time()
+    unrelated = tuple(
+        GaiaEvent(
+            "noaa_glm", f"flash-{index}", "lightning_flash", now - 1000 + index / 10,
+        )
+        for index in range(5001)
+    )
+    backgrounds = tuple(
+        GaiaEvent(
+            "open_meteo_marine", f"{slug}-swell", "ocean_swell", now,
+            traits={"place": place, "swell_period_s": 10.0},
+        )
+        for slug, place in (
+            ("punta", "Punta de Lobos, Chile"),
+            ("raglan", "Raglan, New Zealand"),
+            ("shonan", "Shōnan, Japan"),
+        )
+    )
+    app.state.service.store.add_events((*unrelated, *backgrounds))
+    played = []
+    app.state.service.renderer.update_layer = (
+        lambda cue, instrument=None: played.append(cue.event.traits["place"])
+    )
+
+    for _cycle in backgrounds:
+        asyncio.run(app.state.service.play_next_ambient_layers())
+
+    assert played == [
+        "Punta de Lobos, Chile",
+        "Raglan, New Zealand",
+        "Shōnan, Japan",
+    ]
+
 
 def test_storm_background_replaces_ocean_with_persistent_rain_layer(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())

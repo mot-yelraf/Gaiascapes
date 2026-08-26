@@ -709,17 +709,12 @@ class GaiaScapeService:
     async def play_next_ambient_layers(self) -> tuple[str, ...]:
         """Rotate the background and play Event 2 only when a tide turn is due."""
         cycle_at = time.time()
-        events = await asyncio.to_thread(
-            self.store.events_since, cycle_at - 86400.0, 5000
+        background_events = await asyncio.to_thread(
+            self.store.latest_events_by_kind_and_place,
+            BACKGROUND_HISTORY_KINDS,
         )
-        latest_by_location = {}
-        for event in events:
-            if event.kind not in {"ocean_swell", "storm_potential"}:
-                continue
-            place = str(event.traits.get("place", ""))
-            latest_by_location[(event.kind, place)] = event
         groups = {kind: [] for kind in ("ocean_swell", "storm_potential")}
-        for event in latest_by_location.values():
+        for event in background_events:
             groups[event.kind].append(event)
         for events_for_kind in groups.values():
             events_for_kind.sort(key=lambda event: str(event.traits.get("place", "")))
@@ -734,11 +729,16 @@ class GaiaScapeService:
             cursor = self._ambient_cursors[kind]
             selected.append(choices[cursor % len(choices)])
             self._ambient_cursors[kind] = cursor + 1
+        tide_events = await asyncio.to_thread(
+            self.store.events_of_kinds_since,
+            ("tide_turn",),
+            self._last_continuous_cycle_at,
+            5000,
+        )
         due_tides = [
             event
-            for event in events
-            if event.kind == "tide_turn"
-            and self._last_continuous_cycle_at < event.timestamp <= cycle_at
+            for event in tide_events
+            if self._last_continuous_cycle_at < event.timestamp <= cycle_at
             and self.config.instruments_for_event("tide_turn")
         ]
         if due_tides:

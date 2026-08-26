@@ -54,6 +54,10 @@ class EventStore:
                 "CREATE INDEX IF NOT EXISTS idx_gaia_events_occurred "
                 "ON gaia_events (occurred_at)"
             )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_gaia_events_kind_occurred "
+                "ON gaia_events (kind, occurred_at)"
+            )
             connection.commit()
 
     def add_events(self, events, ingested_at=None) -> int:
@@ -100,6 +104,59 @@ class EventStore:
                 LIMIT ?
                 """,
                 (float(since_timestamp), max(1, min(20000, int(limit)))),
+            ).fetchall()
+        return tuple(_event_from_row(row) for row in rows)
+
+    def events_of_kinds_since(self, kinds, since_timestamp: float, limit: int = 5000):
+        """Return only the requested event kinds on or after a timestamp."""
+        kinds = tuple(dict.fromkeys(str(kind) for kind in kinds))
+        if not kinds:
+            return ()
+        placeholders = ",".join("?" for _kind in kinds)
+        with closing(sqlite3.connect(self.path)) as connection:
+            rows = connection.execute(
+                f"""
+                SELECT provider, event_id, kind, occurred_at, latitude,
+                       longitude, strength, traits_json
+                FROM gaia_events
+                WHERE kind IN ({placeholders}) AND occurred_at >= ?
+                ORDER BY occurred_at ASC, provider ASC, event_id ASC
+                LIMIT ?
+                """,
+                (
+                    *kinds,
+                    float(since_timestamp),
+                    max(1, min(20000, int(limit))),
+                ),
+            ).fetchall()
+        return tuple(_event_from_row(row) for row in rows)
+
+    def latest_events_by_kind_and_place(self, kinds):
+        """Return the newest requested event for each normalized place."""
+        kinds = tuple(dict.fromkeys(str(kind) for kind in kinds))
+        if not kinds:
+            return ()
+        placeholders = ",".join("?" for _kind in kinds)
+        with closing(sqlite3.connect(self.path)) as connection:
+            rows = connection.execute(
+                f"""
+                WITH ranked_events AS (
+                    SELECT provider, event_id, kind, occurred_at, latitude,
+                           longitude, strength, traits_json,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY kind, json_extract(traits_json, '$.place')
+                               ORDER BY occurred_at DESC, provider DESC, event_id DESC
+                           ) AS place_rank
+                    FROM gaia_events
+                    WHERE kind IN ({placeholders})
+                )
+                SELECT provider, event_id, kind, occurred_at, latitude,
+                       longitude, strength, traits_json
+                FROM ranked_events
+                WHERE place_rank = 1
+                ORDER BY kind ASC, json_extract(traits_json, '$.place') ASC
+                """,
+                kinds,
             ).fetchall()
         return tuple(_event_from_row(row) for row in rows)
 
