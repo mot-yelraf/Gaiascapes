@@ -42,6 +42,56 @@ def test_store_prunes_only_events_before_cutoff(tmp_path):
     assert [item.event_id for item in store.events_since(0)] == ["keep"]
 
 
+def test_store_prunes_retired_provider_places(tmp_path):
+    store = EventStore(tmp_path / "events.sqlite3")
+    store.initialize()
+    store.add_events(
+        (
+            GaiaEvent(
+                "open_meteo_marine", "dakar", "ocean_swell", 100,
+                traits={"place": "Dakar, Senegal"},
+            ),
+            GaiaEvent(
+                "open_meteo_marine", "jamaica", "ocean_swell", 100,
+                traits={"place": "Jamaica"},
+            ),
+            event("unrelated", 100),
+        )
+    )
+
+    assert store.prune_provider_places("open_meteo_marine", ("Jamaica",)) == 1
+    assert {item.event_id for item in store.events_since(0)} == {
+        "jamaica", "unrelated",
+    }
+    assert store.prune_provider_places("open_meteo_marine", ()) == 0
+
+
+def test_store_prunes_provider_place_moved_to_new_coordinates(tmp_path):
+    store = EventStore(tmp_path / "events.sqlite3")
+    store.initialize()
+    store.add_events(
+        (
+            GaiaEvent(
+                "open_meteo_marine", "gold-coast", "ocean_swell", 100,
+                latitude=-28.04, longitude=153.62,
+                traits={"place": "Gold Coast, Australia"},
+            ),
+            GaiaEvent(
+                "open_meteo_marine", "maine", "ocean_swell", 100,
+                latitude=44.21, longitude=-68.12,
+                traits={"place": "East Coast of Maine, USA"},
+            ),
+        )
+    )
+    active = (
+        ("swell-8-new", "Gold Coast, Australia", -31.32, 115.29),
+        ("swell-19", "East Coast of Maine, USA", 44.20, -68.10),
+    )
+
+    assert store.prune_provider_locations("open_meteo_marine", active) == 1
+    assert [item.event_id for item in store.events_since(0)] == ["maine"]
+
+
 def test_store_queries_required_kinds_and_latest_places(tmp_path):
     store = EventStore(tmp_path / "events.sqlite3")
     store.initialize()

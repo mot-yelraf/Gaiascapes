@@ -19,7 +19,11 @@ from gaia_scape.score import ScoreCue, build_score, event_duration
 
 from .capture import EventStore
 from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS
-from .open_meteo import OpenMeteoMarineClient, OpenMeteoStormClient
+from .open_meteo import (
+    OpenMeteoMarineClient,
+    OpenMeteoStormClient,
+    provider_locations,
+)
 from .noaa_glm import GLM_POLL_SECONDS, NoaaGlmClient
 from .osc import OscRenderer
 from .performance import PerformancePlayer, cue_with_gain
@@ -50,8 +54,12 @@ class GaiaScapeService:
         self.store = EventStore(_resolve_event_database(self.data_dir))
         self.store.initialize()
         self.usgs = usgs_client or UsgsClient(config.usgs_url)
-        self.marine = marine_client or OpenMeteoMarineClient()
-        self.storm = storm_client or OpenMeteoStormClient()
+        self.marine = marine_client or OpenMeteoMarineClient(
+            locations=provider_locations(config.ocean_swell_locations, "swell")
+        )
+        self.storm = storm_client or OpenMeteoStormClient(
+            locations=provider_locations(config.storm_outlook_locations, "storm")
+        )
         self.glm = glm_client or NoaaGlmClient()
         self.glm.sonification_sample_stride = config.lightning_sample_rate
         self.renderer = OscRenderer(
@@ -203,9 +211,13 @@ class GaiaScapeService:
             try:
                 events = []
                 errors = []
+                forecast_catalogs = []
                 for source, client in enabled_clients:
                     try:
                         events.extend(await asyncio.to_thread(client.fetch))
+                        locations = getattr(client, "locations", ())
+                        if source.startswith("open_meteo_") and locations:
+                            forecast_catalogs.append((source, tuple(locations)))
                     except Exception as exc:
                         error = _capture_error_message(source, exc)
                         if error not in errors:
@@ -216,6 +228,10 @@ class GaiaScapeService:
                 inserted = len(inserted_events)
                 cutoff = time.time() - (self.config.retention_days * 86400)
                 pruned = await asyncio.to_thread(self.store.prune_before, cutoff)
+                for provider, active_places in forecast_catalogs:
+                    pruned += await asyncio.to_thread(
+                        self.store.prune_provider_locations, provider, active_places
+                    )
                 self.last_capture_count = len(events)
                 self.last_capture_inserted = inserted
                 self.last_capture_error = "; ".join(errors)
@@ -499,6 +515,64 @@ class GaiaScapeService:
         for kind in ("ocean_swell", "storm_potential"):
             if self.renderer.instrument_mappings[kind] != kind:
                 self.renderer.stop_layer(kind)
+
+    def apply_forecast_locations(self, ocean_swell_locations, storm_outlook_locations) -> int:
+        """Validate and apply editable Open-Meteo sampling catalogs."""
+        previous_ocean = self.config.ocean_swell_locations
+        previous_storm = self.config.storm_outlook_locations
+        try:
+            self.config.ocean_swell_locations = ocean_swell_locations
+            self.config.storm_outlook_locations = storm_outlook_locations
+            self.config.validate()
+        except (TypeError, ValueError):
+            self.config.ocean_swell_locations = previous_ocean
+            self.config.storm_outlook_locations = previous_storm
+            raise
+        ocean_changed = previous_ocean != self.config.ocean_swell_locations
+        storm_changed = previous_storm != self.config.storm_outlook_locations
+        marine_locations = provider_locations(
+            self.config.ocean_swell_locations, "swell"
+        )
+        storm_locations = provider_locations(
+            self.config.storm_outlook_locations, "storm"
+        )
+        if isinstance(self.marine, OpenMeteoMarineClient):
+            self.marine.locations = marine_locations
+            self.marine._has_cache = False
+        if isinstance(self.storm, OpenMeteoStormClient):
+            self.storm.locations = storm_locations
+            self.storm._has_cache = False
+        pruned = self.store.prune_provider_locations(
+            "open_meteo_marine", marine_locations
+        )
+        pruned += self.store.prune_provider_locations(
+            "open_meteo_storm", storm_locations
+        )
+        if ocean_changed or storm_changed:
+            changed_kinds = {
+                kind
+                for kind, changed in (
+                    ("ocean_swell", ocean_changed),
+                    ("storm_potential", storm_changed),
+                )
+                if changed
+            }
+            self._emitted_cues = deque(
+                (
+                    cue for cue in self._emitted_cues
+                    if cue["event"]["kind"] not in changed_kinds
+                ),
+                maxlen=1000,
+            )
+            for key in tuple(self._published_background_state):
+                if key[1] in changed_kinds:
+                    del self._published_background_state[key]
+            self._latest_background_location = None
+            self._latest_sound_location = None
+            for kind in changed_kinds:
+                self._ambient_cursors[kind] = 0
+                self.renderer.stop_layer(kind)
+        return pruned
 
     async def preview_instrument(
         self, instrument: str, kind: str = "earthquake", volume: float = 1.0

@@ -35,14 +35,19 @@ strength-weighted brown-noise rumble, deep body, randomized envelope-shaped
 reflections, compression, and peak limiting. The reflections avoid per-cue delay
 buffers, and the audio server reserves additional real-time memory so the voice remains
 lightweight enough for dense lightning fields. Ocean Swells and Storm Outlook each
-sample 13 globally distributed locations. NOAA GOES-East and GOES-West GLM LCFA granules are checked
+sample 19 globally distributed locations. NOAA GOES-East and GOES-West GLM LCFA granules are checked
 independently every 20 seconds. Quality-accepted flashes
 are normalized with their observation timestamp, position, optical energy, area,
 duration, satellite, and granule identity.
 
+The Forecast locations Settings pane displays both 19-point catalogs on an
+interactive world map. Select a numbered marker and click the map to relocate
+it, or edit its name, latitude, and longitude directly. Catalogs are validated,
+stored with the installation, and can be restored to the Gaia defaults.
+
 Optional Open-Meteo sources add:
 
-- modeled swell conditions at twelve global surf locations;
+- modeled swell conditions at 19 global coastal locations;
 - modeled high and low tide turns when a local sea-level extremum is present;
 - global Storm Outlook forecasts derived from CAPE and thunderstorm weather codes.
 

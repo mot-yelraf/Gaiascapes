@@ -2,6 +2,11 @@ const byId = (id) => document.getElementById(id);
 let observedCueSequence = null;
 let cuePollInFlight = false;
 let observedHistorySignature = null;
+const LIGHTNING_INTENSITY_HOLD_MS = 3000;
+let displayedLightningEvent = null;
+let pendingLightningEvent = null;
+let lightningIntensityTimer = null;
+let lastLightningIntensityUpdate = 0;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
 const ROBINSON_X = [1, .9986, .9954, .99, .9822, .973, .96, .9427, .9216, .8962, .8679, .835, .7986, .7597, .7186, .6732, .6213, .5722, .5322];
@@ -201,25 +206,119 @@ function updateSoundLocation(location) {
   updateMapBackgroundLocation(location);
 }
 
+function stormMeasurements(traits) {
+  const imperial = byId("displayUnits")?.value === "imperial";
+  const capeJkg = Number(traits.cape_jkg ?? 0);
+  const showersMm = Number(traits.showers_mm ?? 0);
+  const gustKmh = Number(traits.wind_gust_kmh ?? 0);
+  if (imperial) {
+    return {
+      cape: capeJkg * 10.7639,
+      capeUnit: "ft²/s²",
+      showers: showersMm / 25.4,
+      showersUnit: "in",
+      gust: gustKmh * 0.621371,
+      gustUnit: "mph",
+    };
+  }
+  return {
+    cape: capeJkg,
+    capeUnit: "J/kg",
+    showers: showersMm,
+    showersUnit: "mm",
+    gust: gustKmh,
+    gustUnit: "km/h",
+  };
+}
+
+function stormCapeSeverity(capeJkg) {
+  if (capeJkg >= 2500) return {label: "Strong", className: "storm-cape--strong"};
+  if (capeJkg >= 1000) return {label: "Substantial", className: "storm-cape--substantial"};
+  if (capeJkg >= 500) return {label: "Modest", className: "storm-cape--modest"};
+  return {label: "Weak", className: "storm-cape--weak"};
+}
+
+function oceanSwellMeasurements(traits) {
+  const imperial = byId("displayUnits")?.value === "imperial";
+  const heightMeters = Number(traits.swell_height_m ?? traits.wave_height_m ?? 0);
+  return {
+    heightMeters,
+    height: imperial ? heightMeters * 3.28084 : heightMeters,
+    heightUnit: imperial ? "ft" : "m",
+    period: Number(traits.swell_period_s ?? 0),
+    direction: Number(traits.swell_direction_deg ?? 0),
+  };
+}
+
+function oceanSwellSeverity(heightMeters) {
+  if (heightMeters >= 4.6) return {label: "Extreme", className: "swell-height--extreme"};
+  if (heightMeters >= 3.0) return {label: "Very Large", className: "swell-height--very-large"};
+  if (heightMeters >= 1.8) return {label: "Large", className: "swell-height--large"};
+  if (heightMeters >= 0.9) return {label: "Moderate", className: "swell-height--moderate"};
+  if (heightMeters >= 0.3) return {label: "Small", className: "swell-height--small"};
+  return {label: "Minimal", className: "swell-height--minimal"};
+}
+
 function backgroundCharacteristics(event) {
   if (!event) return "Awaiting forecast";
   const traits = event.traits || {};
   if (event.kind === "ocean_swell") {
-    const imperial = byId("displayUnits")?.value === "imperial";
-    const heightMeters = Number(traits.swell_height_m ?? traits.wave_height_m ?? 0);
-    const height = imperial ? heightMeters * 3.28084 : heightMeters;
-    const heightUnit = imperial ? "ft" : "m";
-    const period = Number(traits.swell_period_s ?? 0);
-    const direction = Number(traits.swell_direction_deg ?? 0);
-    return `Swell ${height.toFixed(1)} ${heightUnit} · Period ${period.toFixed(1)} s · Direction ${direction.toFixed(0)}°`;
+    const measurements = oceanSwellMeasurements(traits);
+    const severity = oceanSwellSeverity(measurements.heightMeters);
+    return `${severity.label} · Swell ${measurements.height.toFixed(1)} ${measurements.heightUnit} · Period ${measurements.period.toFixed(1)} s · Direction ${measurements.direction.toFixed(0)}°`;
   }
   if (event.kind === "storm_potential") {
-    const cape = Number(traits.cape_jkg ?? 0).toLocaleString(undefined, {maximumFractionDigits: 0});
-    const showers = Number(traits.showers_mm ?? 0).toFixed(1);
-    const gust = Number(traits.wind_gust_kmh ?? 0).toFixed(0);
-    return `CAPE ${cape} J/kg · Showers ${showers} mm · Gusts ${gust} km/h`;
+    const measurements = stormMeasurements(traits);
+    const severity = stormCapeSeverity(Number(traits.cape_jkg ?? 0));
+    const cape = measurements.cape.toLocaleString(undefined, {maximumFractionDigits: 0});
+    return `${severity.label} · CAPE ${cape} ${measurements.capeUnit} · Showers ${measurements.showers.toFixed(2)} ${measurements.showersUnit} · Gusts ${measurements.gust.toFixed(0)} ${measurements.gustUnit}`;
   }
   return "Awaiting forecast";
+}
+
+function updateBackgroundCharacteristics(event, fallbackText = null) {
+  const severityClasses = [
+    "storm-cape--weak", "storm-cape--modest",
+    "storm-cape--substantial", "storm-cape--strong",
+    "swell-height--minimal", "swell-height--small", "swell-height--moderate",
+    "swell-height--large", "swell-height--very-large", "swell-height--extreme",
+  ];
+  document.querySelectorAll('[data-status-field="background-characteristics"]').forEach((element) => {
+    element.replaceChildren();
+    element.classList.remove("forecast-characteristics", ...severityClasses);
+    if (event?.kind === "ocean_swell") {
+      const measurements = oceanSwellMeasurements(event.traits || {});
+      const severity = oceanSwellSeverity(measurements.heightMeters);
+      const heightPill = document.createElement("span");
+      heightPill.classList.add("swell-height-pill", severity.className);
+      heightPill.textContent = `${severity.label} · Swell ${measurements.height.toFixed(1)} ${measurements.heightUnit}`;
+      const details = document.createElement("span");
+      details.className = "forecast-characteristics-details";
+      details.textContent = `Period ${measurements.period.toFixed(1)} s · Direction ${measurements.direction.toFixed(0)}°`;
+      element.classList.add("forecast-characteristics");
+      element.append(heightPill, details);
+      element.setAttribute("aria-label", backgroundCharacteristics(event));
+      return;
+    }
+    if (event?.kind === "storm_potential") {
+      const traits = event.traits || {};
+      const measurements = stormMeasurements(traits);
+      const severity = stormCapeSeverity(Number(traits.cape_jkg ?? 0));
+      const cape = measurements.cape.toLocaleString(undefined, {maximumFractionDigits: 0});
+      const capePill = document.createElement("span");
+      capePill.classList.add("storm-cape-pill", severity.className);
+      capePill.textContent = `${severity.label} · CAPE ${cape} ${measurements.capeUnit}`;
+      const details = document.createElement("span");
+      details.className = "forecast-characteristics-details";
+      details.textContent = `Showers ${measurements.showers.toFixed(2)} ${measurements.showersUnit} · Gusts ${measurements.gust.toFixed(0)} ${measurements.gustUnit}`;
+      element.classList.add("forecast-characteristics");
+      element.append(capePill, details);
+      element.setAttribute("aria-label", backgroundCharacteristics(event));
+      return;
+    }
+    element.removeAttribute("aria-label");
+    element.textContent = fallbackText ?? backgroundCharacteristics(event);
+  });
 }
 
 function updateBackgroundStatus(event) {
@@ -227,7 +326,7 @@ function updateBackgroundStatus(event) {
   updateBackgroundSoundsTitle(selection);
   if (selection === "none") {
     updateSoundLocation(null);
-    updateStatusField("background-characteristics", "No background selected");
+    updateBackgroundCharacteristics(null, "No background selected");
     return;
   }
   const activeEvent = event?.kind === selection ? event : null;
@@ -236,7 +335,7 @@ function updateBackgroundStatus(event) {
     latitude: activeEvent.latitude,
     longitude: activeEvent.longitude,
   } : null);
-  updateStatusField("background-characteristics", backgroundCharacteristics(activeEvent));
+  updateBackgroundCharacteristics(activeEvent);
 }
 
 function eventKindLabel(kind) {
@@ -258,24 +357,131 @@ function eventStatusText(event) {
   return `${type} · M${magnitude} · ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`;
 }
 
-function updateLastEventStatus(event) {
+function lightningIntensity(event) {
+  const strength = Math.max(0, Math.min(1, Number(event?.strength ?? 0)));
+  if (strength >= 0.75) return {label: "Intense", className: "lightning-intensity--intense"};
+  if (strength >= 0.5) return {label: "Strong", className: "lightning-intensity--strong"};
+  if (strength >= 0.25) return {label: "Moderate", className: "lightning-intensity--moderate"};
+  return {label: "Faint", className: "lightning-intensity--faint"};
+}
+
+function formatLightningEnergy(energyJoules) {
+  const energy = Math.max(0, Number(energyJoules) || 0);
+  if (energy >= 1e-9) return `${(energy * 1e9).toFixed(2)} nJ`;
+  if (energy >= 1e-12) return `${(energy * 1e12).toFixed(2)} pJ`;
+  if (energy >= 1e-15) return `${(energy * 1e15).toFixed(1)} fJ`;
+  return `${energy.toExponential(1)} J`;
+}
+
+function renderLastEventStatus(event) {
   const text = eventStatusText(event);
   updateStatusField("last-event-type", text, text === "—" ? "" : text);
   const locationAndTime = event
     ? `${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)} @ ${when(event.timestamp)}`
     : "Not yet";
-  updateStatusField("last-event-time", locationAndTime, locationAndTime === "Not yet" ? "" : locationAndTime);
+  document.querySelectorAll('[data-status-field="last-event-time"]').forEach((element) => {
+    element.replaceChildren();
+    element.classList.remove("lightning-characteristics");
+    element.removeAttribute("aria-label");
+    if (event?.kind !== "lightning_flash") {
+      element.textContent = locationAndTime;
+      element.title = locationAndTime === "Not yet" ? "" : locationAndTime;
+      return;
+    }
+    const traits = event.traits || {};
+    const intensity = lightningIntensity(event);
+    const pill = document.createElement("span");
+    pill.classList.add("lightning-intensity-pill", intensity.className);
+    pill.textContent = `${intensity.label} · ${formatLightningEnergy(traits.flash_energy_j)}`;
+    const measurements = document.createElement("span");
+    measurements.className = "lightning-characteristics-details";
+    measurements.textContent = `${Number(traits.flash_area_km2 ?? 0).toFixed(1)} km² · ${Number(traits.flash_duration_ms ?? 0).toFixed(0)} ms`;
+    const observation = document.createElement("span");
+    observation.className = "lightning-characteristics-location";
+    observation.textContent = locationAndTime;
+    element.classList.add("lightning-characteristics");
+    element.append(pill, measurements, observation);
+    element.setAttribute("aria-label", `${intensity.label} lightning, ${formatLightningEnergy(traits.flash_energy_j)}, ${measurements.textContent}, ${locationAndTime}`);
+    element.title = "";
+  });
+}
+
+function lightningEventKey(event) {
+  return `${event?.provider || ""}:${event?.event_id || ""}`;
+}
+
+function updateLastEventStatus(event) {
+  if (event?.kind !== "lightning_flash") {
+    if (lightningIntensityTimer !== null) clearTimeout(lightningIntensityTimer);
+    lightningIntensityTimer = null;
+    displayedLightningEvent = null;
+    pendingLightningEvent = null;
+    lastLightningIntensityUpdate = 0;
+    renderLastEventStatus(event);
+    return;
+  }
+  if (lightningEventKey(event) === lightningEventKey(displayedLightningEvent)
+      || lightningEventKey(event) === lightningEventKey(pendingLightningEvent)) return;
+  const now = Date.now();
+  if (!displayedLightningEvent || now - lastLightningIntensityUpdate >= LIGHTNING_INTENSITY_HOLD_MS) {
+    displayedLightningEvent = event;
+    pendingLightningEvent = null;
+    lastLightningIntensityUpdate = now;
+    renderLastEventStatus(event);
+    return;
+  }
+  if (!pendingLightningEvent || Number(event.strength ?? 0) > Number(pendingLightningEvent.strength ?? 0)) {
+    pendingLightningEvent = event;
+  }
+  if (lightningIntensityTimer !== null) return;
+  const remaining = LIGHTNING_INTENSITY_HOLD_MS - (now - lastLightningIntensityUpdate);
+  lightningIntensityTimer = setTimeout(() => {
+    lightningIntensityTimer = null;
+    if (!pendingLightningEvent) return;
+    displayedLightningEvent = pendingLightningEvent;
+    pendingLightningEvent = null;
+    lastLightningIntensityUpdate = Date.now();
+    renderLastEventStatus(displayedLightningEvent);
+  }, remaining);
+}
+
+function earthquakeSeverity(magnitude) {
+  if (magnitude >= 8) return {label: "Great", className: "earthquake-magnitude--great"};
+  if (magnitude >= 7) return {label: "Major", className: "earthquake-magnitude--major"};
+  if (magnitude >= 6) return {label: "Strong", className: "earthquake-magnitude--strong"};
+  if (magnitude >= 5) return {label: "Moderate", className: "earthquake-magnitude--moderate"};
+  if (magnitude >= 4) return {label: "Light", className: "earthquake-magnitude--light"};
+  if (magnitude >= 2) return {label: "Minor", className: "earthquake-magnitude--minor"};
+  return {label: "Micro", className: "earthquake-magnitude--micro"};
 }
 
 function updateLastEarthquakeStatus(event) {
   const location = event
     ? (event.traits?.place || `${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`)
     : "—";
-  const detail = event
-    ? `M${Number(event.traits?.magnitude ?? 0).toFixed(1)} * ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)} @ ${when(event.timestamp)}`
-    : "Not yet";
   updateStatusField("last-earthquake-location", location, location === "—" ? "" : location);
-  updateStatusField("last-earthquake-detail", detail, detail === "Not yet" ? "" : detail);
+  document.querySelectorAll('[data-status-field="last-earthquake-detail"]').forEach((element) => {
+    element.replaceChildren();
+    element.classList.remove("earthquake-characteristics");
+    element.removeAttribute("aria-label");
+    if (!event) {
+      element.textContent = "Not yet";
+      element.title = "";
+      return;
+    }
+    const magnitude = Number(event.traits?.magnitude ?? 0);
+    const severity = earthquakeSeverity(magnitude);
+    const pill = document.createElement("span");
+    pill.classList.add("earthquake-magnitude-pill", severity.className);
+    pill.textContent = `${severity.label} · M${magnitude.toFixed(1)}`;
+    const observation = document.createElement("span");
+    observation.className = "earthquake-characteristics-location";
+    observation.textContent = `${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)} @ ${when(event.timestamp)}`;
+    element.classList.add("earthquake-characteristics");
+    element.append(pill, observation);
+    element.setAttribute("aria-label", `${severity.label} earthquake, magnitude ${magnitude.toFixed(1)}, ${observation.textContent}`);
+    element.title = "";
+  });
 }
 
 function backgroundSoundLabel(instrument) {
@@ -459,7 +665,12 @@ function eventSummary(event) {
     return {badge: state, detail: `${level.toFixed(2)}${levelUnit} modeled sea level`};
   }
   if (event.kind === "storm_potential") {
-    return {badge: "CAPE", detail: `${Number(traits.cape_jkg ?? 0).toFixed(0)} J/kg Storm Outlook forecast`};
+    const measurements = stormMeasurements(traits);
+    const cape = measurements.cape.toLocaleString(undefined, {maximumFractionDigits: 0});
+    return {
+      badge: "CAPE",
+      detail: `${cape} ${measurements.capeUnit} · ${measurements.showers.toFixed(2)} ${measurements.showersUnit} showers · ${measurements.gust.toFixed(0)} ${measurements.gustUnit} gusts`,
+    };
   }
   if (event.kind === "lightning_flash") {
     const area = Number(traits.flash_area_km2 ?? 0);
@@ -629,6 +840,195 @@ const settingsForm = byId("settingsForm");
 if (settingsDialog && settingsForm) {
   const tabs = Array.from(settingsDialog.querySelectorAll("[data-settings-pane]"));
   const panes = Array.from(settingsDialog.querySelectorAll("[data-pane]"));
+  const locationDataElement = byId("forecastLocationData");
+  const parsedLocationData = locationDataElement
+    ? JSON.parse(locationDataElement.textContent)
+    : {current: {}, defaults: {}};
+  const cloneCatalog = (catalog) => (catalog || []).map((location) => ({...location}));
+  const forecastLocationCatalogs = {
+    ocean_swell: cloneCatalog(parsedLocationData.current.ocean_swell),
+    storm_outlook: cloneCatalog(parsedLocationData.current.storm_outlook),
+  };
+  const defaultForecastLocationCatalogs = {
+    ocean_swell: cloneCatalog(parsedLocationData.defaults.ocean_swell),
+    storm_outlook: cloneCatalog(parsedLocationData.defaults.storm_outlook),
+  };
+  let activeForecastCatalog = "ocean_swell";
+  let selectedForecastLocation = 0;
+
+  function forecastCatalogLabel() {
+    return activeForecastCatalog === "ocean_swell" ? "Ocean Swells" : "Storm Outlook";
+  }
+
+  function movedForecastLocationName(latitude, longitude) {
+    const latitudeText = `${Math.abs(latitude).toFixed(2)}°${latitude >= 0 ? "N" : "S"}`;
+    const longitudeText = `${Math.abs(longitude).toFixed(2)}°${longitude >= 0 ? "E" : "W"}`;
+    return `${latitudeText}, ${longitudeText}`;
+  }
+
+  function renderForecastMarkers() {
+    const layer = byId("forecastLocationMarkerLayer");
+    if (!layer) return;
+    layer.replaceChildren();
+    forecastLocationCatalogs[activeForecastCatalog].forEach((location, index) => {
+      const position = projectCoordinates(location.longitude, location.latitude);
+      const marker = createSvgElement("g", {
+        class: `forecast-location-marker${index === selectedForecastLocation ? " is-selected" : ""}`,
+        "data-location-marker": index,
+        role: "button",
+        tabindex: "0",
+        "aria-label": `Location ${index + 1}: ${location.name}`,
+      });
+      const circle = createSvgElement("circle", {cx: position.x, cy: position.y, r: 13});
+      const label = createSvgElement("text", {x: position.x, y: position.y + 4, "text-anchor": "middle"});
+      label.textContent = String(index + 1);
+      const title = createSvgElement("title");
+      title.textContent = `${location.name} · ${Number(location.latitude).toFixed(2)}, ${Number(location.longitude).toFixed(2)}`;
+      marker.append(circle, label, title);
+      marker.addEventListener("click", (event) => {
+        event.stopPropagation();
+        selectedForecastLocation = index;
+        renderForecastLocationEditor();
+      });
+      marker.addEventListener("keydown", (event) => {
+        if (!["Enter", " "].includes(event.key)) return;
+        event.preventDefault();
+        selectedForecastLocation = index;
+        renderForecastLocationEditor();
+      });
+      layer.append(marker);
+    });
+  }
+
+  function coordinateInput(label, value, minimum, maximum, onChange) {
+    const wrapper = document.createElement("label");
+    wrapper.className = "forecast-coordinate-input";
+    const caption = document.createElement("span");
+    caption.textContent = label;
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = String(minimum);
+    input.max = String(maximum);
+    input.step = "0.01";
+    input.value = Number(value).toFixed(2);
+    input.addEventListener("change", () => {
+      const parsed = Number(input.value);
+      if (!Number.isFinite(parsed)) {
+        input.value = Number(value).toFixed(2);
+        return;
+      }
+      const normalized = Math.max(minimum, Math.min(maximum, parsed));
+      input.value = normalized.toFixed(2);
+      onChange(normalized);
+      renderForecastMarkers();
+    });
+    wrapper.append(caption, input);
+    return wrapper;
+  }
+
+  function renderForecastLocationList() {
+    const list = byId("forecastLocationList");
+    if (!list) return;
+    list.replaceChildren();
+    const sortedLocations = forecastLocationCatalogs[activeForecastCatalog]
+      .map((location, index) => ({location, index}))
+      .sort((left, right) => left.location.name.localeCompare(
+        right.location.name, undefined, {sensitivity: "base", numeric: true}
+      ));
+    sortedLocations.forEach(({location, index}) => {
+      const row = document.createElement("div");
+      row.className = `forecast-location-row${index === selectedForecastLocation ? " is-selected" : ""}`;
+      const selector = document.createElement("button");
+      selector.type = "button";
+      selector.className = "forecast-location-number";
+      selector.textContent = String(index + 1);
+      selector.setAttribute("aria-label", `Select location ${index + 1}`);
+      selector.addEventListener("click", () => {
+        selectedForecastLocation = index;
+        renderForecastLocationEditor();
+      });
+      const fields = document.createElement("div");
+      fields.className = "forecast-location-fields";
+      const coordinates = document.createElement("div");
+      coordinates.className = "forecast-location-coordinates";
+      coordinates.append(
+        coordinateInput("Lat", location.latitude, -90, 90, (value) => { location.latitude = value; }),
+        coordinateInput("Lon", location.longitude, -180, 180, (value) => { location.longitude = value; }),
+      );
+      const nameField = document.createElement("label");
+      nameField.className = "forecast-location-name";
+      const nameLabel = document.createElement("span");
+      nameLabel.textContent = "Name";
+      const name = document.createElement("input");
+      name.type = "text";
+      name.maxLength = 80;
+      name.value = location.name;
+      name.setAttribute("aria-label", `Location ${index + 1} name`);
+      name.addEventListener("focus", () => {
+        selectedForecastLocation = index;
+        renderForecastMarkers();
+        row.classList.add("is-selected");
+      });
+      name.addEventListener("input", () => {
+        location.name = name.value;
+        renderForecastMarkers();
+      });
+      name.addEventListener("change", renderForecastLocationEditor);
+      nameField.append(nameLabel, name);
+      fields.append(nameField, coordinates);
+      row.append(selector, fields);
+      list.append(row);
+    });
+  }
+
+  function renderForecastLocationEditor() {
+    const catalog = forecastLocationCatalogs[activeForecastCatalog];
+    settingsDialog.querySelectorAll("[data-location-catalog]").forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.locationCatalog === activeForecastCatalog);
+    });
+    byId("forecastLocationCount").textContent = `${catalog.length} / 19 locations`;
+    byId("forecastLocationReadout").textContent = `Location ${selectedForecastLocation + 1} selected. Click the map to move it.`;
+    renderForecastMarkers();
+    renderForecastLocationList();
+  }
+
+  const forecastLocationMap = byId("forecastLocationMap");
+  if (forecastLocationMap) {
+    const boundary = mapProjectionBoundary();
+    byId("forecastMapClipPath").setAttribute("d", boundary);
+    byId("forecastMapOceanPath").setAttribute("d", boundary);
+    forecastLocationMap.addEventListener("click", (event) => {
+      const point = forecastLocationMap.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      const mapPoint = point.matrixTransform(forecastLocationMap.getScreenCTM().inverse());
+      if (!mapContainsPoint(mapPoint.x, mapPoint.y)) return;
+      const coordinates = inverseProjectCoordinates(mapPoint.x, mapPoint.y);
+      const location = forecastLocationCatalogs[activeForecastCatalog][selectedForecastLocation];
+      location.latitude = Number(coordinates.latitude.toFixed(4));
+      location.longitude = Number(coordinates.longitude.toFixed(4));
+      location.name = movedForecastLocationName(
+        location.latitude, location.longitude
+      );
+      renderForecastLocationEditor();
+      byId("forecastLocationReadout").textContent = `Moved location ${selectedForecastLocation + 1} to ${Math.abs(location.latitude).toFixed(2)}°${location.latitude >= 0 ? "N" : "S"}, ${Math.abs(location.longitude).toFixed(2)}°${location.longitude >= 0 ? "E" : "W"}.`;
+    });
+  }
+  settingsDialog.querySelectorAll("[data-location-catalog]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeForecastCatalog = button.dataset.locationCatalog;
+      selectedForecastLocation = 0;
+      renderForecastLocationEditor();
+    });
+  });
+  byId("restoreForecastLocations")?.addEventListener("click", () => {
+    forecastLocationCatalogs[activeForecastCatalog] = cloneCatalog(
+      defaultForecastLocationCatalogs[activeForecastCatalog]
+    );
+    selectedForecastLocation = 0;
+    renderForecastLocationEditor();
+    byId("settingsStatus").textContent = `${forecastCatalogLabel()} defaults restored. Save settings to apply.`;
+  });
 
   function activatePane(name, focusTab = false) {
     tabs.forEach((tab) => {
@@ -642,6 +1042,7 @@ if (settingsDialog && settingsForm) {
       pane.classList.toggle("is-active", active);
       pane.hidden = !active;
     });
+    if (name === "locations") renderForecastLocationEditor();
   }
 
   function openSettings() {
@@ -763,6 +1164,13 @@ if (settingsDialog && settingsForm) {
     status.textContent = "Saving…";
     status.classList.remove("error");
     try {
+      await request("/api/settings/locations", {
+        method: "PUT",
+        body: JSON.stringify({
+          ocean_swell_locations: forecastLocationCatalogs.ocean_swell,
+          storm_outlook_locations: forecastLocationCatalogs.storm_outlook,
+        }),
+      });
       await request("/api/settings/audio", {
         method: "PUT",
         body: JSON.stringify({

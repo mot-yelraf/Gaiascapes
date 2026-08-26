@@ -170,10 +170,10 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert f'/static/app.js?v={app.version}' in home.text
         assert f'/static/app.css?v={app.version}' in home.text
         script = client.get("/static/app.js").text
+        assert "pill.textContent = `${severity.label} · M${magnitude.toFixed(1)}`" in script
         assert (
-            "`M${Number(event.traits?.magnitude ?? 0).toFixed(1)} * "
-            "${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)} "
-            "@ ${when(event.timestamp)}`"
+            "observation.textContent = `${Number(event.latitude).toFixed(2)}, "
+            "${Number(event.longitude).toFixed(2)} @ ${when(event.timestamp)}`"
         ) in script
         assert (
             "`${Number(event.latitude).toFixed(2)}, "
@@ -186,9 +186,45 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert "cue.volume ?? 1" in script
         assert "baseScale * visualVolume" in script
         assert 'return "Storm Outlook"' in script
+        assert 'capeUnit: "ft²/s²"' in script
+        assert 'showersUnit: "in"' in script
+        assert 'gustUnit: "mph"' in script
+        assert 'label: "Weak"' in script
+        assert 'label: "Modest"' in script
+        assert 'label: "Substantial"' in script
+        assert 'label: "Strong"' in script
+        assert "storm-cape-pill" in script
+        assert 'label: "Minimal"' in script
+        assert 'label: "Small"' in script
+        assert 'label: "Moderate"' in script
+        assert 'label: "Large"' in script
+        assert 'label: "Very Large"' in script
+        assert 'label: "Extreme"' in script
+        assert "swell-height-pill" in script
+        assert "LIGHTNING_INTENSITY_HOLD_MS = 3000" in script
+        assert 'label: "Faint"' in script
+        assert 'label: "Intense"' in script
+        assert "lightning-intensity-pill" in script
+        assert "flash_energy_j" in script
+        assert "flash_duration_ms" in script
+        assert 'label: "Micro"' in script
+        assert 'label: "Minor"' in script
+        assert 'label: "Light"' in script
+        assert 'label: "Major"' in script
+        assert 'label: "Great"' in script
+        assert "earthquake-magnitude-pill" in script
         assert 'return "Lightning R2D2"' in script
         assert 'return "Natural Thunder"' in script
         assert "updateBackgroundStatus(null)" in script
+        stylesheet = client.get("/static/app.css").text
+        assert ".storm-cape--weak" in stylesheet
+        assert ".storm-cape--strong" in stylesheet
+        assert ".swell-height--minimal" in stylesheet
+        assert ".swell-height--extreme" in stylesheet
+        assert ".lightning-intensity--faint" in stylesheet
+        assert ".lightning-intensity--intense" in stylesheet
+        assert ".earthquake-magnitude--micro" in stylesheet
+        assert ".earthquake-magnitude--great" in stylesheet
         assert "backgroundCharacteristics" in script
         assert "updateLastEventStatus" in script
         assert "updateLastEarthquakeStatus" in script
@@ -666,6 +702,86 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path):
     assert '"event_3": 0.35' in (
         tmp_path / "config.json"
     ).read_text(encoding="utf-8")
+
+
+def test_forecast_location_editor_renders_and_persists_catalogs(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    ocean = [dict(location) for location in app.state.config.ocean_swell_locations]
+    storm = [dict(location) for location in app.state.config.storm_outlook_locations]
+    ocean[0] = {
+        "name": "Custom Gulf of Maine",
+        "latitude": 43.5,
+        "longitude": -68.5,
+    }
+
+    with TestClient(app) as client:
+        home = client.get("/")
+        response = client.put(
+            "/api/settings/locations",
+            json={
+                "ocean_swell_locations": ocean,
+                "storm_outlook_locations": storm,
+            },
+        )
+
+    assert 'data-settings-pane="locations"' in home.text
+    assert 'id="forecastLocationMap"' in home.text
+    assert 'id="forecastLocationList"' in home.text
+    assert response.status_code == 200
+    assert response.json()["ocean_swell_locations"][0]["name"] == "Custom Gulf of Maine"
+    assert app.state.service.marine.locations[0][0].startswith("swell-1-")
+    assert app.state.service.marine.locations[0][1:] == (
+        "Custom Gulf of Maine", 43.5, -68.5,
+    )
+    saved = (tmp_path / "config.json").read_text(encoding="utf-8")
+    assert '"name": "Custom Gulf of Maine"' in saved
+
+
+def test_forecast_location_settings_reject_incomplete_catalog(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    original = [dict(location) for location in app.state.config.ocean_swell_locations]
+
+    with TestClient(app) as client:
+        response = client.put(
+            "/api/settings/locations",
+            json={
+                "ocean_swell_locations": original[:-1],
+                "storm_outlook_locations": app.state.config.storm_outlook_locations,
+            },
+        )
+
+    assert response.status_code == 422
+    assert app.state.config.ocean_swell_locations == original
+
+
+def test_forecast_location_move_immediately_prunes_old_map_record(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.store.add_events(
+        (
+            GaiaEvent(
+                "open_meteo_marine", "gold-coast-old", "ocean_swell", time.time(),
+                latitude=-28.04, longitude=153.62,
+                traits={"place": "Gold Coast, Australia"},
+            ),
+        )
+    )
+    ocean = [dict(location) for location in app.state.config.ocean_swell_locations]
+    ocean[7]["latitude"] = -31.32
+    ocean[7]["longitude"] = 115.29
+
+    with TestClient(app) as client:
+        response = client.put(
+            "/api/settings/locations",
+            json={
+                "ocean_swell_locations": ocean,
+                "storm_outlook_locations": app.state.config.storm_outlook_locations,
+            },
+        )
+        events = client.get("/api/events")
+
+    assert response.status_code == 200
+    assert response.json()["pruned"] == 1
+    assert events.json()["events"] == []
 
 
 def test_invalid_instrument_does_not_replace_live_mapping(tmp_path):

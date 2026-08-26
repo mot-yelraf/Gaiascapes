@@ -11,6 +11,8 @@ import os
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
+from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
+
 
 DEFAULT_USGS_URL = (
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
@@ -54,13 +56,22 @@ DEFAULT_INSTRUMENT_VOLUMES = {
 SUPPORTED_INSTRUMENTS = tuple(
     dict.fromkeys(instrument for values in EVENT_INSTRUMENT_OPTIONS.values() for instrument in values)
 )
+FORECAST_LOCATION_COUNT = 19
+
+
+def default_forecast_locations(locations) -> list[dict]:
+    """Return a JSON-safe editable copy of a provider location catalog."""
+    return [
+        {"name": place, "latitude": latitude, "longitude": longitude}
+        for _slug, place, latitude, longitude in locations
+    ]
 
 
 @dataclass
 class AppConfig:
     """Validated runtime settings stored alongside application data."""
 
-    config_revision: int = 5
+    config_revision: int = 6
     http_host: str = "0.0.0.0"
     http_port: int = 8768
     usgs_url: str = DEFAULT_USGS_URL
@@ -83,6 +94,12 @@ class AppConfig:
         default_factory=lambda: dict(DEFAULT_INSTRUMENT_VOLUMES)
     )
     lightning_sample_rate: int = 1
+    ocean_swell_locations: list[dict] = field(
+        default_factory=lambda: default_forecast_locations(SURF_LOCATIONS)
+    )
+    storm_outlook_locations: list[dict] = field(
+        default_factory=lambda: default_forecast_locations(STORM_LOCATIONS)
+    )
 
     @classmethod
     def load(cls, path: Path) -> "AppConfig":
@@ -99,8 +116,8 @@ class AppConfig:
             if int(document.get("config_revision", 0)) < 2:
                 if "noaa_glm" not in config.enabled_sources:
                     config.enabled_sources.append("noaa_glm")
-            if int(document.get("config_revision", 0)) < 5:
-                config.config_revision = 5
+            if int(document.get("config_revision", 0)) < 6:
+                config.config_revision = 6
             config._migrate_legacy_instruments()
             # v0.26.236.36 lengthened the original, non-user-facing default.
             if document.get("continuous_interval_seconds") in {12, 12.0}:
@@ -123,7 +140,7 @@ class AppConfig:
     def validate(self) -> None:
         """Normalize values and reject unsafe ranges."""
         self.http_host = str(self.http_host).strip() or "0.0.0.0"
-        self.config_revision = max(5, int(self.config_revision))
+        self.config_revision = max(6, int(self.config_revision))
         self.osc_host = str(self.osc_host).strip() or "127.0.0.1"
         self.usgs_url = str(self.usgs_url).strip()
         if not self.usgs_url.startswith("https://"):
@@ -158,6 +175,12 @@ class AppConfig:
         self.instrument_volumes = volume_mappings_for_slots(self.instrument_volumes)
         self.lightning_sample_rate = max(
             1, min(11, int(self.lightning_sample_rate))
+        )
+        self.ocean_swell_locations = validate_forecast_locations(
+            self.ocean_swell_locations, "Ocean Swells"
+        )
+        self.storm_outlook_locations = validate_forecast_locations(
+            self.storm_outlook_locations, "Storm Outlook"
         )
 
     def instrument_slots(self) -> dict[str, str]:
@@ -284,6 +307,35 @@ def volume_mappings_for_slots(volumes: object) -> dict[str, float]:
         if not 0.0 <= value <= 1.0:
             raise ValueError(f"{slot.replace('_', ' ').title()} volume must be 0..1")
         normalized[slot] = value
+    return normalized
+
+
+def validate_forecast_locations(locations: object, label: str) -> list[dict]:
+    """Validate one complete editable forecast sampling catalog."""
+    if not isinstance(locations, list) or len(locations) != FORECAST_LOCATION_COUNT:
+        raise ValueError(f"{label} must contain exactly {FORECAST_LOCATION_COUNT} locations")
+    normalized = []
+    coordinates = set()
+    for index, location in enumerate(locations, start=1):
+        if not isinstance(location, dict):
+            raise ValueError(f"{label} location {index} must be an object")
+        name = str(location.get("name", "")).strip()
+        if not name or len(name) > 80:
+            raise ValueError(f"{label} location {index} must have a name up to 80 characters")
+        try:
+            latitude = float(location.get("latitude"))
+            longitude = float(location.get("longitude"))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{label} location {index} has invalid coordinates") from exc
+        if not -90.0 <= latitude <= 90.0 or not -180.0 <= longitude <= 180.0:
+            raise ValueError(f"{label} location {index} is outside world coordinates")
+        coordinate = (round(latitude, 4), round(longitude, 4))
+        if coordinate in coordinates:
+            raise ValueError(f"{label} locations must use distinct coordinates")
+        coordinates.add(coordinate)
+        normalized.append(
+            {"name": name, "latitude": latitude, "longitude": longitude}
+        )
     return normalized
 
 

@@ -19,10 +19,12 @@ from .config import (
     AppConfig,
     BACKGROUND_INSTRUMENT_OPTIONS,
     EVENT_VOICE_OPTIONS,
+    default_forecast_locations,
     event_kind_for_voice,
     event_mappings_for_slots,
     resolve_data_dir,
 )
+from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
 from .service import GaiaScapeService
 
 
@@ -91,6 +93,14 @@ def create_app(
             lightning_sample_rate=config.lightning_sample_rate,
             event_voice_options=EVENT_VOICE_OPTIONS,
             background_options=BACKGROUND_INSTRUMENT_OPTIONS,
+            forecast_location_catalogs={
+                "ocean_swell": config.ocean_swell_locations,
+                "storm_outlook": config.storm_outlook_locations,
+            },
+            default_forecast_location_catalogs={
+                "ocean_swell": default_forecast_locations(SURF_LOCATIONS),
+                "storm_outlook": default_forecast_locations(STORM_LOCATIONS),
+            },
         )
 
     @app.get("/healthz")
@@ -218,6 +228,24 @@ def create_app(
             "event_instruments": dict(config.event_instruments),
             "instrument_volumes": config.volume_slots(),
             "lightning_sample_rate": config.lightning_sample_rate,
+        }
+
+    @app.put("/api/settings/locations")
+    async def update_forecast_locations(request: Request):
+        """Validate, apply, and persist editable forecast sampling locations."""
+        body = await _json_body(request)
+        try:
+            pruned = service.apply_forecast_locations(
+                body.get("ocean_swell_locations"),
+                body.get("storm_outlook_locations"),
+            )
+            config.save(config_path)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return {
+            "ocean_swell_locations": config.ocean_swell_locations,
+            "storm_outlook_locations": config.storm_outlook_locations,
+            "pruned": pruned,
         }
 
     @app.post("/api/instruments/preview")

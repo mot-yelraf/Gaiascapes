@@ -75,13 +75,22 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     assert "Compander.ar(signal, signal" in synth
     assert "Limiter.ar(signal, 0.82" in synth
     earthquake = synth.split("SynthDef(\\earthquake", 1)[1].split("}).add;", 1)[0]
-    assert "life = duration.clip(1.2, 7)" in earthquake
+    assert "life = duration.clip(1.4, 8)" in earthquake
     assert "(freq * 0.25).clip(26, 52)" in earthquake
-    assert "surfaceMotion = LFNoise2.kr" in earthquake
+    assert "pWaveDelay = depth.clip(0, 700).linlin(0, 700, 0.16, 0.5)" in earthquake
+    assert "surfaceMotion = SinOsc.kr" in earthquake
     assert "bodyMotion = LFNoise1.kr" in earthquake
+    assert "pWave = SinOsc.ar" in earthquake
+    assert "rumbleFreq * [2.2, 3.4]" in earthquake
+    assert "rumbleFreq * [1, 1.006, 2.03]" in earthquake
+    assert ".exprange(55, 125)" in earthquake
+    assert "envelope * amp * 3.75" in earthquake
+    assert "onsetEnvelope" not in earthquake
     seismic_bells = synth.split("SynthDef(\\seismicBells", 1)[1].split("}).add;", 1)[0]
     assert "duration.clip(0.18, 1.78) * 2.4" in seismic_bells
     natural_thunder = synth.split("SynthDef(\\naturalThunder", 1)[1].split("}).add;", 1)[0]
+    assert ".exprange(85, 360)" in natural_thunder
+    assert "HPF.ar(BrownNoise.ar(0.8), 45)" in natural_thunder
     assert "DelayC.ar" not in natural_thunder
     assert "AllpassC.ar" not in natural_thunder
     assert "drySignal = Pan2.ar(rumble + deepBody, pan)" in natural_thunder

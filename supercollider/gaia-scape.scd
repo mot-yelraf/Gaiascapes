@@ -18,34 +18,53 @@ s.waitForBoot({
 
 SynthDef(\earthquake, {
     |out=0, freq=110, amp=0.35, duration=0.8, pan=0, depth=10, strength=0.5|
-    var life, releaseTime, rumbleFreq, surfaceMotion, bodyMotion, filterMotion;
-    var envelope, onsetEnvelope, rumble, groundTone, subharmonic, onset;
-    var signal, outputSignal;
-    life = duration.clip(1.2, 7);
-    releaseTime = (life * 0.3).clip(0.35, 1.5);
+    var life, releaseTime, rumbleFreq, pWaveDelay, surfaceRate;
+    var envelope, pWaveEnvelope, sWaveEnvelope, surfaceMotion, bodyMotion;
+    var pWave, groundTone, subharmonic, lowFriction, signal, outputSignal;
+    life = duration.clip(1.4, 8);
+    releaseTime = (life * 0.34).clip(0.5, 2.1);
     rumbleFreq = ((freq * 0.25).clip(26, 52)
         * depth.clip(0, 700).linexp(0, 700, 1, 0.62)).clip(22, 52);
+    pWaveDelay = depth.clip(0, 700).linlin(0, 700, 0.16, 0.5);
+    surfaceRate = (1.15 + (strength * 0.8)).clip(1.15, 1.95);
     envelope = EnvGen.kr(
-        Env.linen(0.04, (life - releaseTime - 0.04).max(0.05), releaseTime, curve: -3),
+        Env.linen(0.09, (life - releaseTime - 0.09).max(0.05), releaseTime, curve: -3),
         doneAction: Done.freeSelf
     );
-    onsetEnvelope = EnvGen.kr(Env.perc(0.006, 0.16 + (strength * 0.18), curve: -6));
-    // Slow surface-wave motion dominates stronger events; faster body-wave motion
-    // adds irregular shaking without moving the audible carrier out of sub-bass.
-    surfaceMotion = LFNoise2.kr((2.6 - (strength * 1.8)).clip(0.6, 2.6))
-        .range(0.24, 1).squared;
-    bodyMotion = LFNoise1.kr((6 - (strength * 3.8)).clip(1.5, 6))
-        .range(0.42, 1);
-    filterMotion = LFNoise1.kr(0.28 + (strength * 0.42)).exprange(58, 155);
-    rumble = RLPF.ar(BrownNoise.ar(0.95), filterMotion, 0.34, 0.82)
-        * ((surfaceMotion * 0.72) + (bodyMotion * 0.28));
-    groundTone = SinOsc.ar(rumbleFreq * [1, 1.006], 0, [0.42, 0.3]).sum
-        * ((surfaceMotion * 0.55) + (bodyMotion * 0.45));
-    subharmonic = SinOsc.ar((rumbleFreq * 0.5).max(18), 0, 0.3 + (strength * 0.18));
-    onset = BPF.ar(PinkNoise.ar, (rumbleFreq * 2.8).clip(70, 145), 0.72, 0.16)
-        * onsetEnvelope * strength;
-    signal = ((rumble + groundTone + subharmonic + onset) * 0.76).tanh;
-    outputSignal = LeakDC.ar(signal) * envelope * amp * 1.18;
+    pWaveEnvelope = EnvGen.kr(
+        Env([0, 1, 0.3, 0], [0.025, pWaveDelay + 0.1, 0.45], [-4, -3, -5])
+    );
+    sWaveEnvelope = EnvGen.kr(
+        Env([0, 0, 1, 0.76, 0], [
+            pWaveDelay,
+            0.12,
+            ((life - pWaveDelay) * 0.42).max(0.1),
+            ((life - pWaveDelay) * 0.48).max(0.1)
+        ], [-4, -2, -1, -4])
+    );
+    // A restrained P-wave arrives first; the slower, nearly periodic S-wave
+    // creates ground heave instead of thunder's irregular rolling motion.
+    surfaceMotion = SinOsc.kr(surfaceRate, Rand(0, 6.283)).range(0.3, 1).squared;
+    bodyMotion = LFNoise1.kr(2.1 + (strength * 1.4)).range(0.7, 1);
+    pWave = SinOsc.ar(
+        (rumbleFreq * [2.2, 3.4]).clip(50, 145),
+        0,
+        [0.34, 0.2]
+    ).sum
+        * pWaveEnvelope * (0.35 + (strength * 0.45));
+    groundTone = SinOsc.ar(
+        rumbleFreq * [1, 1.006, 2.03],
+        0,
+        [0.42, 0.3, 0.2]
+    ).sum
+        * ((surfaceMotion * 0.72) + (bodyMotion * 0.28)) * sWaveEnvelope;
+    subharmonic = SinOsc.ar((rumbleFreq * 0.5).max(18), 0, 0.34 + (strength * 0.2))
+        * surfaceMotion * sWaveEnvelope;
+    lowFriction = RLPF.ar(BrownNoise.ar(0.55),
+        LFNoise1.kr(0.3).exprange(55, 125), 0.3, 0.38)
+        * bodyMotion * sWaveEnvelope;
+    signal = ((pWave + groundTone + subharmonic + lowFriction) * 0.78).tanh;
+    outputSignal = LeakDC.ar(signal) * envelope * amp * 3.75;
     Out.ar(out, Limiter.ar(Pan2.ar(outputSignal, pan), 0.86, 0.008));
 }).add;
 
@@ -115,12 +134,12 @@ SynthDef(\naturalThunder, {
     rumbleMotion = LFNoise1.kr(Rand(3.0, 6.5)).range(0.28, 1).squared;
     rumble = RLPF.ar(
         BrownNoise.ar(0.9),
-        LFNoise1.kr(Rand(0.35, 0.9)).exprange(65, 310),
+        LFNoise1.kr(Rand(0.35, 0.9)).exprange(85, 360),
         0.48
     ) * rumbleMotion * rumbleEnvelope * (0.12 + (strength.squared * 0.62));
     deepBody = LPF.ar(
-        HPF.ar(BrownNoise.ar(0.8), 30),
-        92 + (strength * 38)
+        HPF.ar(BrownNoise.ar(0.8), 45),
+        145 + (strength * 65)
     ) * rumbleEnvelope * strength.squared * 0.72;
     reflectionEnvelopeA = EnvGen.kr(Env(
         [0, 0, 1, 0],

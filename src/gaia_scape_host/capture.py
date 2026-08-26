@@ -226,6 +226,63 @@ class EventStore:
             connection.commit()
         return max(0, int(deleted))
 
+    def prune_provider_places(self, provider: str, active_places) -> int:
+        """Delete forecast records for locations retired by a provider catalog."""
+        active_places = tuple(dict.fromkeys(str(place) for place in active_places))
+        if not active_places:
+            return 0
+        placeholders = ",".join("?" for _place in active_places)
+        with closing(sqlite3.connect(self.path)) as connection:
+            cursor = connection.execute(
+                f"""
+                DELETE FROM gaia_events
+                WHERE provider = ?
+                  AND json_extract(traits_json, '$.place') NOT IN ({placeholders})
+                """,
+                (str(provider), *active_places),
+            )
+            deleted = cursor.rowcount
+            connection.commit()
+        return max(0, int(deleted))
+
+    def prune_provider_locations(
+        self, provider: str, active_locations, coordinate_tolerance: float = 0.5
+    ) -> int:
+        """Delete forecast records that no longer match an active named coordinate."""
+        active_locations = tuple(active_locations)
+        if not active_locations:
+            return 0
+        normalized = tuple(
+            (str(location[1]), float(location[2]), float(location[3]))
+            for location in active_locations
+        )
+        with closing(sqlite3.connect(self.path)) as connection:
+            rows = connection.execute(
+                """
+                SELECT provider, event_id, latitude, longitude,
+                       json_extract(traits_json, '$.place')
+                FROM gaia_events
+                WHERE provider = ?
+                """,
+                (str(provider),),
+            ).fetchall()
+            retired = [
+                (row[0], row[1])
+                for row in rows
+                if not any(
+                    row[4] == name
+                    and abs(row[2] - latitude) <= coordinate_tolerance
+                    and abs(row[3] - longitude) <= coordinate_tolerance
+                    for name, latitude, longitude in normalized
+                )
+            ]
+            connection.executemany(
+                "DELETE FROM gaia_events WHERE provider = ? AND event_id = ?",
+                retired,
+            )
+            connection.commit()
+        return len(retired)
+
 
 def _event_from_row(row) -> GaiaEvent:
     try:

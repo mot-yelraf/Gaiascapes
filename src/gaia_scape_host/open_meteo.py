@@ -7,6 +7,7 @@ global sampling locations and normalize useful observations into Gaia events.
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import time
 import urllib.error
@@ -38,6 +39,12 @@ SURF_LOCATIONS = (
     ("shonan", "Shōnan, Japan", 35.30, 139.45),
     ("punta-de-lobos", "Punta de Lobos, Chile", -34.42, -72.05),
     ("florianopolis", "Florianópolis, Brazil", -27.68, -48.45),
+    ("equatorial-guinea", "Equatorial Guinea", 3.70, 8.70),
+    ("somalia", "East Coast of Somalia", 5.50, 49.20),
+    ("east-madagascar", "East Coast of Madagascar", -19.00, 49.10),
+    ("sri-lanka", "Sri Lanka", 6.00, 81.90),
+    ("jamaica", "Jamaica", 18.10, -76.90),
+    ("maine", "East Coast of Maine, USA", 44.20, -68.10),
 )
 
 # Broad atmospheric sampling points. These describe forecast potential, not strikes.
@@ -55,6 +62,12 @@ STORM_LOCATIONS = (
     ("maritime-continent", "Maritime Continent", 0.0, 115.0),
     ("northern-australia", "Northern Australia", -16.0, 133.0),
     ("east-asia", "East Asia", 28.0, 115.0),
+    ("southeast-usa", "Southeast USA", 32.0, -84.0),
+    ("central-america", "Central America", 13.0, -86.0),
+    ("sahel", "Sahel", 13.0, 20.0),
+    ("madagascar", "Madagascar", -19.0, 47.0),
+    ("bangladesh", "Bangladesh", 24.0, 90.0),
+    ("philippines", "Philippines", 13.0, 122.0),
 )
 
 
@@ -300,13 +313,33 @@ def _retry_after_seconds(headers) -> float:
     return max(60.0, min(3600.0, seconds))
 
 
+def provider_locations(locations, prefix: str):
+    """Convert editable location dictionaries to provider sampling tuples."""
+    provider_catalog = []
+    for index, location in enumerate(locations, start=1):
+        identity = (
+            f"{location['name']}|{location['latitude']:.4f}|"
+            f"{location['longitude']:.4f}"
+        )
+        digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:10]
+        provider_catalog.append(
+            (
+                f"{prefix}-{index}-{digest}",
+                location["name"],
+                location["latitude"],
+                location["longitude"],
+            )
+        )
+    return tuple(provider_catalog)
+
+
 class OpenMeteoMarineClient(_OpenMeteoClient):
     """Retrieve modeled swell and tide conditions from Open-Meteo Marine."""
 
-    def __init__(self, url=MARINE_URL, timeout=20.0):
+    def __init__(self, url=MARINE_URL, timeout=20.0, locations=SURF_LOCATIONS):
         super().__init__(
             url,
-            SURF_LOCATIONS,
+            locations,
             parse_marine_document,
             (
                 "wave_height",
@@ -322,10 +355,10 @@ class OpenMeteoMarineClient(_OpenMeteoClient):
 class OpenMeteoStormClient(_OpenMeteoClient):
     """Retrieve global convective forecasts from Open-Meteo Weather."""
 
-    def __init__(self, url=WEATHER_URL, timeout=20.0):
+    def __init__(self, url=WEATHER_URL, timeout=20.0, locations=STORM_LOCATIONS):
         super().__init__(
             url,
-            STORM_LOCATIONS,
+            locations,
             parse_storm_document,
             ("cape", "weather_code", "showers", "wind_gusts_10m"),
             timeout,

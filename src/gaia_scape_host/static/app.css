@@ -41,6 +41,37 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 1.45rem; }
 .metrics span { display: block; margin-bottom: 8px; color: var(--muted); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
 .metrics strong { display: block; overflow: hidden; font-size: clamp(1rem, 2.1vw, 1.3rem); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .metrics small { display: block; min-height: 1.2em; margin-top: 8px; overflow: hidden; color: var(--muted); font-size: .76rem; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.metrics small.forecast-characteristics { display: flex; align-items: center; justify-content: center; gap: 7px; flex-wrap: wrap; overflow: visible; white-space: normal; }
+.metrics .storm-cape-pill, .metrics .swell-height-pill { display: inline-block; max-width: 100%; padding: 6px 11px; overflow: hidden; color: #fff; border-radius: 999px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.forecast-characteristics-details { white-space: nowrap; }
+.storm-cape--weak { background: #475569; }
+.storm-cape--modest { background: #0f766e; }
+.storm-cape--substantial { background: #92400e; }
+.storm-cape--strong { background: #991b1b; }
+.swell-height--minimal { background: #475569; }
+.swell-height--small { background: #0f766e; }
+.swell-height--moderate { background: #1d4ed8; }
+.swell-height--large { background: #92400e; }
+.swell-height--very-large { background: #c2410c; }
+.swell-height--extreme { background: #881337; }
+.metrics small.lightning-characteristics { display: flex; align-items: center; flex-direction: column; gap: 5px; overflow: visible; white-space: normal; }
+.metrics .lightning-intensity-pill { display: inline-block; max-width: 100%; margin-bottom: 0; padding: 6px 11px; overflow: hidden; color: #fff; border-radius: 999px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.lightning-characteristics-details, .lightning-characteristics-location { margin-bottom: 0 !important; letter-spacing: 0 !important; text-transform: none !important; white-space: nowrap; }
+.lightning-characteristics-location { font-size: .68rem !important; letter-spacing: 0 !important; text-transform: none !important; }
+.lightning-intensity--faint { background: #475569; }
+.lightning-intensity--moderate { background: #0f766e; }
+.lightning-intensity--strong { background: #92400e; }
+.lightning-intensity--intense { background: #6b21a8; }
+.metrics small.earthquake-characteristics { display: flex; align-items: center; flex-direction: column; gap: 5px; overflow: visible; white-space: normal; }
+.metrics .earthquake-magnitude-pill { display: inline-block; max-width: 100%; margin-bottom: 0; padding: 6px 11px; overflow: hidden; color: #fff; border-radius: 999px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.earthquake-characteristics-location { margin-bottom: 0 !important; font-size: .68rem !important; letter-spacing: 0 !important; text-transform: none !important; white-space: nowrap; }
+.earthquake-magnitude--micro { background: #475569; }
+.earthquake-magnitude--minor { background: #0f766e; }
+.earthquake-magnitude--light { background: #1d4ed8; }
+.earthquake-magnitude--moderate { background: #92400e; }
+.earthquake-magnitude--strong { background: #c2410c; }
+.earthquake-magnitude--major { background: #991b1b; }
+.earthquake-magnitude--great { background: #581c87; }
 .map-status { margin-top: 22px; }
 .workspace { width: 57.5%; margin: 46px auto 0; }
 .panel { min-height: 390px; padding: 26px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); box-shadow: 0 22px 70px rgba(0,0,0,.18); backdrop-filter: blur(16px); }
@@ -176,6 +207,35 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .mapping-control button:disabled, .event-mapping-input button:disabled { opacity: .62; cursor: wait; }
 .settings-tip { display: flex; gap: .8rem; align-items: center; margin-top: 1.25rem; padding: .9rem; border-left: 3px solid var(--moss); background: rgba(158,211,154,.08); color: var(--muted); font-size: .74rem; line-height: 1.45; }
 .settings-tip > span:first-child { color: var(--moss); font-size: 1.3rem; }
+.location-settings-pane { display: flex; flex-direction: column; overflow: hidden; }
+.location-settings-pane > .pane-heading { flex: 0 0 auto; }
+.location-editor-tabs { display: flex; gap: .45rem; }
+.location-editor-tabs button { flex: 1 1 0; }
+.location-editor-tabs button.is-active { color: var(--ink); border-color: rgba(106,181,189,.66); background: rgba(50,127,148,.2); }
+.location-editor-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: .7rem 0; }
+.location-editor-toolbar strong { color: var(--moss); font-size: .78rem; letter-spacing: .04em; }
+.location-editor-toolbar button { padding: .48rem .7rem; font-size: .72rem; }
+.location-editor-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(18rem, .85fr); flex: 1 1 auto; gap: .85rem; min-height: 0; }
+.forecast-map-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: .6rem; border: 1px solid var(--line); background: #0a1717; }
+#forecastLocationMap { display: block; width: 100%; min-height: 0; flex: 1 1 auto; cursor: crosshair; }
+.forecast-map-stage output { flex: 0 0 auto; min-height: 1.7rem; padding: .4rem .35rem 0; color: var(--muted); font-size: .7rem; }
+.forecast-location-marker { cursor: pointer; outline: none; }
+.forecast-location-marker circle { fill: #327f94; stroke: #b7e4e6; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.forecast-location-marker text { fill: #f4fbfa; font: 700 9px system-ui, sans-serif; pointer-events: none; }
+.forecast-location-marker:hover circle, .forecast-location-marker:focus circle { fill: #489aab; stroke: #fff; stroke-width: 3; }
+.forecast-location-marker.is-selected circle { fill: #c98558; stroke: #ffe2bd; stroke-width: 4; }
+.forecast-location-list { min-height: 0; overflow-y: auto; border: 1px solid var(--line); background: #0b120f; }
+.forecast-location-row { display: grid; grid-template-columns: 2.1rem 1fr; gap: .55rem; padding: .55rem; border-bottom: 1px solid rgba(186,213,191,.12); }
+.forecast-location-row.is-selected { background: rgba(201,133,88,.12); box-shadow: inset 3px 0 #c98558; }
+.forecast-location-number { align-self: start; width: 2rem; height: 2rem; padding: 0; border-radius: 50%; color: var(--muted); font-size: .72rem; }
+.forecast-location-row.is-selected .forecast-location-number { color: #ffe2bd; border-color: #c98558; }
+.forecast-location-fields { display: grid; min-width: 0; gap: .4rem; }
+.forecast-location-coordinates { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+.forecast-coordinate-input { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .3rem; color: var(--muted); font-size: .63rem; }
+.forecast-coordinate-input input { width: 100%; min-width: 0; padding: .3rem .35rem; background: #101b17; font-size: .68rem; font-variant-numeric: tabular-nums; }
+.forecast-location-name { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .45rem; color: var(--muted); font-size: .63rem; }
+.forecast-location-name input { width: 100%; min-width: 0; padding: .4rem .5rem; background: #101b17; }
+.location-settings-pane > .settings-tip { flex: 0 0 auto; margin-top: .8rem; }
 .modal-footer { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 4.3rem; padding: .8rem 1.2rem; border-top: 1px solid var(--line); background: #0c1511; }
 .modal-footer p { color: var(--muted); font-size: .7rem; }
 .modal-footer p.error { color: var(--danger); }
@@ -195,6 +255,10 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
   .settings-pane { padding: 1rem; }
   .event-mapping-grid { grid-template-columns: 1fr; }
   .mapping-control { grid-template-columns: 1fr; align-items: stretch; }
+  .location-settings-pane { display: block; overflow-y: auto; }
+  .location-editor-layout { grid-template-columns: 1fr; height: auto; }
+  .forecast-map-stage { min-height: 20rem; }
+  .forecast-location-list { max-height: 24rem; }
   .modal-footer { align-items: flex-start; flex-direction: column; }
   #worldMap { min-height: 23rem; }
 }

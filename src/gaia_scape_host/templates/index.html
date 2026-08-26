@@ -120,12 +120,13 @@
         <nav class="settings-menu" aria-label="Settings sections" role="tablist" aria-orientation="vertical">
           <button type="button" class="settings-tab is-active" data-settings-pane="sources">Sound sources</button>
           <button type="button" class="settings-tab" data-settings-pane="instruments">Instruments</button>
+          <button type="button" class="settings-tab" data-settings-pane="locations">Forecast locations</button>
         </nav>
         <div class="settings-content">
           <section class="settings-pane is-active" data-pane="sources">
             <div class="pane-heading"><span>01</span><div><h3>Captured sound sources</h3><p>Choose which live Earth data feeds can enter the local event history.</p></div></div>
             <label class="source-option"><input id="sourceUsgs" type="checkbox" {% if "usgs" in enabled_sources %}checked{% endif %}><span><strong>USGS earthquakes</strong><small>Observed earthquakes from the current USGS daily feed.</small></span></label>
-            <label class="source-option"><input id="sourceMarine" type="checkbox" {% if "open_meteo_marine" in enabled_sources %}checked{% endif %}><span><strong>Open-Meteo surf & tides</strong><small>Modeled swell and tide turns at twelve global surf locations.</small></span></label>
+            <label class="source-option"><input id="sourceMarine" type="checkbox" {% if "open_meteo_marine" in enabled_sources %}checked{% endif %}><span><strong>Open-Meteo surf & tides</strong><small>Modeled swell and tide turns at 19 global coastal locations.</small></span></label>
             <label class="source-option"><input id="sourceStorm" type="checkbox" {% if "open_meteo_storm" in enabled_sources %}checked{% endif %}><span><strong>Open-Meteo Storm Outlook</strong><small>Global forecast convection—not observed lightning strikes.</small></span></label>
             <label class="source-option"><input id="sourceGlm" type="checkbox" {% if "noaa_glm" in enabled_sources %}checked{% endif %}><span><strong>NOAA GOES GLM lightning</strong><small>Observed total-lightning flashes from GOES-East and GOES-West every 20 seconds.</small></span></label>
             <p class="settings-tip"><span>ⓘ</span><span>Marine forecasts are not suitable for navigation. Data: Open-Meteo and contributing weather agencies.</span></p>
@@ -154,11 +155,38 @@
               <label class="settings-field" for="displayUnits"><span>Units</span><select id="displayUnits"><option value="imperial" {% if units == "imperial" %}selected{% endif %}>Imperial</option><option value="metric" {% if units == "metric" %}selected{% endif %}>Metric</option></select></label>
             </div>
           </section>
+          <section class="settings-pane location-settings-pane" data-pane="locations" hidden>
+            <div class="pane-heading"><span>03</span><div><h3>Forecast locations</h3><p>Select a numbered location, then click the map to move it. Edit its name or coordinates in the list. Each forecast uses exactly 19 locations.</p></div></div>
+            <div class="location-editor-tabs" role="group" aria-label="Forecast catalog">
+              <button type="button" class="is-active" data-location-catalog="ocean_swell">Ocean Swells</button>
+              <button type="button" data-location-catalog="storm_outlook">Storm Outlook</button>
+            </div>
+            <div class="location-editor-toolbar">
+              <strong id="forecastLocationCount">19 / 19 locations</strong>
+              <button type="button" id="restoreForecastLocations">Restore defaults</button>
+            </div>
+            <div class="location-editor-layout">
+              <div class="forecast-map-stage">
+                <svg id="forecastLocationMap" viewBox="0 170 1024 684" role="img" aria-labelledby="forecastLocationMapTitle forecastLocationMapDescription">
+                  <title id="forecastLocationMapTitle">Editable forecast location map</title>
+                  <desc id="forecastLocationMapDescription">Select a numbered marker and click another map coordinate to relocate it.</desc>
+                  <defs><clipPath id="forecastMapClip"><path id="forecastMapClipPath"/></clipPath></defs>
+                  <path class="map-ocean" id="forecastMapOceanPath"/>
+                  <g class="map-land" clip-path="url(#forecastMapClip)"><use href="/static/gaia-scape-icon.svg#realistic-land"/></g>
+                  <g id="forecastLocationMarkerLayer" clip-path="url(#forecastMapClip)"></g>
+                </svg>
+                <output id="forecastLocationReadout" aria-live="polite">Location 1 selected. Click the map to move it.</output>
+              </div>
+              <div class="forecast-location-list" id="forecastLocationList" aria-label="Editable forecast locations"></div>
+            </div>
+            <p class="settings-tip"><span>ⓘ</span><span>Ocean coordinates use Open-Meteo’s sea-cell preference. The returned model cell may be several kilometers from the point selected here. Marine forecasts are not suitable for navigation.</span></p>
+          </section>
         </div>
       </div>
       <footer class="modal-footer"><p id="settingsStatus" aria-live="polite">Changes are stored with this installation.</p><div><button type="button" data-close-settings>Close</button><button class="primary" type="submit">Save settings</button></div></footer>
     </form>
   </dialog>
+  <script id="forecastLocationData" type="application/json">{{ {"current": forecast_location_catalogs, "defaults": default_forecast_location_catalogs} | tojson }}</script>
   <script src="/static/app.js?v={{ version }}"></script>
 </body>
 </html>

@@ -11,6 +11,7 @@ import pytest
 from gaia_scape_host.config import (
     AppConfig,
     event_mappings_for_slots,
+    validate_forecast_locations,
     volume_mappings_for_slots,
 )
 
@@ -157,9 +158,41 @@ def test_existing_config_enables_glm_once_during_revision_migration(tmp_path):
     config.save(path)
     reloaded = AppConfig.load(path)
 
-    assert config.config_revision == 5
+    assert config.config_revision == 6
     assert config.enabled_sources == ["usgs", "noaa_glm"]
     assert reloaded.enabled_sources == ["usgs", "noaa_glm"]
+
+
+def test_forecast_location_catalogs_default_to_nineteen_and_persist(tmp_path):
+    path = tmp_path / "config.json"
+    config = AppConfig()
+    config.ocean_swell_locations[0] = {
+        "name": "Custom Atlantic",
+        "latitude": 42.5,
+        "longitude": -67.25,
+    }
+    config.save(path)
+
+    reloaded = AppConfig.load(path)
+
+    assert len(reloaded.ocean_swell_locations) == 19
+    assert len(reloaded.storm_outlook_locations) == 19
+    assert reloaded.ocean_swell_locations[0]["name"] == "Custom Atlantic"
+
+
+def test_forecast_locations_require_nineteen_distinct_world_coordinates():
+    locations = [
+        {"name": f"Point {index}", "latitude": index - 9, "longitude": index * 5}
+        for index in range(19)
+    ]
+    assert len(validate_forecast_locations(locations, "Test")) == 19
+
+    with pytest.raises(ValueError, match="exactly 19"):
+        validate_forecast_locations(locations[:-1], "Test")
+    locations[1]["latitude"] = locations[0]["latitude"]
+    locations[1]["longitude"] = locations[0]["longitude"]
+    with pytest.raises(ValueError, match="distinct coordinates"):
+        validate_forecast_locations(locations, "Test")
 
 
 def test_glm_can_be_disabled_after_configuration_migration(tmp_path):

@@ -17,6 +17,7 @@ from gaia_scape_host.open_meteo import (
     SURF_LOCATIONS,
     parse_marine_document,
     parse_storm_document,
+    provider_locations,
 )
 
 
@@ -26,13 +27,33 @@ NOW = datetime(2026, 8, 23, 1, tzinfo=timezone.utc).timestamp()
 
 
 @pytest.mark.parametrize("locations", (SURF_LOCATIONS, STORM_LOCATIONS))
-def test_global_forecast_catalogs_have_thirteen_distinct_locations(locations):
-    assert len(locations) == 13
-    assert len({location[0] for location in locations}) == 13
+def test_global_forecast_catalogs_have_nineteen_distinct_locations(locations):
+    assert len(locations) == 19
+    assert len({location[0] for location in locations}) == 19
     assert any(location[2] < 0 for location in locations)
     assert any(location[2] > 0 for location in locations)
     assert any(location[3] < 0 for location in locations)
     assert any(location[3] > 0 for location in locations)
+
+
+def test_marine_catalog_includes_requested_regions():
+    slugs = {location[0] for location in SURF_LOCATIONS}
+
+    assert {
+        "equatorial-guinea",
+        "somalia",
+        "east-madagascar",
+        "sri-lanka",
+    }.issubset(slugs)
+
+
+def test_editable_provider_location_identity_changes_when_coordinates_change():
+    original = [{"name": "Example", "latitude": -28.0, "longitude": 153.0}]
+    moved = [{"name": "Example", "latitude": -31.0, "longitude": 115.0}]
+
+    assert provider_locations(original, "swell")[0][0] != (
+        provider_locations(moved, "swell")[0][0]
+    )
 
 
 def test_marine_document_emits_swell_and_modeled_high_tide_turn():
