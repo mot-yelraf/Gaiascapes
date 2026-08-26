@@ -83,6 +83,7 @@ def create_app(
             default_hours=config.replay_hours,
             default_duration=config.performance_seconds,
             live_mode=config.live_mode,
+            app_view=config.app_view,
             enabled_sources=set(config.enabled_sources),
             units=config.units,
             instrument_slots=config.instrument_slots(),
@@ -148,6 +149,19 @@ def create_app(
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return (await service.status())["live"]
+
+    @app.put("/api/settings/view")
+    async def update_app_view(request: Request):
+        """Validate and persist the user's selected application view."""
+        body = await _json_body(request)
+        previous_view = config.app_view
+        try:
+            config.app_view = body.get("view", "")
+            config.save(config_path)
+        except (TypeError, ValueError) as exc:
+            config.app_view = previous_view
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return {"view": config.app_view}
 
     @app.post("/api/live/start")
     async def start_live():

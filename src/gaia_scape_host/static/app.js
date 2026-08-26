@@ -201,6 +201,83 @@ function updateSoundLocation(location) {
   updateMapBackgroundLocation(location);
 }
 
+function backgroundCharacteristics(event) {
+  if (!event) return "Awaiting forecast";
+  const traits = event.traits || {};
+  if (event.kind === "ocean_swell") {
+    const imperial = byId("displayUnits")?.value === "imperial";
+    const heightMeters = Number(traits.swell_height_m ?? traits.wave_height_m ?? 0);
+    const height = imperial ? heightMeters * 3.28084 : heightMeters;
+    const heightUnit = imperial ? "ft" : "m";
+    const period = Number(traits.swell_period_s ?? 0);
+    const direction = Number(traits.swell_direction_deg ?? 0);
+    return `Swell ${height.toFixed(1)} ${heightUnit} · Period ${period.toFixed(1)} s · Direction ${direction.toFixed(0)}°`;
+  }
+  if (event.kind === "storm_potential") {
+    const cape = Number(traits.cape_jkg ?? 0).toLocaleString(undefined, {maximumFractionDigits: 0});
+    const showers = Number(traits.showers_mm ?? 0).toFixed(1);
+    const gust = Number(traits.wind_gust_kmh ?? 0).toFixed(0);
+    return `CAPE ${cape} J/kg · Showers ${showers} mm · Gusts ${gust} km/h`;
+  }
+  return "Awaiting forecast";
+}
+
+function updateBackgroundStatus(event) {
+  const selection = byId("backgroundInstrument")?.value || "none";
+  updateBackgroundSoundsTitle(selection);
+  if (selection === "none") {
+    updateSoundLocation(null);
+    updateStatusField("background-characteristics", "No background selected");
+    return;
+  }
+  const activeEvent = event?.kind === selection ? event : null;
+  updateSoundLocation(activeEvent ? {
+    name: activeEvent.traits?.place || "",
+    latitude: activeEvent.latitude,
+    longitude: activeEvent.longitude,
+  } : null);
+  updateStatusField("background-characteristics", backgroundCharacteristics(activeEvent));
+}
+
+function eventKindLabel(kind) {
+  const labels = {
+    earthquake: "Earthquake",
+    tide_turn: "Tide Turn",
+    lightning_flash: "Lightning Flash",
+    ocean_swell: "Ocean Swell",
+    storm_potential: "Storm Outlook",
+  };
+  return labels[kind] || instrumentLabel(kind);
+}
+
+function eventStatusText(event) {
+  if (!event) return "—";
+  const type = eventKindLabel(event.kind);
+  if (event.kind !== "earthquake") return type;
+  const magnitude = Number(event.traits?.magnitude ?? 0).toFixed(1);
+  return `${type} · M${magnitude} · ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`;
+}
+
+function updateLastEventStatus(event) {
+  const text = eventStatusText(event);
+  updateStatusField("last-event-type", text, text === "—" ? "" : text);
+  const locationAndTime = event
+    ? `${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)} @ ${when(event.timestamp)}`
+    : "Not yet";
+  updateStatusField("last-event-time", locationAndTime, locationAndTime === "Not yet" ? "" : locationAndTime);
+}
+
+function updateLastEarthquakeStatus(event) {
+  const location = event
+    ? (event.traits?.place || `${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`)
+    : "—";
+  const detail = event
+    ? `M${Number(event.traits?.magnitude ?? 0).toFixed(1)} * ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)} @ ${when(event.timestamp)}`
+    : "Not yet";
+  updateStatusField("last-earthquake-location", location, location === "—" ? "" : location);
+  updateStatusField("last-earthquake-detail", detail, detail === "Not yet" ? "" : detail);
+}
+
 function backgroundSoundLabel(instrument) {
   if (instrument === "ocean_swell") return "Ocean Swells";
   if (instrument === "storm_potential") return "Storm Outlook";
@@ -279,14 +356,12 @@ function animateCapturedEvent(event, instrument = "", role = "event", cueDuratio
 async function updateStatus() {
   try {
     const status = await request("/api/status");
-    updateStatusField("event-count", status.history.event_count.toLocaleString());
     const historySignature = `${status.history.event_count}:${status.history.latest_timestamp ?? ""}`;
     const historyChanged = observedHistorySignature !== null && observedHistorySignature !== historySignature;
     observedHistorySignature = historySignature;
-    updateStatusField("event-time", when(status.capture.last_at));
-    updateSoundLocation(status.cues.latest_background_location);
-    const eventSounds = (status.cues.latest_event_sounds || []).map(instrumentLabel).join(" + ") || "—";
-    updateStatusField("event-sounds", eventSounds, eventSounds === "—" ? "" : eventSounds);
+    updateBackgroundStatus(status.cues.latest_background_event);
+    updateLastEventStatus(status.cues.latest_event);
+    updateLastEarthquakeStatus(status.cues.latest_earthquake_event);
     const continuous = status.live.mode === "continuous";
     byId("liveMode").value = status.live.mode;
     applyLiveMode(status.live.mode);
@@ -319,11 +394,11 @@ async function updateEmittedCues() {
       );
     });
     const locationCue = payload.cues.filter((cue) => cueRole(cue) === "background").at(-1);
-    if (locationCue) updateSoundLocation({
-      name: locationCue.event.traits?.place || "",
-      latitude: locationCue.event.latitude,
-      longitude: locationCue.event.longitude,
-    });
+    if (locationCue) updateBackgroundStatus(locationCue.event);
+    const eventCue = payload.cues.filter((cue) => cueRole(cue) === "event").at(-1);
+    if (eventCue) updateLastEventStatus(eventCue.event);
+    const earthquakeCue = payload.cues.filter((cue) => cue.event?.kind === "earthquake").at(-1);
+    if (earthquakeCue) updateLastEarthquakeStatus(earthquakeCue.event);
     if (payload.cues.some((cue) => cue.history_updated !== false)) await updateEvents();
     observedCueSequence = payload.latest_sequence;
   } catch (error) {
@@ -456,11 +531,14 @@ const appViews = Array.from(document.querySelectorAll("[data-app-view]"));
 const APP_VIEW_STORAGE_KEY = "gaia-scape-app-view";
 
 function savedAppView() {
+  const configuredView = appViews.some((view) => view.dataset.appView === document.body.dataset.initialAppView)
+    ? document.body.dataset.initialAppView
+    : "dashboard";
   try {
     const name = window.localStorage.getItem(APP_VIEW_STORAGE_KEY);
-    return appViews.some((view) => view.dataset.appView === name) ? name : "dashboard";
+    return appViews.some((view) => view.dataset.appView === name) ? name : configuredView;
   } catch (_error) {
-    return "dashboard";
+    return configuredView;
   }
 }
 
@@ -470,6 +548,10 @@ function saveAppView(name) {
   } catch (_error) {
     // The view still works when storage is disabled or unavailable.
   }
+  request("/api/settings/view", {
+    method: "PUT",
+    body: JSON.stringify({view: name}),
+  }).catch((error) => message(`Could not save view preference: ${error.message}`, true));
 }
 
 function activateAppView(name, persist = false) {
@@ -482,14 +564,15 @@ function activateAppView(name, persist = false) {
     button.setAttribute("aria-pressed", String(active));
   });
   appViews.forEach((view) => { view.hidden = view.dataset.appView !== selectedName; });
-  document.body.dataset.appView = selectedName;
+  document.body.dataset.activeAppView = selectedName;
   if (persist) saveAppView(selectedName);
 }
 
 appViewButtons.forEach((button) => {
   button.addEventListener("click", () => activateAppView(button.dataset.appViewButton, true));
 });
-activateAppView(savedAppView());
+// Sync any preference retained by an older browser-only release into config.json.
+activateAppView(savedAppView(), true);
 
 const worldMap = byId("worldMap");
 if (worldMap) {
@@ -668,10 +751,12 @@ if (settingsDialog && settingsForm) {
     });
   });
   byId("backgroundInstrument").addEventListener("change", (event) => {
-    updateBackgroundSoundsTitle(event.target.value);
+    updateBackgroundStatus(null);
   });
   updateBackgroundSoundsTitle(byId("backgroundInstrument").value);
-  byId("displayUnits").addEventListener("change", updateEvents);
+  byId("displayUnits").addEventListener("change", () => {
+    Promise.all([updateStatus(), updateEvents()]);
+  });
   settingsForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const status = byId("settingsStatus");

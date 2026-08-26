@@ -30,6 +30,15 @@ def test_event_strength_is_bounded():
     assert GaiaEvent("x", "2", "test", 1, strength=9).strength == 1.0
 
 
+def test_earthquake_duration_scales_to_seven_seconds_for_strong_events():
+    weak = GaiaEvent("usgs", "a-weak", "earthquake", 1, strength=0.0)
+    strong = GaiaEvent("usgs", "b-strong", "earthquake", 1, strength=1.0)
+
+    score = build_score((weak, strong), 1, 1, 1)
+
+    assert [cue.duration for cue in score] == [1.2, 7.0]
+
+
 def test_lightning_flash_contour_is_shifted_down_one_octave():
     earthquake = GaiaEvent("x", "quake", "earthquake", 1, latitude=0)
     lightning = GaiaEvent("x", "flash", "lightning_flash", 1, latitude=0)

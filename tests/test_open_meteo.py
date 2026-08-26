@@ -13,6 +13,8 @@ import pytest
 from gaia_scape_host import open_meteo
 from gaia_scape_host.open_meteo import (
     OpenMeteoMarineClient,
+    STORM_LOCATIONS,
+    SURF_LOCATIONS,
     parse_marine_document,
     parse_storm_document,
 )
@@ -21,6 +23,16 @@ from gaia_scape_host.open_meteo import (
 LOCATION = (("test-coast", "Test Coast", 10.0, 20.0),)
 TIMES = ["2026-08-23T00:00", "2026-08-23T01:00", "2026-08-23T02:00"]
 NOW = datetime(2026, 8, 23, 1, tzinfo=timezone.utc).timestamp()
+
+
+@pytest.mark.parametrize("locations", (SURF_LOCATIONS, STORM_LOCATIONS))
+def test_global_forecast_catalogs_have_thirteen_distinct_locations(locations):
+    assert len(locations) == 13
+    assert len({location[0] for location in locations}) == 13
+    assert any(location[2] < 0 for location in locations)
+    assert any(location[2] > 0 for location in locations)
+    assert any(location[3] < 0 for location in locations)
+    assert any(location[3] > 0 for location in locations)
 
 
 def test_marine_document_emits_swell_and_modeled_high_tide_turn():

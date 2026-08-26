@@ -36,10 +36,11 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 1.45rem; }
 .view-option { padding: 7px 13px; border: 0; border-radius: 999px; color: var(--muted); background: transparent; font-size: .78rem; font-weight: 700; }
 .view-option:hover { border-color: transparent; color: var(--ink); background: rgba(255,255,255,.04); }
 .view-option.is-active { color: #132014; background: var(--moss); }
-.metrics { display: grid; grid-template-columns: repeat(4, max-content); width: max-content; max-width: 100%; gap: 1px; margin: 22px auto 0; overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--line); }
-.metrics article { min-width: 12rem; padding: 20px; text-align: center; background: #111b17; }
+.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 1px; margin: 22px 0 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--line); }
+.metrics article { min-width: 0; padding: 20px; text-align: center; background: #111b17; }
 .metrics span { display: block; margin-bottom: 8px; color: var(--muted); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
-.metrics strong { display: block; max-width: 24rem; overflow: hidden; font-size: 1.15rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.metrics strong { display: block; overflow: hidden; font-size: clamp(1rem, 2.1vw, 1.3rem); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.metrics small { display: block; min-height: 1.2em; margin-top: 8px; overflow: hidden; color: var(--muted); font-size: .76rem; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .map-status { margin-top: 22px; }
 .workspace { width: 57.5%; margin: 46px auto 0; }
 .panel { min-height: 390px; padding: 26px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); box-shadow: 0 22px 70px rgba(0,0,0,.18); backdrop-filter: blur(16px); }

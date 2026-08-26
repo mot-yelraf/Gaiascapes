@@ -141,18 +141,24 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'id="captureButton"' not in home.text
         assert 'id="refreshButton"' not in home.text
         assert 'id="backgroundSoundsStatus"' in home.text
-        assert 'id="eventTimeStatus"' in home.text
-        assert 'id="eventSoundsStatus"' in home.text
+        assert 'id="lastEventType"' in home.text
+        assert 'id="lastEventTime"' in home.text
+        assert 'id="lastEarthquakeLocation"' in home.text
+        assert 'id="lastEarthquakeDetail"' in home.text
         assert 'id="backgroundSoundsTitle" data-status-field="background-title">Ocean Swells</span>' in home.text
         assert home.text.count('data-status-field="background-location"') == 2
-        assert home.text.count('data-status-field="event-count"') == 2
-        assert home.text.count('data-status-field="event-time"') == 2
-        assert home.text.count('data-status-field="event-sounds"') == 2
+        assert home.text.count('data-status-field="background-characteristics"') == 2
+        assert home.text.count('data-status-field="last-event-type"') == 2
+        assert home.text.count('data-status-field="last-event-time"') == 2
+        assert home.text.count('data-status-field="last-earthquake-location"') == 2
+        assert home.text.count('data-status-field="last-earthquake-detail"') == 2
+        assert home.text.count(">Last Event</span>") == 2
+        assert home.text.count(">Last Earthquake Event</span>") == 2
         assert 'aria-label="Map application status"' in home.text
         assert "Open-Meteo Storm Outlook" in home.text
         assert '<option value="storm_potential" >Storm Outlook</option>' in home.text
-        assert "Event Time" in home.text
-        assert "Event Sounds" in home.text
+        assert "Event Time" not in home.text
+        assert "Event Sounds" not in home.text
         assert 'id="scStatus"' not in home.text
         assert 'id="oscStatus"' not in home.text
         assert home.text.index('<section class="workspace">') < home.text.index(
@@ -164,6 +170,15 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert f'/static/app.js?v={app.version}' in home.text
         assert f'/static/app.css?v={app.version}' in home.text
         script = client.get("/static/app.js").text
+        assert (
+            "`M${Number(event.traits?.magnitude ?? 0).toFixed(1)} * "
+            "${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)} "
+            "@ ${when(event.timestamp)}`"
+        ) in script
+        assert (
+            "`${Number(event.latitude).toFixed(2)}, "
+            "${Number(event.longitude).toFixed(2)} @ ${when(event.timestamp)}`"
+        ) in script
         assert 'message(status.capture.last_error, true, "capture")' in script
         assert 'dataset.messageSource === "capture"' in script
         assert 'lightning_flash: ["#79500a"' in script
@@ -173,13 +188,18 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'return "Storm Outlook"' in script
         assert 'return "Lightning R2D2"' in script
         assert 'return "Natural Thunder"' in script
-        assert 'updateBackgroundSoundsTitle(event.target.value)' in script
+        assert "updateBackgroundStatus(null)" in script
+        assert "backgroundCharacteristics" in script
+        assert "updateLastEventStatus" in script
+        assert "updateLastEarthquakeStatus" in script
+        assert 'return `${type} · M${magnitude} · ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`' in script
         assert '!["lightning_glass", "natural_thunder"].includes(select.value)' in script
         assert "lightning_sample_rate: Number(lightningSampleSliders[0].value)" in script
         assert "activateWorkspacePane" in script
         assert "activateAppView" in script
         assert 'APP_VIEW_STORAGE_KEY = "gaia-scape-app-view"' in script
-        assert "activateAppView(savedAppView())" in script
+        assert 'request("/api/settings/view"' in script
+        assert "activateAppView(savedAppView(), true)" in script
         assert "saveAppView(selectedName)" in script
         assert "projectCoordinates" in script
         assert "inverseProjectCoordinates" in script
@@ -194,6 +214,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert '"ArrowLeft", "ArrowRight", "Home", "End"' in script
         stylesheet = client.get("/static/app.css").text
         assert ".workspace { width: 57.5%; margin: 46px auto 0; }" in stylesheet
+        assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in stylesheet
         assert "grid-template-columns: minmax(7.5rem, 1fr) 6rem" in stylesheet
         assert ".workspace { width: 100%; }" in stylesheet
         assert "50% { opacity: .62; transform: scale(var(--map-pulse-scale, 2.8)); }" in stylesheet
@@ -206,6 +227,32 @@ def test_web_app_captures_and_reports_status(tmp_path):
     assert status.json()["history"]["event_count"] == 1
     assert (tmp_path / "config.json").exists()
     assert (tmp_path / "gaia_scape.sqlite3").exists()
+
+
+def test_selected_app_view_persists_across_restart(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+
+    with TestClient(app) as client:
+        response = client.put("/api/settings/view", json={"view": "map"})
+
+    assert response.status_code == 200
+    assert response.json() == {"view": "map"}
+    assert '"app_view": "map"' in (tmp_path / "config.json").read_text(
+        encoding="utf-8"
+    )
+
+    restarted_app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    with TestClient(restarted_app) as client:
+        home = client.get("/")
+        invalid = client.put("/api/settings/view", json={"view": "globe"})
+
+    assert invalid.status_code == 422
+    assert restarted_app.state.config.app_view == "map"
+    assert '<body data-initial-app-view="map">' in home.text
+    assert '<body data-app-view=' not in home.text
+    assert 'class="view-option is-active" id="mapViewButton"' in home.text
+    assert 'id="dashboardView" data-app-view="dashboard" hidden' in home.text
+    assert 'id="mapView" data-app-view="map" aria-labelledby="mapViewTitle">' in home.text
 
 
 def test_open_meteo_message_clears_after_provider_recovers(tmp_path):
@@ -462,6 +509,18 @@ def test_event_history_publishes_background_only_when_visited_and_changed(tmp_pa
         ),
         "earthquake",
     )
+    app.state.service._record_emitted_cue(
+        ScoreCue(
+            0,
+            GaiaEvent(
+                "noaa_glm", "later-flash", "lightning_flash", now + 1,
+                traits={"place": "Atlantic flash"},
+            ),
+            60,
+            80,
+        ),
+        "lightning_glass",
+    )
 
     history = asyncio.run(app.state.service.recent_events(hours=1, limit=100))
 
@@ -475,6 +534,9 @@ def test_event_history_publishes_background_only_when_visited_and_changed(tmp_pa
     status = asyncio.run(app.state.service.status())
     assert status["cues"]["latest_location"]["name"] == "Bundoran"
     assert status["cues"]["latest_background_location"]["name"] == "Bundoran"
+    assert status["cues"]["latest_background_event"]["event_id"] == "bundoran-swell-same"
+    assert status["cues"]["latest_event"]["event_id"] == "later-flash"
+    assert status["cues"]["latest_earthquake_event"]["event_id"] == "later-quake"
     cues = asyncio.run(app.state.service.emitted_cues(after=0))["cues"]
     assert [cue["history_updated"] for cue in cues[:2]] == [True, False]
 
@@ -774,6 +836,33 @@ def test_independent_event_slots_follow_the_selected_voice_source(tmp_path):
         ("earthquake", "earthquake"),
         ("tide_turn", "tidal_bell"),
     ]
+
+
+def test_strong_live_earthquake_uses_seven_second_cue(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.apply_audio_settings(
+        ["usgs"],
+        {
+            "event_1": "earthquake",
+            "event_2": "none",
+            "event_3": "none",
+            "background": "none",
+        },
+    )
+    played = []
+    app.state.service.renderer.play = (
+        lambda cue, instrument=None: played.append((cue, instrument)) or True
+    )
+
+    asyncio.run(
+        app.state.service._play_live_event(
+            GaiaEvent("usgs", "strong-quake", "earthquake", time.time(), strength=1.0)
+        )
+    )
+
+    assert len(played) == 1
+    assert played[0][0].duration == 7.0
+    assert played[0][1] == "earthquake"
 
 
 def test_matching_duplicate_slots_each_emit_a_cue(tmp_path):

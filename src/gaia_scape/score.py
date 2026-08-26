@@ -71,6 +71,13 @@ def _lightning_pitch(event, geographic_pitch, note_max):
     return min(int(note_max) + 8, geographic_pitch + interval) + LIGHTNING_OCTAVE_SHIFT
 
 
+def event_duration(event):
+    """Map normalized event strength to a renderer-independent cue duration."""
+    if event.kind == "earthquake":
+        return 1.2 + (event.strength * 5.8)
+    return 0.18 + (event.strength * 1.6)
+
+
 def build_score(
     events,
     window_start,
@@ -90,7 +97,7 @@ def build_score(
         if event.kind == "lightning_flash":
             pitch = _lightning_pitch(event, pitch, note_max)
         velocity = 20 + int(round(event.strength * 107.0))
-        duration = 0.18 + (event.strength * 1.6)
+        duration = event_duration(event)
         cues.append(
             ScoreCue(
                 offset,

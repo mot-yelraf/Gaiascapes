@@ -20,6 +20,8 @@ Event 1, Event 2, and Event 3 are independent: Earthquake and Seismic Bell voice
 follow USGS earthquakes, Tidal Bell follows modeled tide turns, and Lightning R2D2
 or Natural Thunder follows normalized lightning-flash observations. Selecting the
 same voice in multiple slots emits each configured cue for every matching event.
+The Earthquake voice uses depth-damped sub-bass and irregular low-frequency
+surface/body-wave modulation, with strength-scaled cues lasting up to seven seconds.
 Continuous mode does not derive ocean sound from the listener’s location. Ambient
 cues play at 75% of their mapped level so full-level earthquake cues remain distinct.
 The global Background Sounds location rotates every 23 seconds. Background cues span 24.5
@@ -28,11 +30,12 @@ Lightning R2D2 uses a short crack, descending pitch contour, glassy decay, and
 pentatonic flash-by-flash pitch variation at least four semitones above other
 events, paired with a yellow-gold map pulse. Each slot's volume also scales its
 map-pulse radius, so quiet lightning remains visible as a compact burst without
-overwhelming the background animation. Natural Thunder replaces pitched oscillators with an irregular filtered-noise
-crack, strength-weighted brown-noise rumble, deep body, randomized envelope-shaped
+overwhelming the background animation. Natural Thunder replaces pitched oscillators with a
+strength-weighted brown-noise rumble, deep body, randomized envelope-shaped
 reflections, compression, and peak limiting. The reflections avoid per-cue delay
 buffers, and the audio server reserves additional real-time memory so the voice remains
-lightweight enough for dense lightning fields. NOAA GOES-East and GOES-West GLM LCFA granules are checked
+lightweight enough for dense lightning fields. Ocean Swells and Storm Outlook each
+sample 13 globally distributed locations. NOAA GOES-East and GOES-West GLM LCFA granules are checked
 independently every 20 seconds. Quality-accepted flashes
 are normalized with their observation timestamp, position, optical energy, area,
 duration, satellite, and granule identity.
@@ -56,8 +59,8 @@ the natural bursts and pauses in the lightning field. If NOAA has not published
 a newer granule by the next polling cycle, Gaia replays the last non-empty flash
 field with the same relative timing until fresh lightning information replaces it. GLM
 flashes remain available for deduplication and replay but are intentionally omitted
-from Environmental Event History, its Events count, and the Event Sounds status
-field. Live yellow-gold pulses still show their observed positions. The console and
+from Environmental Event History and its stored count. Live yellow-gold pulses still
+show their observed positions. The console and
 `/api/status` report granules, raw flashes, sampled flashes, inserts, and errors, for
 example: `NOAA GLM update: 2 granules, 534 raw flashes, 8 sampled, 8 new, 47 sonified`.
 Gaia also quarantines exceptionally dense tropical GOES-19 fields during NOAA's
@@ -181,7 +184,13 @@ voices. The
 Settings menu selects capture sources, three independent event voices, and one continuous
 background. Each musical role can also be set to None. The persisted Units setting
 displays swell and tide heights in meters or feet and earthquake depth in kilometers
-or miles. Independent 0–100% volume sliders sit beneath each Preview button for
+or miles. The Dashboard or Map selection is also stored with the installation and
+restored when Gaia Scape starts. Both views show a three-column status strip with the
+selected background's location and forecast characteristics, the latest event's type
+with its coordinates and event time, and a separately retained latest earthquake area
+followed by its magnitude, coordinates, and event time.
+Independent 0–100%
+volume sliders sit beneath each Preview button for
 Event 1, Event 2, Event 3, and Background; the Lightning R2D2 default in Event 3
 starts at 45% to leave headroom for dense flash fields. OSC host and port can be overridden with
 `GAIA_SCAPE_OSC_HOST` and `GAIA_SCAPE_OSC_PORT`; change `oscPort` in the

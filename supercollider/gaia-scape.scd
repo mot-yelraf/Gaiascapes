@@ -18,22 +18,41 @@ s.waitForBoot({
 
 SynthDef(\earthquake, {
     |out=0, freq=110, amp=0.35, duration=0.8, pan=0, depth=10, strength=0.5|
-    var rumbleFreq, tremor, groundTone, body, impact, envelope, signal, outputSignal;
-    rumbleFreq = (freq * 0.5).clip(58, 118);
-    envelope = EnvGen.kr(Env.perc(0.35, duration.max(1.5), curve: -3), doneAction: Done.freeSelf);
-    tremor = RLPF.ar(BrownNoise.ar(1), rumbleFreq * 2.4, 0.3, 0.85);
-    groundTone = SinOsc.ar(rumbleFreq * [1, 1.012], 0, [0.55, 0.38]).sum;
-    body = SinOsc.ar(freq * [0.75, 1], 0, [0.22, 0.12]).sum;
-    impact = BPF.ar(PinkNoise.ar, (rumbleFreq * 3).clip(180, 380), 0.65, 0.18) * strength;
-    signal = ((tremor + groundTone + body + impact) * 0.72).tanh;
-    outputSignal = LeakDC.ar(signal) * envelope * amp * 1.25;
-    Out.ar(out, Pan2.ar(outputSignal, pan));
+    var life, releaseTime, rumbleFreq, surfaceMotion, bodyMotion, filterMotion;
+    var envelope, onsetEnvelope, rumble, groundTone, subharmonic, onset;
+    var signal, outputSignal;
+    life = duration.clip(1.2, 7);
+    releaseTime = (life * 0.3).clip(0.35, 1.5);
+    rumbleFreq = ((freq * 0.25).clip(26, 52)
+        * depth.clip(0, 700).linexp(0, 700, 1, 0.62)).clip(22, 52);
+    envelope = EnvGen.kr(
+        Env.linen(0.04, (life - releaseTime - 0.04).max(0.05), releaseTime, curve: -3),
+        doneAction: Done.freeSelf
+    );
+    onsetEnvelope = EnvGen.kr(Env.perc(0.006, 0.16 + (strength * 0.18), curve: -6));
+    // Slow surface-wave motion dominates stronger events; faster body-wave motion
+    // adds irregular shaking without moving the audible carrier out of sub-bass.
+    surfaceMotion = LFNoise2.kr((2.6 - (strength * 1.8)).clip(0.6, 2.6))
+        .range(0.24, 1).squared;
+    bodyMotion = LFNoise1.kr((6 - (strength * 3.8)).clip(1.5, 6))
+        .range(0.42, 1);
+    filterMotion = LFNoise1.kr(0.28 + (strength * 0.42)).exprange(58, 155);
+    rumble = RLPF.ar(BrownNoise.ar(0.95), filterMotion, 0.34, 0.82)
+        * ((surfaceMotion * 0.72) + (bodyMotion * 0.28));
+    groundTone = SinOsc.ar(rumbleFreq * [1, 1.006], 0, [0.42, 0.3]).sum
+        * ((surfaceMotion * 0.55) + (bodyMotion * 0.45));
+    subharmonic = SinOsc.ar((rumbleFreq * 0.5).max(18), 0, 0.3 + (strength * 0.18));
+    onset = BPF.ar(PinkNoise.ar, (rumbleFreq * 2.8).clip(70, 145), 0.72, 0.16)
+        * onsetEnvelope * strength;
+    signal = ((rumble + groundTone + subharmonic + onset) * 0.76).tanh;
+    outputSignal = LeakDC.ar(signal) * envelope * amp * 1.18;
+    Out.ar(out, Limiter.ar(Pan2.ar(outputSignal, pan), 0.86, 0.008));
 }).add;
 
 SynthDef(\seismicBells, {
     |out=0, freq=110, amp=0.35, duration=0.8, pan=0, depth=10, strength=0.5|
     var envelope, shimmer, lowBell;
-    envelope = EnvGen.kr(Env.perc(0.004, duration.max(0.18) * 2.4, curve: -5), doneAction: Done.freeSelf);
+    envelope = EnvGen.kr(Env.perc(0.004, duration.clip(0.18, 1.78) * 2.4, curve: -5), doneAction: Done.freeSelf);
     shimmer = SinOsc.ar(freq * [1, 1.507, 2.013], 0, [0.5, 0.25, 0.12]).sum;
     lowBell = SinOsc.ar((freq * 0.5).max(28), 0, 0.24 + (strength * 0.12));
     Out.ar(out, Pan2.ar((shimmer + lowBell) * envelope * amp, pan));
@@ -75,20 +94,20 @@ SynthDef(\lightningGlass, {
 
 SynthDef(\naturalThunder, {
     |out=0, freq=110, amp=0.35, duration=1.2, pan=0, depth=10, strength=0.5|
-    var life, crackEnvelope, crackSource, crack, rumbleEnvelope, rumbleMotion;
+    var life, rumbleEnvelope, rumbleMotion;
     var rumble, deepBody, reflectionEnvelopeA, reflectionEnvelopeB;
     var reflectionA, reflectionB, reflections, drySignal, signal;
     life = duration.clip(0.45, 2.4) * (1.15 + (strength * 1.65));
-    crackEnvelope = EnvGen.ar(
-        Env([0, 1, 0.52, 0], [0.001, 0.018, 0.15], [-8, -3, -6])
-    );
-    crackSource = WhiteNoise.ar(0.85) + Dust2.ar(38 + (strength * 54), 0.24);
-    crack = Mix(BPF.ar(
-        crackSource,
-        [Rand(170, 310), Rand(420, 720), Rand(850, 1500), Rand(1900, 3600)],
-        [0.72, 0.52, 0.38, 0.26],
-        [0.46, 0.36, 0.25, 0.14]
-    )) * crackEnvelope;
+    // crackEnvelope = EnvGen.ar(
+    //     Env([0, 1, 0.52, 0], [0.001, 0.018, 0.15], [-8, -3, -6])
+    // );
+    // crackSource = WhiteNoise.ar(0.85) + Dust2.ar(38 + (strength * 54), 0.24);
+    // crack = Mix(BPF.ar(
+    //     crackSource,
+    //     [Rand(170, 310), Rand(420, 720), Rand(850, 1500), Rand(1900, 3600)],
+    //     [0.72, 0.52, 0.38, 0.26],
+    //     [0.46, 0.36, 0.25, 0.14]
+    // )) * crackEnvelope;
     rumbleEnvelope = EnvGen.kr(
         Env([0, 1, 0.72, 0], [0.018, life * 0.32, life * 0.68], [-2, -1, -4]),
         doneAction: Done.freeSelf
@@ -126,7 +145,7 @@ SynthDef(\naturalThunder, {
     reflections = Pan2.ar(reflectionA, (pan - 0.24).clip(-1, 1));
     reflections = reflections + Pan2.ar(reflectionB, (pan + 0.28).clip(-1, 1));
     reflections = reflections * 0.3;
-    drySignal = Pan2.ar(crack + rumble + deepBody, pan);
+    drySignal = Pan2.ar(rumble + deepBody, pan);
     signal = LeakDC.ar(drySignal + reflections) * amp * 0.92;
     signal = Compander.ar(signal, signal, 0.42, 1, 0.34, 0.002, 0.22);
     Out.ar(out, Limiter.ar(signal, 0.82, 0.005));

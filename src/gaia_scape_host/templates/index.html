@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/static/app.css?v={{ version }}">
   <link rel="icon" href="/static/gaia-scape-icon.svg?v={{ version }}" type="image/svg+xml">
 </head>
-<body>
+<body data-initial-app-view="{{ app_view }}">
   <div class="event-pulse-layer" id="eventPulseLayer" aria-hidden="true"></div>
   <main>
     <header>
@@ -20,14 +20,14 @@
       </div>
       <div class="header-actions">
         <div class="view-selector" role="group" aria-label="Application view">
-          <button class="view-option is-active" id="dashboardViewButton" type="button" aria-pressed="true" data-app-view-button="dashboard">Dashboard</button>
-          <button class="view-option" id="mapViewButton" type="button" aria-pressed="false" data-app-view-button="map">Map</button>
+          <button class="view-option{% if app_view == 'dashboard' %} is-active{% endif %}" id="dashboardViewButton" type="button" aria-pressed="{{ 'true' if app_view == 'dashboard' else 'false' }}" data-app-view-button="dashboard">Dashboard</button>
+          <button class="view-option{% if app_view == 'map' %} is-active{% endif %}" id="mapViewButton" type="button" aria-pressed="{{ 'true' if app_view == 'map' else 'false' }}" data-app-view-button="map">Map</button>
         </div>
         <button class="settings-trigger" type="button" data-open-settings><span aria-hidden="true">⚙</span> Settings</button>
       </div>
     </header>
 
-    <div id="dashboardView" data-app-view="dashboard">
+    <div id="dashboardView" data-app-view="dashboard"{% if app_view != 'dashboard' %} hidden{% endif %}>
       <section class="workspace">
         <article class="panel stream-panel">
         <nav class="workspace-tabs" aria-label="Environmental stream views" role="tablist">
@@ -69,14 +69,13 @@
       </section>
 
       <section class="metrics" aria-label="Application status">
-        <article><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong></article>
-        <article><span>Events</span><strong id="eventCount" data-status-field="event-count">—</strong></article>
-        <article><span>Event Time</span><strong id="eventTimeStatus" data-status-field="event-time">—</strong></article>
-        <article><span>Event Sounds</span><strong id="eventSoundsStatus" data-status-field="event-sounds">—</strong></article>
+        <article><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting forecast</small></article>
+        <article><span>Last Event</span><strong id="lastEventType" data-status-field="last-event-type">—</strong><small id="lastEventTime" data-status-field="last-event-time">Not yet</small></article>
+        <article><span>Last Earthquake Event</span><strong id="lastEarthquakeLocation" data-status-field="last-earthquake-location">—</strong><small id="lastEarthquakeDetail" data-status-field="last-earthquake-detail">Not yet</small></article>
       </section>
     </div>
 
-    <section class="map-view" id="mapView" data-app-view="map" aria-labelledby="mapViewTitle" hidden>
+    <section class="map-view" id="mapView" data-app-view="map" aria-labelledby="mapViewTitle"{% if app_view != 'map' %} hidden{% endif %}>
       <div class="map-heading">
         <div><p class="eyebrow">Live coordinates</p><h2 id="mapViewTitle">Global event map</h2></div>
         <div class="map-legend" aria-label="Map marker legend"><span><i class="map-legend-background"></i>Background</span><span><i class="map-legend-event"></i>Event</span></div>
@@ -101,10 +100,9 @@
         <output class="map-coordinate-readout" id="mapCoordinateReadout" aria-live="polite">Move over the map to inspect coordinates</output>
       </div>
       <section class="metrics map-status" aria-label="Map application status">
-        <article><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong data-status-field="background-location">—</strong></article>
-        <article><span>Events</span><strong data-status-field="event-count">—</strong></article>
-        <article><span>Event Time</span><strong data-status-field="event-time">—</strong></article>
-        <article><span>Event Sounds</span><strong data-status-field="event-sounds">—</strong></article>
+        <article><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting forecast</small></article>
+        <article><span>Last Event</span><strong data-status-field="last-event-type">—</strong><small data-status-field="last-event-time">Not yet</small></article>
+        <article><span>Last Earthquake Event</span><strong data-status-field="last-earthquake-location">—</strong><small data-status-field="last-earthquake-detail">Not yet</small></article>
       </section>
     </section>
 

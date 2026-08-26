@@ -60,7 +60,7 @@ SUPPORTED_INSTRUMENTS = tuple(
 class AppConfig:
     """Validated runtime settings stored alongside application data."""
 
-    config_revision: int = 4
+    config_revision: int = 5
     http_host: str = "0.0.0.0"
     http_port: int = 8768
     usgs_url: str = DEFAULT_USGS_URL
@@ -69,6 +69,7 @@ class AppConfig:
     replay_hours: float = 2.0
     performance_seconds: float = 120.0
     live_mode: str = "capture"
+    app_view: str = "dashboard"
     continuous_interval_seconds: float = 23.0
     osc_host: str = "127.0.0.1"
     osc_port: int = 57130
@@ -98,8 +99,8 @@ class AppConfig:
             if int(document.get("config_revision", 0)) < 2:
                 if "noaa_glm" not in config.enabled_sources:
                     config.enabled_sources.append("noaa_glm")
-            if int(document.get("config_revision", 0)) < 4:
-                config.config_revision = 4
+            if int(document.get("config_revision", 0)) < 5:
+                config.config_revision = 5
             config._migrate_legacy_instruments()
             # v0.26.236.36 lengthened the original, non-user-facing default.
             if document.get("continuous_interval_seconds") in {12, 12.0}:
@@ -122,7 +123,7 @@ class AppConfig:
     def validate(self) -> None:
         """Normalize values and reject unsafe ranges."""
         self.http_host = str(self.http_host).strip() or "0.0.0.0"
-        self.config_revision = max(4, int(self.config_revision))
+        self.config_revision = max(5, int(self.config_revision))
         self.osc_host = str(self.osc_host).strip() or "127.0.0.1"
         self.usgs_url = str(self.usgs_url).strip()
         if not self.usgs_url.startswith("https://"):
@@ -136,6 +137,9 @@ class AppConfig:
         self.live_mode = str(self.live_mode).strip().lower()
         if self.live_mode not in {"capture", "continuous"}:
             raise ValueError("Live mode must be capture or continuous")
+        self.app_view = str(self.app_view).strip().lower()
+        if self.app_view not in {"dashboard", "map"}:
+            raise ValueError("App view must be dashboard or map")
         self.continuous_interval_seconds = max(
             5.0, min(300.0, float(self.continuous_interval_seconds))
         )

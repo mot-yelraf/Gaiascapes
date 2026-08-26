@@ -74,8 +74,20 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     assert "BrownNoise.ar(0.9)" in synth
     assert "Compander.ar(signal, signal" in synth
     assert "Limiter.ar(signal, 0.82" in synth
+    earthquake = synth.split("SynthDef(\\earthquake", 1)[1].split("}).add;", 1)[0]
+    assert "life = duration.clip(1.2, 7)" in earthquake
+    assert "(freq * 0.25).clip(26, 52)" in earthquake
+    assert "surfaceMotion = LFNoise2.kr" in earthquake
+    assert "bodyMotion = LFNoise1.kr" in earthquake
+    seismic_bells = synth.split("SynthDef(\\seismicBells", 1)[1].split("}).add;", 1)[0]
+    assert "duration.clip(0.18, 1.78) * 2.4" in seismic_bells
     natural_thunder = synth.split("SynthDef(\\naturalThunder", 1)[1].split("}).add;", 1)[0]
     assert "DelayC.ar" not in natural_thunder
     assert "AllpassC.ar" not in natural_thunder
+    assert "drySignal = Pan2.ar(rumble + deepBody, pan)" in natural_thunder
+    assert "reflections = reflections + Pan2.ar" in natural_thunder
+    assert "    crackEnvelope = EnvGen.ar" not in natural_thunder
+    assert "    crackSource = WhiteNoise.ar" not in natural_thunder
+    assert "    crack = Mix(BPF.ar" not in natural_thunder
     assert "rainDensity = 10 + (smoothStrength * 110)" in synth
     assert "Dust2.ar(rainDensity" in synth

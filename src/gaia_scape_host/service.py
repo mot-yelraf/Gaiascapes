@@ -15,7 +15,7 @@ from collections import deque
 from pathlib import Path
 
 from gaia_scape.events import GaiaEvent
-from gaia_scape.score import ScoreCue, build_score
+from gaia_scape.score import ScoreCue, build_score, event_duration
 
 from .capture import EventStore
 from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS
@@ -402,6 +402,11 @@ class GaiaScapeService:
                 "latest_sequence": self._cue_sequence,
                 "latest_location": self._latest_sound_location,
                 "latest_background_location": self._latest_background_location,
+                "latest_background_event": self._latest_emitted_event("background"),
+                "latest_event": self._latest_emitted_event("event"),
+                "latest_earthquake_event": self._latest_emitted_event(
+                    "event", kind="earthquake"
+                ),
                 "latest_event_sounds": self._latest_event_sounds(),
             },
             "performance": self.player.status(),
@@ -431,6 +436,13 @@ class GaiaScapeService:
                 or str(glm_status.get("last_error", "")),
             },
         }
+
+    def _latest_emitted_event(self, role: str, kind: str | None = None) -> dict | None:
+        """Return the normalized event from the latest emitted cue for a role."""
+        for cue in reversed(self._emitted_cues):
+            if cue["role"] == role and (kind is None or cue["event"]["kind"] == kind):
+                return cue["event"]
+        return None
 
     def _latest_event_sounds(self) -> list[str]:
         """Return Event 1–3 voices emitted for the most recent source event."""
@@ -517,8 +529,10 @@ class GaiaScapeService:
             traits={"magnitude": magnitude, "depth_km": depth, "place": place},
         )
         preview_pitch = 42 if kind == "lightning_flash" else 50
+        preview_duration = event_duration(event) if instrument == "earthquake" else 2.4
         cue = ScoreCue(
-            0, event, pitch=preview_pitch, velocity=116, duration=2.4, pan=0.0
+            0, event, pitch=preview_pitch, velocity=116,
+            duration=preview_duration, pan=0.0,
         )
         try:
             volume = float(volume)
@@ -742,7 +756,6 @@ class GaiaScapeService:
         """Render one event now and journal it for synchronized visuals."""
         ambient_duration = self.config.continuous_interval_seconds + 1.5
         durations = {
-            "earthquake": 3.2,
             "lightning_flash": 0.45 + (event.strength * 0.75),
             "ocean_swell": ambient_duration,
             "tide_turn": ambient_duration,

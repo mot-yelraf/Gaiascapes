@@ -127,6 +127,17 @@ def test_units_are_validated_and_normalized():
         config.validate()
 
 
+def test_app_view_is_validated_and_normalized():
+    config = AppConfig(app_view=" Map ")
+    config.validate()
+
+    assert config.app_view == "map"
+
+    config.app_view = "globe"
+    with pytest.raises(ValueError, match="App view must be dashboard or map"):
+        config.validate()
+
+
 def test_original_continuous_interval_migrates_to_23_seconds(tmp_path):
     path = tmp_path / "config.json"
     path.write_text(
@@ -146,7 +157,7 @@ def test_existing_config_enables_glm_once_during_revision_migration(tmp_path):
     config.save(path)
     reloaded = AppConfig.load(path)
 
-    assert config.config_revision == 4
+    assert config.config_revision == 5
     assert config.enabled_sources == ["usgs", "noaa_glm"]
     assert reloaded.enabled_sources == ["usgs", "noaa_glm"]
 
