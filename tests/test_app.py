@@ -207,6 +207,8 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'capeUnit: "ft²/s²"' in script
         assert 'showersUnit: "in"' in script
         assert 'gustUnit: "mph"' in script
+        assert 'details.textContent = `Wind gusts ${measurements.gust.toFixed(0)} ${measurements.gustUnit}`' in script
+        assert "details.textContent = `Showers" not in script
         assert 'label: "Weak"' in script
         assert 'label: "Modest"' in script
         assert 'label: "Substantial"' in script
@@ -223,8 +225,15 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'label: "Faint"' in script
         assert 'label: "Intense"' in script
         assert "lightning-intensity-pill" in script
+        assert "element.append(pill, observation)" in script
+        assert "lightning-characteristics-details" not in script
         assert "flash_energy_j" in script
         assert "flash_duration_ms" in script
+        assert 'areaUnit: "mi²"' in script
+        assert 'durationUnit: "s"' in script
+        assert 'return `${footPounds.toExponential(1)} ft·lbf`' in script
+        assert 'return `${miles.toFixed(1)} mi`' in script
+        assert "displayedLightningUnits !== selectedUnits" in script
         assert 'label: "Micro"' in script
         assert 'label: "Minor"' in script
         assert 'label: "Light"' in script
@@ -246,6 +255,11 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert ".status-card--background { --status-accent: #6ab5bd; }" in stylesheet
         assert ".status-card--event { --status-accent: #e5aa2b; }" in stylesheet
         assert ".status-card--earthquake { --status-accent: #b98258; }" in stylesheet
+        assert ".metrics small.forecast-characteristics," in stylesheet
+        assert ".metrics small.lightning-characteristics," in stylesheet
+        assert ".metrics small.earthquake-characteristics" in stylesheet
+        assert "flex-direction: column; gap: 8px" in stylesheet
+        assert "font-size: .76rem !important" in stylesheet
         assert ".recovery-toast-stack" in stylesheet
         assert ".recovery-toast--error" in stylesheet
         assert ".map-system-location-marker { fill: #53b86b;" in stylesheet

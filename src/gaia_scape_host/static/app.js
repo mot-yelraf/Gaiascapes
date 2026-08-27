@@ -5,6 +5,7 @@ let observedHistorySignature = null;
 const observedRecoveryTransitions = new Map();
 const LIGHTNING_INTENSITY_HOLD_MS = 3000;
 let displayedLightningEvent = null;
+let displayedLightningUnits = null;
 let pendingLightningEvent = null;
 let lightningIntensityTimer = null;
 let lastLightningIntensityUpdate = 0;
@@ -104,7 +105,7 @@ function renderMapGrid() {
 }
 
 function mapMarkerTitle(event) {
-  const place = event.traits?.place || event.kind;
+  const place = displayPlace(event.traits?.place || event.kind);
   const magnitude = Number(event.traits?.magnitude);
   const magnitudeText = event.kind === "earthquake" && Number.isFinite(magnitude)
     ? ` · M${magnitude.toFixed(1)}`
@@ -211,6 +212,19 @@ function when(timestamp) {
   return timestamp
     ? new Date(timestamp * 1000).toLocaleString().replace(/,\s*/, " ")
     : "Not yet";
+}
+
+function usesImperialUnits() {
+  return byId("displayUnits")?.value === "imperial";
+}
+
+function displayPlace(place) {
+  const text = String(place || "");
+  if (!usesImperialUnits()) return text;
+  return text.replace(/(\d+(?:\.\d+)?)\s*km\b/gi, (_match, distance) => {
+    const miles = Number(distance) * 0.621371;
+    return `${miles.toFixed(1)} mi`;
+  });
 }
 
 function message(text, error = false, source = "") {
@@ -338,7 +352,7 @@ function backgroundCharacteristics(event) {
     const measurements = stormMeasurements(traits);
     const severity = stormCapeSeverity(Number(traits.cape_jkg ?? 0));
     const cape = measurements.cape.toLocaleString(undefined, {maximumFractionDigits: 0});
-    return `${severity.label} · CAPE ${cape} ${measurements.capeUnit} · Showers ${measurements.showers.toFixed(2)} ${measurements.showersUnit} · Gusts ${measurements.gust.toFixed(0)} ${measurements.gustUnit}`;
+    return `${severity.label} · CAPE ${cape} ${measurements.capeUnit} · Wind gusts ${measurements.gust.toFixed(0)} ${measurements.gustUnit}`;
   }
   return "Awaiting forecast";
 }
@@ -377,7 +391,7 @@ function updateBackgroundCharacteristics(event, fallbackText = null) {
       capePill.textContent = `${severity.label} · CAPE ${cape} ${measurements.capeUnit}`;
       const details = document.createElement("span");
       details.className = "forecast-characteristics-details";
-      details.textContent = `Showers ${measurements.showers.toFixed(2)} ${measurements.showersUnit} · Gusts ${measurements.gust.toFixed(0)} ${measurements.gustUnit}`;
+      details.textContent = `Wind gusts ${measurements.gust.toFixed(0)} ${measurements.gustUnit}`;
       element.classList.add("forecast-characteristics");
       element.append(capePill, details);
       element.setAttribute("aria-label", backgroundCharacteristics(event));
@@ -434,10 +448,33 @@ function lightningIntensity(event) {
 
 function formatLightningEnergy(energyJoules) {
   const energy = Math.max(0, Number(energyJoules) || 0);
+  if (usesImperialUnits()) {
+    const footPounds = energy * 0.737562;
+    return `${footPounds.toExponential(1)} ft·lbf`;
+  }
   if (energy >= 1e-9) return `${(energy * 1e9).toFixed(2)} nJ`;
   if (energy >= 1e-12) return `${(energy * 1e12).toFixed(2)} pJ`;
   if (energy >= 1e-15) return `${(energy * 1e15).toFixed(1)} fJ`;
   return `${energy.toExponential(1)} J`;
+}
+
+function lightningMeasurements(traits) {
+  const areaSquareKilometers = Number(traits.flash_area_km2 ?? 0);
+  const durationMilliseconds = Number(traits.flash_duration_ms ?? 0);
+  if (usesImperialUnits()) {
+    return {
+      area: areaSquareKilometers * 0.386102,
+      areaUnit: "mi²",
+      duration: durationMilliseconds / 1000,
+      durationUnit: "s",
+    };
+  }
+  return {
+    area: areaSquareKilometers,
+    areaUnit: "km²",
+    duration: durationMilliseconds,
+    durationUnit: "ms",
+  };
 }
 
 function renderLastEventStatus(event) {
@@ -460,15 +497,12 @@ function renderLastEventStatus(event) {
     const pill = document.createElement("span");
     pill.classList.add("lightning-intensity-pill", intensity.className);
     pill.textContent = `${intensity.label} · ${formatLightningEnergy(traits.flash_energy_j)}`;
-    const measurements = document.createElement("span");
-    measurements.className = "lightning-characteristics-details";
-    measurements.textContent = `${Number(traits.flash_area_km2 ?? 0).toFixed(1)} km² · ${Number(traits.flash_duration_ms ?? 0).toFixed(0)} ms`;
     const observation = document.createElement("span");
     observation.className = "lightning-characteristics-location";
     observation.textContent = locationAndTime;
     element.classList.add("lightning-characteristics");
-    element.append(pill, measurements, observation);
-    element.setAttribute("aria-label", `${intensity.label} lightning, ${formatLightningEnergy(traits.flash_energy_j)}, ${measurements.textContent}, ${locationAndTime}`);
+    element.append(pill, observation);
+    element.setAttribute("aria-label", `${intensity.label} lightning, ${formatLightningEnergy(traits.flash_energy_j)}, ${locationAndTime}`);
     element.title = "";
   });
 }
@@ -482,16 +516,25 @@ function updateLastEventStatus(event) {
     if (lightningIntensityTimer !== null) clearTimeout(lightningIntensityTimer);
     lightningIntensityTimer = null;
     displayedLightningEvent = null;
+    displayedLightningUnits = null;
     pendingLightningEvent = null;
     lastLightningIntensityUpdate = 0;
     renderLastEventStatus(event);
     return;
   }
-  if (lightningEventKey(event) === lightningEventKey(displayedLightningEvent)
-      || lightningEventKey(event) === lightningEventKey(pendingLightningEvent)) return;
+  const selectedUnits = usesImperialUnits() ? "imperial" : "metric";
+  if (lightningEventKey(event) === lightningEventKey(displayedLightningEvent)) {
+    if (displayedLightningUnits !== selectedUnits) {
+      displayedLightningUnits = selectedUnits;
+      renderLastEventStatus(event);
+    }
+    return;
+  }
+  if (lightningEventKey(event) === lightningEventKey(pendingLightningEvent)) return;
   const now = Date.now();
   if (!displayedLightningEvent || now - lastLightningIntensityUpdate >= LIGHTNING_INTENSITY_HOLD_MS) {
     displayedLightningEvent = event;
+    displayedLightningUnits = selectedUnits;
     pendingLightningEvent = null;
     lastLightningIntensityUpdate = now;
     renderLastEventStatus(event);
@@ -506,6 +549,7 @@ function updateLastEventStatus(event) {
     lightningIntensityTimer = null;
     if (!pendingLightningEvent) return;
     displayedLightningEvent = pendingLightningEvent;
+    displayedLightningUnits = usesImperialUnits() ? "imperial" : "metric";
     pendingLightningEvent = null;
     lastLightningIntensityUpdate = Date.now();
     renderLastEventStatus(displayedLightningEvent);
@@ -524,7 +568,7 @@ function earthquakeSeverity(magnitude) {
 
 function updateLastEarthquakeStatus(event) {
   const location = event
-    ? (event.traits?.place || `${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`)
+    ? (displayPlace(event.traits?.place) || `${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`)
     : "—";
   updateStatusField("last-earthquake-location", location, location === "—" ? "" : location);
   document.querySelectorAll('[data-status-field="last-earthquake-detail"]').forEach((element) => {
@@ -690,7 +734,7 @@ async function updateEvents() {
     renderMapHistory(events);
     byId("eventList").innerHTML = events.length ? events.map((event) => {
       const summary = eventSummary(event);
-      const place = event.traits.place || `${event.latitude.toFixed(2)}, ${event.longitude.toFixed(2)}`;
+      const place = displayPlace(event.traits.place) || `${event.latitude.toFixed(2)}, ${event.longitude.toFixed(2)}`;
       const instruments = (event.instruments || [event.instrument]).map(instrumentLabel).join(" + ");
       const backgroundForecast = ["ocean_swell", "storm_potential"].includes(event.kind);
       const detail = backgroundForecast
@@ -739,9 +783,9 @@ function eventSummary(event) {
     };
   }
   if (event.kind === "lightning_flash") {
-    const area = Number(traits.flash_area_km2 ?? 0);
-    const detail = area > 0
-      ? `${area.toFixed(1)} km² observed flash area`
+    const measurements = lightningMeasurements(traits);
+    const detail = measurements.area > 0
+      ? `${measurements.area.toFixed(1)} ${measurements.areaUnit} observed flash area`
       : "observed lightning flash";
     return {badge: "FLASH", detail};
   }

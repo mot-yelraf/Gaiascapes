@@ -79,7 +79,6 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 1.45rem; }
 .status-card--earthquake { --status-accent: #b98258; }
 .status-card > span, .status-card > strong, .status-card > small,
 .status-card .forecast-characteristics-details,
-.status-card .lightning-characteristics-details,
 .status-card .lightning-characteristics-location,
 .status-card .earthquake-characteristics-location { color: var(--status-accent); }
 .status-card--earthquake > span,
@@ -89,9 +88,13 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 1.45rem; }
   paint-order: stroke fill;
   text-shadow: 0 0 1px rgba(255,255,255,.85);
 }
-.metrics small.forecast-characteristics { display: flex; align-items: center; justify-content: center; gap: 7px; flex-wrap: wrap; overflow: visible; white-space: normal; }
-.metrics .storm-cape-pill, .metrics .swell-height-pill { display: inline-block; max-width: 100%; padding: 6px 11px; overflow: hidden; color: #fff; border-radius: 999px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
-.forecast-characteristics-details { white-space: nowrap; }
+.metrics small.forecast-characteristics,
+.metrics small.lightning-characteristics,
+.metrics small.earthquake-characteristics { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; overflow: visible; white-space: normal; }
+.metrics .storm-cape-pill, .metrics .swell-height-pill { display: inline-block; max-width: 100%; margin-bottom: 0; padding: 6px 11px; overflow: hidden; color: #fff; border-radius: 999px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.forecast-characteristics-details,
+.lightning-characteristics-location,
+.earthquake-characteristics-location { margin-bottom: 0 !important; font-size: .76rem !important; line-height: 1.35; letter-spacing: 0 !important; text-transform: none !important; white-space: nowrap; }
 .storm-cape--weak { background: #475569; }
 .storm-cape--modest { background: #0f766e; }
 .storm-cape--substantial { background: #92400e; }
@@ -102,17 +105,12 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 1.45rem; }
 .swell-height--large { background: #92400e; }
 .swell-height--very-large { background: #c2410c; }
 .swell-height--extreme { background: #881337; }
-.metrics small.lightning-characteristics { display: flex; align-items: center; flex-direction: column; gap: 5px; overflow: visible; white-space: normal; }
 .metrics .lightning-intensity-pill { display: inline-block; max-width: 100%; margin-bottom: 0; padding: 6px 11px; overflow: hidden; color: #fff; border-radius: 999px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
-.lightning-characteristics-details, .lightning-characteristics-location { margin-bottom: 0 !important; letter-spacing: 0 !important; text-transform: none !important; white-space: nowrap; }
-.lightning-characteristics-location { font-size: .68rem !important; letter-spacing: 0 !important; text-transform: none !important; }
 .lightning-intensity--faint { background: #475569; }
 .lightning-intensity--moderate { background: #0f766e; }
 .lightning-intensity--strong { background: #92400e; }
 .lightning-intensity--intense { background: #6b21a8; }
-.metrics small.earthquake-characteristics { display: flex; align-items: center; flex-direction: column; gap: 5px; overflow: visible; white-space: normal; }
 .metrics .earthquake-magnitude-pill { display: inline-block; max-width: 100%; margin-bottom: 0; padding: 6px 11px; overflow: hidden; color: #fff; border-radius: 999px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
-.earthquake-characteristics-location { margin-bottom: 0 !important; font-size: .68rem !important; letter-spacing: 0 !important; text-transform: none !important; white-space: nowrap; }
 .earthquake-magnitude--micro { background: #475569; }
 .earthquake-magnitude--minor { background: #0f766e; }
 .earthquake-magnitude--light { background: #1d4ed8; }
