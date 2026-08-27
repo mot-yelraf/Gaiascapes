@@ -21,6 +21,39 @@ body {
     #0d1512;
 }
 body.modal-open { overflow: hidden; }
+.recovery-toast-stack {
+  position: fixed;
+  z-index: 1000;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  width: min(390px, calc(100vw - 36px));
+  gap: 10px;
+  pointer-events: none;
+}
+.recovery-toast {
+  display: grid;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #6ab5bd;
+  border-radius: 10px;
+  color: var(--ink);
+  background: rgba(13, 21, 18, .97);
+  box-shadow: 0 14px 44px rgba(0,0,0,.38);
+  font: inherit;
+  line-height: 1.35;
+  text-align: left;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.recovery-toast:hover { border-color: rgba(234,241,232,.38); transform: translateY(-1px); }
+.recovery-toast strong { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+.recovery-toast span { margin-top: 4px; color: var(--ink); font-size: .82rem; }
+.recovery-toast small { margin-top: 7px; color: var(--muted); font-size: .68rem; }
+.recovery-toast--success { border-left-color: var(--moss); }
+.recovery-toast--warning { border-left-color: var(--earth); }
+.recovery-toast--error { border-left-color: var(--danger); }
 main { position: relative; z-index: 1; width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0 28px; }
 header, .panel-title, .actions { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .heading-block { flex: 1 1 auto; min-width: 0; }

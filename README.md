@@ -71,6 +71,20 @@ example: `NOAA GLM update: 2 granules, 534 raw flashes, 8 sampled, 8 new, 47 son
 Gaia also quarantines exceptionally dense tropical GOES-19 fields during NOAA's
 documented 15:00–19:00 UTC false-alarm window, active since July 17, 2026.
 
+### Network recovery
+
+Gaia Scape keeps capture, history, the web interface, and available audio layers
+running when an environmental provider becomes unavailable. Each source reports
+an online, degraded, offline, or recovering state through `/api/status`. Failed
+sources retry independently with bounded exponential backoff and jitter, so one
+outage does not interrupt healthy feeds.
+
+Recent Open-Meteo forecasts can remain active for up to three hours, and a recent
+NOAA GLM field can replay for up to five minutes. These limits prevent indefinitely
+sonifying stale conditions. Stored forecast events and sampled GLM flashes provide
+a restart-safe fallback when they are still fresh. The desktop displays recovery
+changes as stacked notifications; click any notification to dismiss it.
+
 Storm potential is not an observed lightning-flash feed. Marine values are
 model output and are not suitable for navigation. Open-Meteo marine data
 combines models from DWD, ECMWF, Météo-France, NOAA, and other contributing

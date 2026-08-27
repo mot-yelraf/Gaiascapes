@@ -59,7 +59,7 @@ class FakeEvent:
 
 def _fake_webview(calls):
     window = SimpleNamespace(
-        events=SimpleNamespace(shown=FakeEvent()),
+        events=SimpleNamespace(shown=FakeEvent(), closed=FakeEvent()),
         native=SimpleNamespace(Icon=None),
     )
 
@@ -310,6 +310,38 @@ def test_desktop_starts_native_window_and_stops_owned_server(tmp_path, monkeypat
     assert calls[0][2]["min_size"] == (960, 640)
     assert calls[1] == ("start", (), {})
     assert window.events.shown.handlers == [desktop.set_macos_app_icon]
+    assert len(window.events.closed.handlers) == 1
+
+
+def test_started_server_tracks_desktop_owner(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setenv("GAIA_SCAPE_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setattr(desktop.os, "getpid", lambda: 4321)
+    monkeypatch.setattr(
+        desktop.subprocess,
+        "Popen",
+        lambda *args, **kwargs: (calls.append((args, kwargs)), FakeProcess())[1],
+    )
+
+    desktop._start_server()
+
+    assert calls[0][1]["env"][desktop.DESKTOP_OWNER_PID_ENV] == "4321"
+
+
+def test_server_watchdog_terminates_after_desktop_owner_exits(monkeypatch):
+    calls = []
+
+    class StopEvent:
+        def wait(self, _interval):
+            return False
+
+    monkeypatch.setattr(cli.os, "getppid", lambda: 1)
+    monkeypatch.setattr(cli.os, "getpid", lambda: 9876)
+    monkeypatch.setattr(cli.os, "kill", lambda pid, sig: calls.append((pid, sig)))
+
+    cli._watch_desktop_owner(4321, StopEvent(), interval=0)
+
+    assert calls == [(9876, cli.signal.SIGTERM)]
 
 
 def test_desktop_attaches_without_stopping_existing_server(tmp_path, monkeypatch):

@@ -31,6 +31,8 @@ def test_store_deduplicates_and_replays_in_time_order(tmp_path):
     assert store.count() == 3
     assert [item.event_id for item in store.events_since(50)] == ["a", "b", "c"]
     assert store.events_since(150)[0].traits["depth_km"] == 8.0
+    assert store.latest_ingested_at_for_provider("usgs") is not None
+    assert store.latest_ingested_at_for_provider("noaa_glm") is None
 
 
 def test_store_prunes_only_events_before_cutoff(tmp_path):

@@ -2,6 +2,7 @@ const byId = (id) => document.getElementById(id);
 let observedCueSequence = null;
 let cuePollInFlight = false;
 let observedHistorySignature = null;
+const observedRecoveryTransitions = new Map();
 const LIGHTNING_INTENSITY_HOLD_MS = 3000;
 let displayedLightningEvent = null;
 let pendingLightningEvent = null;
@@ -217,6 +218,42 @@ function message(text, error = false, source = "") {
   banner.textContent = text;
   banner.classList.toggle("error", error);
   banner.dataset.messageSource = source;
+}
+
+function syncRecoveryToasts(health = {}) {
+  const stack = byId("recoveryToasts");
+  if (!stack) return;
+  Object.values(health).forEach((source) => {
+    const existing = stack.querySelector(`[data-recovery-source="${source.source}"]`);
+    if (!source.enabled || !source.notify) {
+      existing?.remove();
+      observedRecoveryTransitions.set(source.source, source.transition);
+      return;
+    }
+    const previousTransition = observedRecoveryTransitions.get(source.source);
+    if (previousTransition === source.transition) {
+      existing?.querySelector("span")?.replaceChildren(source.message);
+      return;
+    }
+    observedRecoveryTransitions.set(source.source, source.transition);
+    existing?.remove();
+    const toast = document.createElement("button");
+    toast.type = "button";
+    toast.className = `recovery-toast recovery-toast--${source.severity}`;
+    toast.dataset.recoverySource = source.source;
+    toast.setAttribute("aria-label", `${source.message} Click to dismiss.`);
+    const title = document.createElement("strong");
+    title.textContent = source.state === "online"
+      ? "Recovered"
+      : source.state.charAt(0).toUpperCase() + source.state.slice(1);
+    const detail = document.createElement("span");
+    detail.textContent = source.message;
+    const dismiss = document.createElement("small");
+    dismiss.textContent = "Click to dismiss";
+    toast.append(title, detail, dismiss);
+    toast.addEventListener("click", () => toast.remove(), {once: true});
+    stack.append(toast);
+  });
 }
 
 function updateStatusField(field, text, title = null) {
@@ -598,6 +635,10 @@ async function updateStatus() {
     updateBackgroundStatus(status.cues.latest_background_event);
     updateLastEventStatus(status.cues.latest_event);
     updateLastEarthquakeStatus(status.cues.latest_earthquake_event);
+    syncRecoveryToasts({
+      ...(status.sources?.recovery ? {all_sources: status.sources.recovery} : {}),
+      ...(status.sources?.health || {}),
+    });
     const continuous = status.live.mode === "continuous";
     byId("liveMode").value = status.live.mode;
     applyLiveMode(status.live.mode);
@@ -606,11 +647,6 @@ async function updateStatus() {
       ? (status.live.running ? `Continuous · ${status.live.played_count} cues` : "Paused")
       : (status.performance.running ? `Playing ${status.performance.played_count}/${status.performance.cue_count}` : "Capture");
     byId("performanceBadge").classList.toggle("running", active);
-    if (status.capture.last_error) {
-      message(status.capture.last_error, true, "capture");
-    } else if (byId("message").dataset.messageSource === "capture") {
-      message("");
-    }
     if (historyChanged) await updateEvents();
   } catch (error) {
     message(error.message, true);

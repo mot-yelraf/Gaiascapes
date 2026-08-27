@@ -13,6 +13,7 @@ import plistlib
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -31,6 +32,7 @@ MACOS_APP_NAME = "Gaia Scape"
 MACOS_BUNDLE_IDENTIFIER = "earth.gaiascape.GaiaScape"
 MACOS_RELAUNCH_MARKER = "GAIA_SCAPE_MACOS_APP_RELAUNCHED"
 MACOS_HEADLESS_MARKER = "GAIA_SCAPE_HEADLESS"
+DESKTOP_OWNER_PID_ENV = "GAIA_SCAPE_DESKTOP_OWNER_PID"
 MACOS_LSREGISTER_PATH = Path(
     "/System/Library/Frameworks/CoreServices.framework/Frameworks/"
     "LaunchServices.framework/Support/lsregister"
@@ -296,10 +298,12 @@ def _wait_for_health(base_url: str, process: subprocess.Popen[Any] | None) -> bo
 
 def _start_server() -> subprocess.Popen[Any]:
     """Start the web server with this interpreter and installation."""
+    environment = os.environ.copy()
+    environment[DESKTOP_OWNER_PID_ENV] = str(os.getpid())
     return subprocess.Popen(
         [sys.executable, "-m", "gaia_scape_host"],
         cwd=resolve_data_dir().parent,
-        env=os.environ.copy(),
+        env=environment,
     )
 
 
@@ -414,7 +418,16 @@ def main() -> int:
         return 0
     base_url = _base_url()
     owned_server: subprocess.Popen[Any] | None = None
+    server_stop_lock = threading.Lock()
     os.environ.setdefault("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
+
+    def stop_owned_server() -> None:
+        """Stop the server once when either the window or event loop closes."""
+        nonlocal owned_server
+        with server_stop_lock:
+            process = owned_server
+            owned_server = None
+        _stop_owned_server(process)
 
     if sys.platform.startswith("linux"):
         os.environ.setdefault("GDK_BACKEND", "wayland,x11")
@@ -449,7 +462,7 @@ def main() -> int:
             return 1
 
     if not _wait_for_health(base_url, owned_server):
-        _stop_owned_server(owned_server)
+        stop_owned_server()
         print(
             f"Gaia Scape GUI not started: {base_url.rstrip('/')} did not become ready.",
             file=sys.stderr,
@@ -473,6 +486,7 @@ def main() -> int:
             frameless=False,
             confirm_close=True,
         )
+        window.events.closed += stop_owned_server
         if sys.platform == "darwin":
             window.events.shown += set_macos_app_icon
             webview.start()
@@ -484,7 +498,7 @@ def main() -> int:
         else:
             webview.start()
     finally:
-        _stop_owned_server(owned_server)
+        stop_owned_server()
     return 0
 
 

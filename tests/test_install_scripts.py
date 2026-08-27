@@ -48,7 +48,11 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     synth = Path("supercollider/gaia-scape.scd").read_text(encoding="utf-8")
 
     assert '"$RUNTIME_DIR/run_supercollider.sh" &' in gui
-    assert "trap cleanup EXIT INT TERM" in gui
+    assert 'desktop_pid=$!' in gui
+    assert 'kill -TERM "$desktop_pid"' in gui
+    assert 'pgrep -P "$supercollider_pid"' in gui
+    assert 'kill -TERM "$child_pid"' in gui
+    assert "trap cleanup EXIT" in gui
     assert "data/audio-device" in audio
     assert "GAIA_SCAPE_AUDIO_DEVICE" in audio
     assert 'GAIA_SCAPE_SCLANG_PORT:-57131' in audio

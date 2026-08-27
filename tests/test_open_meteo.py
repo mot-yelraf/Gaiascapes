@@ -192,9 +192,36 @@ def test_open_meteo_429_uses_stale_cache_and_starts_cooldown(monkeypatch):
     monkeypatch.setattr(open_meteo.time, "monotonic", lambda: clock[0])
 
     assert client.fetch() == ("cached",)
+    assert client.last_fetch_used_fallback is True
+    assert "cached forecast" in client.last_error
     clock[0] = 1050.0
     assert client.fetch() == ("cached",)
     assert len(calls) == 1
+
+
+def test_open_meteo_network_loss_uses_only_fresh_cached_data(monkeypatch):
+    client = OpenMeteoMarineClient()
+    client._cached_events = ("cached",)
+    client._cache_updated_at = 1000.0
+    client._has_cache = True
+    clock = [1000.0 + client.refresh_seconds]
+    monkeypatch.setattr(open_meteo.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(
+        open_meteo.urllib.request,
+        "urlopen",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            urllib.error.URLError("offline")
+        ),
+    )
+
+    assert client.fetch() == ("cached",)
+    assert client.last_fetch_used_fallback is True
+    assert "network error" in client.last_error
+
+    clock[0] = 1000.0 + open_meteo.STALE_CACHE_SECONDS + 61.0
+    client._retry_not_before = 0.0
+    with pytest.raises(urllib.error.URLError):
+        client.fetch()
 
 
 def test_open_meteo_429_without_cache_has_a_readable_error(monkeypatch):

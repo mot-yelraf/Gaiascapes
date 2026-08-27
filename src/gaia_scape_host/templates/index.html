@@ -9,6 +9,7 @@
 </head>
 <body data-initial-app-view="{{ app_view }}">
   <div class="event-pulse-layer" id="eventPulseLayer" aria-hidden="true"></div>
+  <aside class="recovery-toast-stack" id="recoveryToasts" aria-live="polite" aria-label="Data source recovery status"></aside>
   <main>
     <header>
       <div class="heading-block">
@@ -78,7 +79,7 @@
     <section class="map-view" id="mapView" data-app-view="map" aria-labelledby="mapViewTitle"{% if app_view != 'map' %} hidden{% endif %}>
       <div class="map-heading">
         <div><p class="eyebrow">Live coordinates</p><h2 id="mapViewTitle">Global event map</h2></div>
-        <div class="map-legend" aria-label="Map marker legend"><span><i class="map-legend-background"></i>Background</span><span><i class="map-legend-event"></i>Event</span><span><b class="map-legend-system" aria-hidden="true"></b>System location</span></div>
+        <div class="map-legend" aria-label="Map marker legend"><span><i class="map-legend-background"></i>Background</span><span><i class="map-legend-event"></i>Event</span><span><b class="map-legend-system" aria-hidden="true"></b>My location</span></div>
       </div>
       <div class="map-stage">
         <svg id="worldMap" viewBox="0 170 1024 684" role="img" aria-labelledby="worldMapTitle worldMapDescription">

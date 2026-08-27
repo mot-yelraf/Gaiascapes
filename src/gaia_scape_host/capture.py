@@ -216,6 +216,15 @@ class EventStore:
                 ).fetchone()
         return None if row[0] is None else float(row[0])
 
+    def latest_ingested_at_for_provider(self, provider: str):
+        """Return when a provider most recently supplied stored data."""
+        with closing(sqlite3.connect(self.path)) as connection:
+            row = connection.execute(
+                "SELECT MAX(ingested_at) FROM gaia_events WHERE provider = ?",
+                (str(provider),),
+            ).fetchone()
+        return None if row[0] is None else float(row[0])
+
     def prune_before(self, cutoff_timestamp: float) -> int:
         """Delete history older than the retention cutoff."""
         with closing(sqlite3.connect(self.path)) as connection:

@@ -138,7 +138,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'id="worldMap"' in home.text
         assert 'id="mapPulseLayer"' in home.text
         assert 'id="mapSystemLocationLayer"' in home.text
-        assert "System location" in home.text
+        assert "My location" in home.text
         assert 'href="/static/gaia-scape-icon.svg#realistic-land"' in home.text
         assert 'role="tablist"' in home.text
         assert 'data-workspace-tab="live"' in home.text
@@ -195,8 +195,10 @@ def test_web_app_captures_and_reports_status(tmp_path):
             "`${Number(event.latitude).toFixed(2)}, "
             "${Number(event.longitude).toFixed(2)} @ ${when(event.timestamp)}`"
         ) in script
-        assert 'message(status.capture.last_error, true, "capture")' in script
-        assert 'dataset.messageSource === "capture"' in script
+        assert "status.sources?.recovery" in script
+        assert "syncRecoveryToasts({" in script
+        assert "Click to dismiss" in script
+        assert 'id="recoveryToasts"' in home.text
         assert 'lightning_flash: ["#79500a"' in script
         assert '["lightning_glass", "natural_thunder"].includes(instrument)' in script
         assert "cue.volume ?? 1" in script
@@ -244,6 +246,8 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert ".status-card--background { --status-accent: #6ab5bd; }" in stylesheet
         assert ".status-card--event { --status-accent: #e5aa2b; }" in stylesheet
         assert ".status-card--earthquake { --status-accent: #b98258; }" in stylesheet
+        assert ".recovery-toast-stack" in stylesheet
+        assert ".recovery-toast--error" in stylesheet
         assert ".map-system-location-marker { fill: #53b86b;" in stylesheet
         assert "backgroundCharacteristics" in script
         assert "updateLastEventStatus" in script
@@ -354,6 +358,85 @@ def test_open_meteo_message_clears_after_provider_recovers(tmp_path):
     assert failed_status["capture"]["last_error"]
     assert recovered["received"] == 1
     assert recovered_status["capture"]["last_error"] == ""
+    health = recovered_status["sources"]["health"]["open_meteo_marine"]
+    assert health["state"] == "online"
+    assert health["notify"] is True
+    assert "recovered" in health["message"]
+
+
+def test_provider_failure_backs_off_and_reports_offline_status(tmp_path, monkeypatch):
+    class OfflineUsgs:
+        def __init__(self):
+            self.calls = 0
+
+        def fetch(self):
+            self.calls += 1
+            raise OSError("network unavailable")
+
+    source = OfflineUsgs()
+    app = create_app(tmp_path, auto_capture=False, usgs_client=source)
+    app.state.config.enabled_sources = ["usgs"]
+    monkeypatch.setattr(service.random, "uniform", lambda _start, _end: 0.0)
+
+    with pytest.raises(RuntimeError, match="network unavailable"):
+        asyncio.run(app.state.service.capture_once(respect_backoff=True))
+    skipped = asyncio.run(app.state.service.capture_once(respect_backoff=True))
+    status = asyncio.run(app.state.service.status())
+
+    health = status["sources"]["health"]["usgs"]
+    assert source.calls == 1
+    assert skipped["received"] == 0
+    assert health["state"] == "offline"
+    assert health["consecutive_failures"] == 1
+    assert health["retry_seconds"] > 0
+    assert health["using_fallback"] is False
+    assert status["sources"]["recovery"]["state"] == "offline"
+    assert "All enabled environmental data sources are offline" in (
+        status["sources"]["recovery"]["message"]
+    )
+
+
+def test_provider_retry_delay_grows_exponentially_with_a_bound(tmp_path, monkeypatch):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    clock = [1000.0]
+    monkeypatch.setattr(service.time, "time", lambda: clock[0])
+    monkeypatch.setattr(service.random, "uniform", lambda _start, _end: 0.0)
+
+    app.state.service._mark_source_failure("usgs", OSError("offline"))
+    first_retry = app.state.service._source_recovery["usgs"].retry_at
+    clock[0] += 1.0
+    app.state.service._mark_source_failure("usgs", OSError("still offline"))
+    second_retry = app.state.service._source_recovery["usgs"].retry_at
+
+    assert first_retry == 1060.0
+    assert second_retry == 1121.0
+
+
+def test_recent_persisted_forecast_degrades_instead_of_going_offline(
+    tmp_path, monkeypatch
+):
+    now = time.time()
+    app = create_app(tmp_path, auto_capture=False, marine_client=RecoveringMarine())
+    app.state.config.enabled_sources = ["open_meteo_marine"]
+    app.state.service.store.add_events(
+        (
+            GaiaEvent(
+                "open_meteo_marine", "cached", "ocean_swell", now,
+                latitude=1, longitude=2, strength=0.4,
+                traits={"place": "Cached Coast"},
+            ),
+        ),
+        ingested_at=now,
+    )
+    app.state.service._source_recovery["open_meteo_marine"].last_data_at = now
+    monkeypatch.setattr(service.random, "uniform", lambda _start, _end: 0.0)
+
+    with pytest.raises(RuntimeError):
+        asyncio.run(app.state.service.capture_once(respect_backoff=True))
+    health = asyncio.run(app.state.service.status())["sources"]["health"]
+
+    assert health["open_meteo_marine"]["state"] == "degraded"
+    assert health["open_meteo_marine"]["using_fallback"] is True
 
 
 def test_live_mode_persists_and_controls_continuous_task(tmp_path):
@@ -1284,6 +1367,55 @@ def test_glm_replays_last_flash_field_when_no_new_granule_arrives(
         "NOAA GLM unchanged: replaying previous field with 2 sonified flashes"
         in caplog.text
     )
+
+
+def test_recent_glm_field_is_restored_from_persistent_history(tmp_path):
+    now = time.time()
+    first = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    first.state.service.store.add_events(
+        (
+            GaiaEvent(
+                "noaa_glm", "persisted-a", "lightning_flash", now - 5,
+                latitude=10, longitude=-60, strength=0.5,
+            ),
+            GaiaEvent(
+                "noaa_glm", "persisted-b", "lightning_flash", now,
+                latitude=11, longitude=-61, strength=0.6,
+            ),
+        ),
+        ingested_at=now,
+    )
+
+    restarted = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+
+    assert [
+        event.event_id
+        for event in restarted.state.service._last_glm_sonification_events
+    ] == ["persisted-a", "persisted-b"]
+
+
+def test_continuous_mode_stops_forecast_layers_after_fallback_expires(tmp_path):
+    old = time.time() - service.FORECAST_FALLBACK_MAX_AGE_SECONDS - 1
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.store.add_events(
+        (
+            GaiaEvent(
+                "open_meteo_marine", "stale-swell", "ocean_swell", old,
+                latitude=1, longitude=2, strength=0.5,
+                traits={"place": "Stale Coast"},
+            ),
+        )
+    )
+    app.state.service.renderer.active_layers.add("ocean_swell")
+    stopped = []
+    app.state.service.renderer.stop_layer = (
+        lambda kind: stopped.append(kind) or True
+    )
+
+    selected = asyncio.run(app.state.service.play_next_ambient_layers())
+
+    assert selected == ()
+    assert "ocean_swell" in stopped
 
 
 def test_background_preview_does_not_add_captured_event(tmp_path):

@@ -21,6 +21,7 @@ from gaia_scape.events import GaiaEvent
 MAX_DOCUMENT_BYTES = 4 * 1024 * 1024
 REFRESH_SECONDS = 60 * 60
 RATE_LIMIT_COOLDOWN_SECONDS = 15 * 60
+STALE_CACHE_SECONDS = 3 * 60 * 60
 MARINE_URL = "https://marine-api.open-meteo.com/v1/marine"
 WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 
@@ -252,14 +253,19 @@ class _OpenMeteoClient:
         self._cache_updated_at = 0.0
         self._has_cache = False
         self._retry_not_before = 0.0
+        self.last_error = ""
+        self.last_fetch_used_fallback = False
 
     def fetch(self):
         """Retrieve and normalize one forecast update for all locations."""
         now = time.monotonic()
+        self.last_fetch_used_fallback = False
         if self._has_cache and (
             now - self._cache_updated_at < self.refresh_seconds
-            or now < self._retry_not_before
         ):
+            return self._cached_events
+        if self._has_cache and now < self._retry_not_before:
+            self.last_fetch_used_fallback = True
             return self._cached_events
         if now < self._retry_not_before:
             raise RuntimeError(
@@ -289,10 +295,24 @@ class _OpenMeteoClient:
             retry_after = _retry_after_seconds(exc.headers)
             self._retry_not_before = now + retry_after
             if self._has_cache:
+                self.last_error = (
+                    "Open-Meteo is rate limited; using cached forecast data while "
+                    "automatic recovery waits."
+                )
+                self.last_fetch_used_fallback = True
                 return self._cached_events
             raise RuntimeError(
                 "Open-Meteo is temporarily limiting requests; Gaia Scape will retry automatically."
             ) from exc
+        except (OSError, urllib.error.URLError) as exc:
+            if self._has_cache and now - self._cache_updated_at <= STALE_CACHE_SECONDS:
+                self._retry_not_before = now + 60.0
+                self.last_error = (
+                    f"Open-Meteo network error; using cached forecast data: {exc}"
+                )
+                self.last_fetch_used_fallback = True
+                return self._cached_events
+            raise
         if len(payload) > MAX_DOCUMENT_BYTES:
             raise ValueError("Open-Meteo response exceeds size limit")
         self._cached_events = self.parser(
@@ -301,6 +321,8 @@ class _OpenMeteoClient:
         self._cache_updated_at = now
         self._has_cache = True
         self._retry_not_before = 0.0
+        self.last_error = ""
+        self.last_fetch_used_fallback = False
         return self._cached_events
 
 

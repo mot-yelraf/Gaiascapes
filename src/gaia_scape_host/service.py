@@ -9,16 +9,18 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import random
 import shutil
 import time
 from collections import deque
+from dataclasses import dataclass
 from pathlib import Path
 
 from gaia_scape.events import GaiaEvent
 from gaia_scape.score import ScoreCue, build_score, event_duration
 
 from .capture import EventStore
-from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS
+from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS, SUPPORTED_SOURCES
 from .open_meteo import (
     OpenMeteoMarineClient,
     OpenMeteoStormClient,
@@ -35,6 +37,37 @@ BACKGROUND_HISTORY_KINDS = frozenset({"ocean_swell", "storm_potential"})
 HIDDEN_HISTORY_KINDS = frozenset({"lightning_flash"})
 LOGGER = logging.getLogger("uvicorn.error")
 GLM_SONIFICATION_TIME_SCALE = 1.0
+RECOVERY_MAX_RETRY_SECONDS = 15 * 60.0
+GLM_FALLBACK_MAX_AGE_SECONDS = 5 * 60.0
+FORECAST_FALLBACK_MAX_AGE_SECONDS = 3 * 60 * 60.0
+SOURCE_LABELS = {
+    "usgs": "USGS earthquakes",
+    "open_meteo_marine": "Open-Meteo marine",
+    "open_meteo_storm": "Open-Meteo storm outlook",
+    "noaa_glm": "NOAA GLM lightning",
+}
+SOURCE_FALLBACK_MAX_AGE = {
+    "open_meteo_marine": FORECAST_FALLBACK_MAX_AGE_SECONDS,
+    "open_meteo_storm": FORECAST_FALLBACK_MAX_AGE_SECONDS,
+    "noaa_glm": GLM_FALLBACK_MAX_AGE_SECONDS,
+}
+
+
+@dataclass
+class _SourceRecovery:
+    """Track one provider's observable recovery state without persisting config."""
+
+    state: str = "waiting"
+    consecutive_failures: int = 0
+    last_success_at: float | None = None
+    last_failure_at: float | None = None
+    last_data_at: float | None = None
+    retry_at: float | None = None
+    last_error: str = ""
+    using_fallback: bool = False
+    transition: int = 0
+    transition_at: float | None = None
+    notify: bool = False
 
 
 class GaiaScapeService:
@@ -53,6 +86,13 @@ class GaiaScapeService:
         self.data_dir = Path(data_dir)
         self.store = EventStore(_resolve_event_database(self.data_dir))
         self.store.initialize()
+        self._source_recovery = {
+            source: _SourceRecovery(
+                last_data_at=self.store.latest_ingested_at_for_provider(source)
+            )
+            for source in SUPPORTED_SOURCES
+        }
+        self._overall_recovery = _SourceRecovery()
         self.usgs = usgs_client or UsgsClient(config.usgs_url)
         self.marine = marine_client or OpenMeteoMarineClient(
             locations=provider_locations(config.ocean_swell_locations, "swell")
@@ -102,6 +142,237 @@ class GaiaScapeService:
         self.last_glm_received = 0
         self.last_glm_inserted = 0
         self.last_glm_error = ""
+        self._restore_glm_fallback()
+
+    def _restore_glm_fallback(self) -> None:
+        """Restore one recent persisted lightning field after an app restart."""
+        recent = self.store.events_of_kinds_since(
+            ("lightning_flash",),
+            time.time() - GLM_FALLBACK_MAX_AGE_SECONDS,
+            500,
+        )
+        if not recent:
+            return
+        newest = max(event.timestamp for event in recent)
+        self._last_glm_sonification_events = tuple(
+            event for event in recent if event.timestamp >= newest - GLM_POLL_SECONDS
+        )[-120:]
+
+    def _source_can_retry(self, source: str) -> bool:
+        retry_at = self._source_recovery[source].retry_at
+        return retry_at is None or time.time() >= retry_at
+
+    def _source_has_fresh_fallback(self, source: str, now: float | None = None) -> bool:
+        maximum_age = SOURCE_FALLBACK_MAX_AGE.get(source)
+        data_at = self._source_recovery[source].last_data_at
+        if maximum_age is None or data_at is None:
+            return False
+        current = time.time() if now is None else float(now)
+        return current - data_at <= maximum_age
+
+    def _set_source_state(self, source: str, state: str, notify: bool) -> None:
+        recovery = self._source_recovery[source]
+        if recovery.state != state:
+            recovery.state = state
+            recovery.transition += 1
+            recovery.transition_at = time.time()
+        recovery.notify = notify
+
+    def _mark_source_recovering(self, source: str) -> None:
+        recovery = self._source_recovery[source]
+        if recovery.consecutive_failures:
+            self._set_source_state(source, "recovering", True)
+
+    def _mark_source_success(self, source: str, events, client=None) -> None:
+        now = time.time()
+        recovery = self._source_recovery[source]
+        had_failures = bool(recovery.consecutive_failures or recovery.using_fallback)
+        used_fallback = bool(
+            client is not None and getattr(client, "last_fetch_used_fallback", False)
+        )
+        client_error = str(getattr(client, "last_error", "")) if client else ""
+        if used_fallback or client_error:
+            if events:
+                recovery.last_data_at = now
+            self._mark_source_failure(
+                source,
+                RuntimeError(
+                    client_error or "Cached provider data is in use."
+                ),
+            )
+            if events:
+                recovery.using_fallback = True
+                self._set_source_state(source, "degraded", True)
+            return
+        recovery.last_success_at = now
+        recovery.last_data_at = now
+        recovery.retry_at = None
+        recovery.consecutive_failures = 0
+        recovery.last_error = ""
+        recovery.using_fallback = False
+        self._set_source_state(source, "online", had_failures)
+
+    def _mark_source_failure(self, source: str, error: Exception) -> None:
+        now = time.time()
+        recovery = self._source_recovery[source]
+        recovery.consecutive_failures += 1
+        recovery.last_failure_at = now
+        base_delay = (
+            GLM_POLL_SECONDS if source == "noaa_glm" else self.config.poll_seconds
+        )
+        delay = min(
+            RECOVERY_MAX_RETRY_SECONDS,
+            float(base_delay) * (2 ** min(recovery.consecutive_failures - 1, 8)),
+        )
+        delay += random.uniform(0.0, min(float(base_delay) * 0.2, 30.0))
+        recovery.retry_at = now + delay
+        recovery.last_error = _capture_error_message(source, error)
+        recovery.using_fallback = self._source_has_fresh_fallback(source, now)
+        self._set_source_state(
+            source, "degraded" if recovery.using_fallback else "offline", True
+        )
+
+    def _source_recovery_status(self, source: str) -> dict:
+        now = time.time()
+        recovery = self._source_recovery[source]
+        enabled = source in self.config.enabled_sources
+        if not enabled:
+            return {
+                "source": source,
+                "label": SOURCE_LABELS[source],
+                "enabled": False,
+                "state": "disabled",
+                "notify": False,
+                "transition": recovery.transition,
+            }
+        fallback_age = (
+            None
+            if recovery.last_data_at is None
+            else max(0.0, now - recovery.last_data_at)
+        )
+        retry_seconds = (
+            None
+            if recovery.retry_at is None
+            else max(0, round(recovery.retry_at - now))
+        )
+        label = SOURCE_LABELS[source]
+        if recovery.state == "online":
+            message = f"{label} recovered. Live data has resumed."
+            severity = "success"
+        elif recovery.state == "recovering":
+            message = f"{label} is attempting automatic recovery."
+            severity = "info"
+        elif recovery.state == "degraded":
+            age_text = (
+                ""
+                if fallback_age is None
+                else f" Cached data age: {round(fallback_age / 60)} minutes."
+            )
+            retry_text = (
+                "" if retry_seconds is None else f" Retrying in {retry_seconds} seconds."
+            )
+            error_text = (
+                "" if not recovery.last_error else f" Last error: {recovery.last_error}"
+            )
+            message = (
+                f"{label} is degraded; cached data remains active."
+                f"{age_text}{retry_text}{error_text}"
+            )
+            severity = "warning"
+        elif recovery.state == "offline":
+            retry_text = (
+                "" if retry_seconds is None else f" Retrying in {retry_seconds} seconds."
+            )
+            error_text = (
+                "" if not recovery.last_error else f" Last error: {recovery.last_error}"
+            )
+            message = f"{label} is offline.{retry_text}{error_text}"
+            severity = "error"
+        else:
+            message = f"{label} is waiting for its first update."
+            severity = "info"
+        return {
+            "source": source,
+            "label": label,
+            "enabled": True,
+            "state": recovery.state,
+            "severity": severity,
+            "message": message,
+            "notify": bool(
+                recovery.notify
+                and recovery.transition_at is not None
+                and now - recovery.transition_at <= 5 * 60
+            ),
+            "transition": recovery.transition,
+            "consecutive_failures": recovery.consecutive_failures,
+            "last_success_at": recovery.last_success_at,
+            "last_failure_at": recovery.last_failure_at,
+            "last_data_at": recovery.last_data_at,
+            "last_error": recovery.last_error,
+            "using_fallback": recovery.using_fallback,
+            "fallback_age_seconds": fallback_age,
+            "freshness_limit_seconds": SOURCE_FALLBACK_MAX_AGE.get(source),
+            "retry_at": recovery.retry_at,
+            "retry_seconds": retry_seconds,
+        }
+
+    def _overall_recovery_status(self, health: dict[str, dict]) -> dict:
+        """Summarize whether the enabled provider set can supply live data."""
+        enabled = [item for item in health.values() if item["enabled"]]
+        states = {item["state"] for item in enabled}
+        if not enabled:
+            state = "disabled"
+        elif states == {"online"}:
+            state = "online"
+        elif states <= {"waiting"}:
+            state = "waiting"
+        elif "waiting" in states and not states.intersection({"offline", "degraded"}):
+            state = "waiting"
+        elif states <= {"offline"}:
+            state = "offline"
+        elif "recovering" in states and not states.intersection({"online", "degraded"}):
+            state = "recovering"
+        else:
+            state = "degraded"
+        previous = self._overall_recovery.state
+        overall = self._overall_recovery
+        if overall.state != state:
+            overall.state = state
+            overall.transition += 1
+            overall.transition_at = time.time()
+        overall.notify = state not in {"disabled", "waiting"} and not (
+            previous == "waiting" and state == "online"
+        )
+        messages = {
+            "online": "All enabled environmental data sources are online.",
+            "degraded": "Gaia Scape is degraded. At least one enabled data source is using fallback data or recovering.",
+            "offline": "All enabled environmental data sources are offline. Automatic recovery will continue.",
+            "recovering": "Gaia Scape is attempting to recover its environmental data sources.",
+            "waiting": "Gaia Scape is waiting for its first environmental data update.",
+            "disabled": "No environmental data sources are enabled.",
+        }
+        severities = {
+            "online": "success",
+            "degraded": "warning",
+            "offline": "error",
+            "recovering": "info",
+            "waiting": "info",
+            "disabled": "info",
+        }
+        return {
+            "source": "all_sources",
+            "label": "Environmental data",
+            "enabled": bool(enabled),
+            "state": state,
+            "severity": severities[state],
+            "message": messages[state],
+            "notify": bool(
+                overall.notify
+                and overall.transition_at is not None
+                and time.time() - overall.transition_at <= 5 * 60
+            ),
+            "transition": overall.transition,
+        }
 
     async def start_polling(self) -> None:
         """Start one idempotent background polling loop."""
@@ -189,7 +460,7 @@ class GaiaScapeService:
         await self.stop_continuous()
         await self.player.stop()
 
-    async def capture_once(self) -> dict:
+    async def capture_once(self, respect_backoff: bool = False) -> dict:
         """Fetch, normalize, persist, and prune all enabled provider feeds."""
         async with self._capture_lock:
             self.last_capture_at = time.time()
@@ -212,17 +483,25 @@ class GaiaScapeService:
                 events = []
                 errors = []
                 forecast_catalogs = []
+                backing_off = []
                 for source, client in enabled_clients:
+                    if respect_backoff and not self._source_can_retry(source):
+                        backing_off.append(source)
+                        continue
+                    self._mark_source_recovering(source)
                     try:
-                        events.extend(await asyncio.to_thread(client.fetch))
+                        source_events = tuple(await asyncio.to_thread(client.fetch))
+                        events.extend(source_events)
                         locations = getattr(client, "locations", ())
                         if source.startswith("open_meteo_") and locations:
                             forecast_catalogs.append((source, tuple(locations)))
+                        self._mark_source_success(source, source_events, client)
                     except Exception as exc:
+                        self._mark_source_failure(source, exc)
                         error = _capture_error_message(source, exc)
                         if error not in errors:
                             errors.append(error)
-                if errors and not events:
+                if errors and not events and not backing_off:
                     raise RuntimeError("; ".join(errors))
                 inserted_events = await asyncio.to_thread(self.store.add_new_events, events)
                 inserted = len(inserted_events)
@@ -234,7 +513,13 @@ class GaiaScapeService:
                     )
                 self.last_capture_count = len(events)
                 self.last_capture_inserted = inserted
-                self.last_capture_error = "; ".join(errors)
+                active_errors = list(errors)
+                active_errors.extend(
+                    self._source_recovery[source].last_error
+                    for source in backing_off
+                    if self._source_recovery[source].last_error
+                )
+                self.last_capture_error = "; ".join(dict.fromkeys(active_errors))
                 if self.config.live_mode == "continuous":
                     for kind in ("earthquake", "lightning_flash"):
                         matching = [event for event in inserted_events if event.kind == kind]
@@ -251,7 +536,7 @@ class GaiaScapeService:
                 self.last_capture_error = f"{type(exc).__name__}: {exc}"
                 raise
 
-    async def capture_glm_once(self) -> dict:
+    async def capture_glm_once(self, respect_backoff: bool = False) -> dict:
         """Retrieve, persist, and sound one independent NOAA GLM update."""
         async with self._glm_capture_lock:
             self.last_glm_capture_at = time.time()
@@ -261,8 +546,17 @@ class GaiaScapeService:
                 self.last_glm_error = ""
                 self._glm_replaying_cached_field = False
                 return {"received": 0, "inserted": 0, "disabled": True}
+            if respect_backoff and not self._source_can_retry("noaa_glm"):
+                return {
+                    "received": 0,
+                    "inserted": 0,
+                    "backing_off": True,
+                    "retry_at": self._source_recovery["noaa_glm"].retry_at,
+                }
             try:
-                events = await asyncio.to_thread(self.glm.fetch)
+                self._mark_source_recovering("noaa_glm")
+                events = tuple(await asyncio.to_thread(self.glm.fetch))
+                self._mark_source_success("noaa_glm", events, self.glm)
                 inserted_events = await asyncio.to_thread(
                     self.store.add_new_events, events
                 )
@@ -301,6 +595,7 @@ class GaiaScapeService:
                     "pruned": pruned,
                 }
             except Exception as exc:
+                self._mark_source_failure("noaa_glm", exc)
                 self.last_glm_error = f"{type(exc).__name__}: {exc}"
                 LOGGER.warning("NOAA GLM update failed: %s", self.last_glm_error)
                 self._replay_last_glm_sonification()
@@ -405,6 +700,10 @@ class GaiaScapeService:
             asyncio.to_thread(self.store.latest_timestamp, HIDDEN_HISTORY_KINDS),
         )
         glm_status = self.glm.status() if hasattr(self.glm, "status") else {}
+        source_health = {
+            source: self._source_recovery_status(source)
+            for source in SUPPORTED_SOURCES
+        }
         return {
             "capture": {
                 "polling": self._poll_task is not None and not self._poll_task.done(),
@@ -436,7 +735,11 @@ class GaiaScapeService:
             },
             "osc": self.renderer.status(),
             "supercollider": detect_supercollider(),
-            "sources": {"enabled": list(self.config.enabled_sources)},
+            "sources": {
+                "enabled": list(self.config.enabled_sources),
+                "health": source_health,
+                "recovery": self._overall_recovery_status(source_health),
+            },
             "glm": {
                 **glm_status,
                 "enabled": "noaa_glm" in self.config.enabled_sources,
@@ -511,6 +814,10 @@ class GaiaScapeService:
             self.config.lightning_sample_rate = previous_lightning_sample_rate
             raise
         self.glm.sonification_sample_stride = self.config.lightning_sample_rate
+        for source in set(self.config.enabled_sources) - set(previous_sources):
+            self._source_recovery[source] = _SourceRecovery(
+                last_data_at=self.store.latest_ingested_at_for_provider(source)
+            )
         self.renderer.instrument_mappings = self.config.background_mappings()
         for kind in ("ocean_swell", "storm_potential"):
             if self.renderer.instrument_mappings[kind] != kind:
@@ -699,7 +1006,7 @@ class GaiaScapeService:
     async def _poll_loop(self) -> None:
         while True:
             try:
-                await self.capture_once()
+                await self.capture_once(respect_backoff=True)
             except Exception:
                 # The error is retained in status; the next interval retries.
                 pass
@@ -711,7 +1018,7 @@ class GaiaScapeService:
             cycle_started = time.monotonic()
             if "noaa_glm" in self.config.enabled_sources:
                 try:
-                    await self.capture_glm_once()
+                    await self.capture_glm_once(respect_backoff=True)
                 except asyncio.CancelledError:
                     raise
                 except Exception:
@@ -735,8 +1042,12 @@ class GaiaScapeService:
     def _replay_last_glm_sonification(self) -> bool:
         """Restart the latest flash field when NOAA has not published a newer one."""
         events = self._last_glm_sonification_events
+        fresh = bool(events) and (
+            time.time() - max(event.timestamp for event in events)
+            <= GLM_FALLBACK_MAX_AGE_SECONDS
+        )
         can_replay = (
-            bool(events)
+            fresh
             and self.config.live_mode == "continuous"
             and "noaa_glm" in self.config.enabled_sources
             and bool(self._instruments_for_kind("lightning_flash"))
@@ -786,6 +1097,10 @@ class GaiaScapeService:
         background_events = await asyncio.to_thread(
             self.store.latest_events_by_kind_and_place,
             BACKGROUND_HISTORY_KINDS,
+        )
+        freshness_cutoff = time.time() - FORECAST_FALLBACK_MAX_AGE_SECONDS
+        background_events = tuple(
+            event for event in background_events if event.timestamp >= freshness_cutoff
         )
         groups = {kind: [] for kind in ("ocean_swell", "storm_potential")}
         for event in background_events:
