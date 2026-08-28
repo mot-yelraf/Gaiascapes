@@ -753,6 +753,21 @@ def test_event_history_publishes_background_only_when_visited_and_changed(tmp_pa
     assert [cue["history_updated"] for cue in cues[:2]] == [True, False]
 
 
+def test_status_restores_latest_earthquake_without_an_emitted_cue(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    assert app.state.service._emitted_cues.maxlen == 10000
+    quake = GaiaEvent(
+        "usgs", "retained-quake", "earthquake", 1234,
+        latitude=12.3, longitude=45.6,
+        traits={"place": "Retained Ridge", "magnitude": 4.2},
+    )
+    app.state.service.store.add_events((quake,))
+
+    status = asyncio.run(app.state.service.status())
+
+    assert status["cues"]["latest_earthquake_event"]["event_id"] == "retained-quake"
+
+
 def test_event_history_includes_older_event_emitted_inside_window(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
     event = GaiaEvent(

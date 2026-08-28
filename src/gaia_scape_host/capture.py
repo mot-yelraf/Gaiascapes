@@ -58,6 +58,49 @@ class EventStore:
                 "CREATE INDEX IF NOT EXISTS idx_gaia_events_kind_occurred "
                 "ON gaia_events (kind, occurred_at)"
             )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS retained_status_events (
+                    kind TEXT PRIMARY KEY,
+                    provider TEXT NOT NULL,
+                    event_id TEXT NOT NULL,
+                    occurred_at REAL NOT NULL,
+                    latitude REAL NOT NULL,
+                    longitude REAL NOT NULL,
+                    strength REAL NOT NULL,
+                    traits_json TEXT NOT NULL
+                )
+                """
+            )
+            latest_earthquake = connection.execute(
+                """
+                SELECT kind, provider, event_id, occurred_at, latitude,
+                       longitude, strength, traits_json
+                FROM gaia_events
+                WHERE kind = 'earthquake'
+                ORDER BY occurred_at DESC, provider DESC, event_id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            if latest_earthquake is not None:
+                connection.execute(
+                    """
+                    INSERT INTO retained_status_events (
+                        kind, provider, event_id, occurred_at, latitude,
+                        longitude, strength, traits_json
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(kind) DO UPDATE SET
+                        provider = excluded.provider,
+                        event_id = excluded.event_id,
+                        occurred_at = excluded.occurred_at,
+                        latitude = excluded.latitude,
+                        longitude = excluded.longitude,
+                        strength = excluded.strength,
+                        traits_json = excluded.traits_json
+                    WHERE excluded.occurred_at > retained_status_events.occurred_at
+                    """,
+                    latest_earthquake,
+                )
             connection.commit()
 
     def add_events(self, events, ingested_at=None) -> int:
@@ -88,8 +131,48 @@ class EventStore:
                 )
                 if cursor.rowcount == 1:
                     inserted_events.append(event)
+                if event.kind == "earthquake":
+                    connection.execute(
+                        """
+                        INSERT INTO retained_status_events (
+                            kind, provider, event_id, occurred_at, latitude,
+                            longitude, strength, traits_json
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(kind) DO UPDATE SET
+                            provider = excluded.provider,
+                            event_id = excluded.event_id,
+                            occurred_at = excluded.occurred_at,
+                            latitude = excluded.latitude,
+                            longitude = excluded.longitude,
+                            strength = excluded.strength,
+                            traits_json = excluded.traits_json
+                        WHERE excluded.occurred_at > retained_status_events.occurred_at
+                        """,
+                        (
+                            event.kind, event.provider, event.event_id,
+                            event.timestamp, event.latitude, event.longitude,
+                            event.strength,
+                            json.dumps(
+                                event.traits, separators=(",", ":"), sort_keys=True
+                            ),
+                        ),
+                    )
             connection.commit()
         return tuple(inserted_events)
+
+    def retained_status_event(self, kind: str) -> GaiaEvent | None:
+        """Return the event retained indefinitely for a status display."""
+        with closing(sqlite3.connect(self.path)) as connection:
+            row = connection.execute(
+                """
+                SELECT provider, event_id, kind, occurred_at, latitude,
+                       longitude, strength, traits_json
+                FROM retained_status_events
+                WHERE kind = ?
+                """,
+                (str(kind),),
+            ).fetchone()
+        return None if row is None else _event_from_row(row)
 
     def events_since(self, since_timestamp: float, limit: int = 5000):
         """Return events on or after a timestamp in occurrence order."""

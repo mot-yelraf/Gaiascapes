@@ -44,6 +44,20 @@ def test_store_prunes_only_events_before_cutoff(tmp_path):
     assert [item.event_id for item in store.events_since(0)] == ["keep"]
 
 
+def test_store_retains_latest_earthquake_status_after_history_pruning(tmp_path):
+    store = EventStore(tmp_path / "events.sqlite3")
+    store.initialize()
+    store.add_events((event("older", 100), event("latest", 200)))
+
+    assert store.prune_before(300) == 2
+    retained = store.retained_status_event("earthquake")
+    assert retained.event_id == "latest"
+    assert retained.timestamp == 200
+
+    store.add_events((event("newest", 400), event("out-of-order", 150)))
+    assert store.retained_status_event("earthquake").event_id == "newest"
+
+
 def test_store_prunes_retired_provider_places(tmp_path):
     store = EventStore(tmp_path / "events.sqlite3")
     store.initialize()
@@ -151,3 +165,4 @@ def test_store_migrates_legacy_table_without_losing_events(tmp_path):
 
     assert store.count() == 1
     assert store.events_since(0)[0].event_id == "legacy"
+    assert store.retained_status_event("earthquake").event_id == "legacy"

@@ -33,6 +33,7 @@ from .usgs import UsgsClient
 
 
 CUE_LONG_POLL_SECONDS = 2.0
+EMITTED_CUE_LIMIT = 10000
 BACKGROUND_HISTORY_KINDS = frozenset({"ocean_swell", "storm_potential"})
 HIDDEN_HISTORY_KINDS = frozenset({"lightning_flash"})
 LOGGER = logging.getLogger("uvicorn.error")
@@ -109,7 +110,7 @@ class GaiaScapeService:
             config.background_mappings(),
         )
         self._cue_sequence = 0
-        self._emitted_cues = deque(maxlen=1000)
+        self._emitted_cues = deque(maxlen=EMITTED_CUE_LIMIT)
         self._cue_event = asyncio.Event()
         self._latest_sound_location = None
         self._latest_background_location = None
@@ -695,9 +696,19 @@ class GaiaScapeService:
 
     async def status(self) -> dict:
         """Build the observable application status contract."""
-        count, latest = await asyncio.gather(
+        count, latest, retained_earthquake = await asyncio.gather(
             asyncio.to_thread(self.store.count, HIDDEN_HISTORY_KINDS),
             asyncio.to_thread(self.store.latest_timestamp, HIDDEN_HISTORY_KINDS),
+            asyncio.to_thread(self.store.retained_status_event, "earthquake"),
+        )
+        emitted_earthquake = self._latest_emitted_event("event", kind="earthquake")
+        retained_earthquake = (
+            None if retained_earthquake is None else retained_earthquake.as_dict()
+        )
+        latest_earthquake = max(
+            (event for event in (retained_earthquake, emitted_earthquake) if event),
+            key=lambda event: event["timestamp"],
+            default=None,
         )
         glm_status = self.glm.status() if hasattr(self.glm, "status") else {}
         source_health = {
@@ -719,9 +730,7 @@ class GaiaScapeService:
                 "latest_background_location": self._latest_background_location,
                 "latest_background_event": self._latest_emitted_event("background"),
                 "latest_event": self._latest_emitted_event("event"),
-                "latest_earthquake_event": self._latest_emitted_event(
-                    "event", kind="earthquake"
-                ),
+                "latest_earthquake_event": latest_earthquake,
                 "latest_event_sounds": self._latest_event_sounds(),
             },
             "performance": self.player.status(),
