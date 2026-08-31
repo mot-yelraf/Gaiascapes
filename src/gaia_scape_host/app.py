@@ -44,6 +44,7 @@ def create_app(
     marine_client=None,
     storm_client=None,
     glm_client=None,
+    mtg_li_client=None,
     geoip_resolver=None,
 ) -> FastAPI:
     """Create an isolated application, optionally disabling network polling."""
@@ -60,6 +61,7 @@ def create_app(
         marine_client=marine_client,
         storm_client=storm_client,
         glm_client=glm_client,
+        mtg_li_client=mtg_li_client,
     )
     system_location = geoip_resolver or GeoIpLocationResolver()
 
@@ -96,6 +98,9 @@ def create_app(
             instrument_slots=config.instrument_slots(),
             instrument_volumes=config.volume_slots(),
             lightning_sample_rate=config.lightning_sample_rate,
+            eumetsat_credentials_configured=bool(
+                config.eumetsat_consumer_key and config.eumetsat_consumer_secret
+            ),
             event_voice_options=EVENT_VOICE_OPTIONS,
             background_options=BACKGROUND_INSTRUMENT_OPTIONS,
             forecast_location_catalogs={
@@ -200,10 +205,16 @@ def create_app(
 
     @app.get("/api/config")
     async def get_config():
-        """Return the validated installation configuration."""
+        """Return validated configuration without provider credentials."""
         from dataclasses import asdict
 
-        return asdict(config)
+        document = asdict(config)
+        document.pop("eumetsat_consumer_key", None)
+        document.pop("eumetsat_consumer_secret", None)
+        document["eumetsat_credentials_configured"] = bool(
+            config.eumetsat_consumer_key and config.eumetsat_consumer_secret
+        )
+        return document
 
     @app.put("/api/settings/audio")
     async def update_audio_settings(request: Request):
@@ -228,6 +239,8 @@ def create_app(
                 body.get("units", config.units),
                 body.get("instrument_volumes", config.instrument_volumes),
                 body.get("lightning_sample_rate", config.lightning_sample_rate),
+                body.get("eumetsat_consumer_key") or None,
+                body.get("eumetsat_consumer_secret") or None,
             )
             config.save(config_path)
         except (TypeError, ValueError) as exc:
@@ -239,6 +252,9 @@ def create_app(
             "event_instruments": dict(config.event_instruments),
             "instrument_volumes": config.volume_slots(),
             "lightning_sample_rate": config.lightning_sample_rate,
+            "eumetsat_credentials_configured": bool(
+                config.eumetsat_consumer_key and config.eumetsat_consumer_secret
+            ),
         }
 
     @app.put("/api/settings/locations")

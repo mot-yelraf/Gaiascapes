@@ -40,6 +40,27 @@ independently every 20 seconds. Quality-accepted flashes
 are normalized with their observation timestamp, position, optical energy, area,
 duration, satellite, and granule identity.
 
+An optional EUMETSAT Meteosat Third Generation Lightning Imager source extends
+observed lightning coverage across Europe and Africa. It downloads the operational
+LI Level 2 Lightning Flashes collection (`EO:EUM:DAT:0691`) through EUMETSAT's
+EUMDAC client, normalizes flash time, position, radiance, duration, and composition,
+and bounds each product to 120 of its strongest observations. In Settings → Sound
+sources, enable **EUMETSAT MTG Lightning Imager** and enter the Consumer Key and
+Consumer Secret issued by the EUMETSAT Data Store. The credentials are saved only
+in the selected installation's local `data/config.json`, whose permissions are
+restricted to the current user; they are masked in the interface and omitted from
+Gaia Scape API responses. Leave both fields blank on later saves to retain the
+stored pair.
+
+Each MTG product is presented once on a fixed 12-minute-delayed timeline. The
+sampled flashes retain their relative observation timing across the ten-minute
+product, so consecutive products form a continuous delayed stream instead of a
+loop. Flashes that arrive after their scheduled presentation time are skipped
+rather than released in a misleading burst. The map identifies MTG flashes with
+a dashed gold pulse and labels them as delayed; NOAA GLM retains its existing
+near-live solid pulse and independent 20-second field behavior. MTG timelines
+stop quietly when data is missing and never turn cached flashes into new events.
+
 The Forecast locations Settings pane displays both 19-point catalogs on an
 interactive world map. Select a numbered marker and click the map to relocate
 it, or edit its name, latitude, and longitude directly. Catalogs are validated,
@@ -80,7 +101,9 @@ sources retry independently with bounded exponential backoff and jitter, so one
 outage does not interrupt healthy feeds.
 
 Recent Open-Meteo forecasts can remain active for up to three hours, and a recent
-NOAA GLM field can replay for up to five minutes. These limits prevent indefinitely
+NOAA GLM field can replay for up to five minutes. EUMETSAT MTG LI observations
+remain fresh for up to 30 minutes, accommodating Data Store publication latency.
+These limits prevent indefinitely
 sonifying stale conditions. Stored forecast events and sampled GLM flashes provide
 a restart-safe fallback when they are still fresh. The desktop displays recovery
 changes as stacked notifications; click any notification to dismiss it.

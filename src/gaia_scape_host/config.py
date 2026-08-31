@@ -17,7 +17,13 @@ from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
 DEFAULT_USGS_URL = (
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
 )
-SUPPORTED_SOURCES = ("usgs", "open_meteo_marine", "open_meteo_storm", "noaa_glm")
+SUPPORTED_SOURCES = (
+    "usgs",
+    "open_meteo_marine",
+    "open_meteo_storm",
+    "noaa_glm",
+    "eumetsat_mtg_li",
+)
 EVENT_VOICE_OPTIONS = (
     "earthquake",
     "tidal_bell",
@@ -94,6 +100,8 @@ class AppConfig:
         default_factory=lambda: dict(DEFAULT_INSTRUMENT_VOLUMES)
     )
     lightning_sample_rate: int = 1
+    eumetsat_consumer_key: str = ""
+    eumetsat_consumer_secret: str = ""
     ocean_swell_locations: list[dict] = field(
         default_factory=lambda: default_forecast_locations(SURF_LOCATIONS)
     )
@@ -182,6 +190,18 @@ class AppConfig:
         self.lightning_sample_rate = max(
             1, min(11, int(self.lightning_sample_rate))
         )
+        self.eumetsat_consumer_key = _credential(
+            self.eumetsat_consumer_key, "EUMETSAT Consumer Key"
+        )
+        self.eumetsat_consumer_secret = _credential(
+            self.eumetsat_consumer_secret, "EUMETSAT Consumer Secret"
+        )
+        if "eumetsat_mtg_li" in self.enabled_sources and not (
+            self.eumetsat_consumer_key and self.eumetsat_consumer_secret
+        ):
+            raise ValueError(
+                "EUMETSAT MTG Lightning requires a Consumer Key and Consumer Secret"
+            )
         self.ocean_swell_locations = validate_forecast_locations(
             self.ocean_swell_locations, "Ocean Swells"
         )
@@ -261,13 +281,23 @@ class AppConfig:
         document = asdict(self)
         document.update(getattr(self, "_persisted_environment_values", {}))
         temporary.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+        temporary.chmod(0o600)
         temporary.replace(path)
+        path.chmod(0o600)
 
 
 def resolve_data_dir() -> Path:
     """Resolve writable state without depending on the source checkout."""
     override = os.environ.get("GAIA_SCAPE_DATA_DIR")
     return Path(override).expanduser().resolve() if override else Path.cwd() / "data"
+
+
+def _credential(value: object, label: str) -> str:
+    """Normalize a locally stored provider credential without logging it."""
+    credential = str(value or "").strip()
+    if len(credential) > 512 or any(ord(character) < 32 for character in credential):
+        raise ValueError(f"{label} is invalid")
+    return credential
 
 
 def event_mappings_for_slots(slots: object) -> dict[str, str]:

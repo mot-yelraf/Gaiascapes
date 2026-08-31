@@ -238,6 +238,23 @@ def test_glm_can_be_disabled_after_configuration_migration(tmp_path):
     assert config.enabled_sources == ["usgs"]
 
 
+def test_eumetsat_source_requires_both_credentials():
+    config = AppConfig(
+        enabled_sources=["eumetsat_mtg_li"],
+        eumetsat_consumer_key="consumer-key",
+    )
+
+    with pytest.raises(ValueError, match="Consumer Key and Consumer Secret"):
+        config.validate()
+
+    config.eumetsat_consumer_secret = "consumer-secret"
+    config.validate()
+
+    assert config.enabled_sources == ["eumetsat_mtg_li"]
+    assert config.eumetsat_consumer_key == "consumer-key"
+    assert config.eumetsat_consumer_secret == "consumer-secret"
+
+
 def test_volume_slots_are_independent_and_zero_silences_only_that_slot():
     config = AppConfig(
         event_instruments={

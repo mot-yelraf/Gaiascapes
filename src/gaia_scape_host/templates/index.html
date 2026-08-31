@@ -76,9 +76,8 @@
       </section>
     </div>
 
-    <section class="map-view" id="mapView" data-app-view="map" aria-labelledby="mapViewTitle"{% if app_view != 'map' %} hidden{% endif %}>
-      <div class="map-heading">
-        <div><p class="eyebrow">Live coordinates</p><h2 id="mapViewTitle">Global event map</h2></div>
+    <section class="map-view" id="mapView" data-app-view="map" aria-label="Global event map"{% if app_view != 'map' %} hidden{% endif %}>
+      <div class="map-heading map-heading--legend-only">
         <div class="map-legend" aria-label="Map marker legend"><span><i class="map-legend-background"></i>Background</span><span><i class="map-legend-event"></i>Event</span><span><b class="map-legend-system" aria-hidden="true"></b>My location</span></div>
       </div>
       <div class="map-stage">
@@ -131,6 +130,12 @@
             <label class="source-option"><input id="sourceMarine" type="checkbox" {% if "open_meteo_marine" in enabled_sources %}checked{% endif %}><span><strong>Open-Meteo surf & tides</strong><small>Modeled swell and tide turns at 19 global coastal locations.</small></span></label>
             <label class="source-option"><input id="sourceStorm" type="checkbox" {% if "open_meteo_storm" in enabled_sources %}checked{% endif %}><span><strong>Open-Meteo Storm Outlook</strong><small>Global forecast convection—not observed lightning strikes.</small></span></label>
             <label class="source-option"><input id="sourceGlm" type="checkbox" {% if "noaa_glm" in enabled_sources %}checked{% endif %}><span><strong>NOAA GOES GLM lightning</strong><small>Observed total-lightning flashes from GOES-East and GOES-West every 20 seconds.</small></span></label>
+            <label class="source-option"><input id="sourceMtgLi" type="checkbox" data-credentials-configured="{{ 'true' if eumetsat_credentials_configured else 'false' }}" {% if "eumetsat_mtg_li" in enabled_sources %}checked{% endif %}><span><strong>EUMETSAT MTG Lightning Imager</strong><small>Observed flashes across Europe and Africa from collection EO:EUM:DAT:0691.</small></span></label>
+            <div class="source-credentials" id="mtgLiCredentials"{% if "eumetsat_mtg_li" not in enabled_sources %} hidden{% endif %}>
+              <label for="eumetsatConsumerKey"><span>Consumer Key</span><input id="eumetsatConsumerKey" type="password" autocomplete="off" placeholder="{% if eumetsat_credentials_configured %}Saved — enter only to replace{% else %}EUMETSAT Consumer Key{% endif %}"></label>
+              <label for="eumetsatConsumerSecret"><span>Consumer Secret</span><input id="eumetsatConsumerSecret" type="password" autocomplete="new-password" placeholder="{% if eumetsat_credentials_configured %}Saved — enter only to replace{% else %}EUMETSAT Consumer Secret{% endif %}"></label>
+              <small>Credentials are stored only in this installation's protected local config file and are never returned by Gaia Scape's API.</small>
+            </div>
             <p class="settings-tip"><span>ⓘ</span><span>Marine forecasts are not suitable for navigation. Data: Open-Meteo and contributing weather agencies.</span></p>
           </section>
           <section class="settings-pane" data-pane="instruments" hidden>

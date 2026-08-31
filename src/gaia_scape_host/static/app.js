@@ -110,7 +110,10 @@ function mapMarkerTitle(event) {
   const magnitudeText = event.kind === "earthquake" && Number.isFinite(magnitude)
     ? ` · M${magnitude.toFixed(1)}`
     : "";
-  return `${place}${magnitudeText} · ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`;
+  const sourceText = event.kind === "lightning_flash"
+    ? ` · ${lightningSourceLabel(event)}`
+    : "";
+  return `${place}${magnitudeText}${sourceText} · ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`;
 }
 
 function updateMapBackgroundLocation(location, color = EVENT_PALETTES.ocean_swell[3]) {
@@ -178,7 +181,8 @@ function animateMapEvent(event, instrument, role, animationDuration) {
   if (!layer) return;
   const colors = eventColors(event, instrument);
   const position = projectCoordinates(event.longitude, event.latitude);
-  const group = createSvgElement("g", {class: `map-cue map-cue--${role}`});
+  const provider = String(event?.provider || "unknown").replace(/[^a-z0-9_-]/gi, "-");
+  const group = createSvgElement("g", {class: `map-cue map-cue--${role} map-cue--provider-${provider}`});
   const pulse = createSvgElement("circle", {cx: position.x, cy: position.y, r: role === "background" ? 10 : 7, class: "map-cue-pulse", stroke: colors.primary});
   const core = createSvgElement("circle", {cx: position.x, cy: position.y, r: role === "background" ? 5 : 4, class: "map-cue-core", fill: colors.primary});
   const title = createSvgElement("title");
@@ -433,9 +437,20 @@ function eventKindLabel(kind) {
 function eventStatusText(event) {
   if (!event) return "—";
   const type = eventKindLabel(event.kind);
+  if (event.kind === "lightning_flash") return `${type} · ${lightningSourceLabel(event, true)}`;
   if (event.kind !== "earthquake") return type;
   const magnitude = Number(event.traits?.magnitude ?? 0).toFixed(1);
   return `${type} · M${magnitude} · ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`;
+}
+
+function lightningSourceLabel(event, compact = false) {
+  if (event?.provider === "eumetsat_mtg_li") {
+    return compact ? "MTG-LI · 12m delay" : "EUMETSAT MTG-LI · 12-minute delayed playback";
+  }
+  if (event?.provider === "noaa_glm") {
+    return compact ? "GOES GLM · live" : "NOAA GOES GLM · near-live";
+  }
+  return "Observed lightning";
 }
 
 function lightningIntensity(event) {
@@ -456,6 +471,16 @@ function formatLightningEnergy(energyJoules) {
   if (energy >= 1e-12) return `${(energy * 1e12).toFixed(2)} pJ`;
   if (energy >= 1e-15) return `${(energy * 1e15).toFixed(1)} fJ`;
   return `${energy.toExponential(1)} J`;
+}
+
+function formatLightningSignal(event) {
+  const traits = event?.traits || {};
+  if (event?.provider === "eumetsat_mtg_li") {
+    const radiance = Math.max(0, Number(traits.flash_radiance_mw_m2_sr) || 0);
+    const value = radiance >= 1000 ? radiance.toExponential(1) : radiance.toFixed(1);
+    return `${value} mW·m⁻²·sr⁻¹`;
+  }
+  return formatLightningEnergy(traits.flash_energy_j);
 }
 
 function lightningMeasurements(traits) {
@@ -494,15 +519,16 @@ function renderLastEventStatus(event) {
     }
     const traits = event.traits || {};
     const intensity = lightningIntensity(event);
+    const signal = formatLightningSignal(event);
     const pill = document.createElement("span");
     pill.classList.add("lightning-intensity-pill", intensity.className);
-    pill.textContent = `${intensity.label} · ${formatLightningEnergy(traits.flash_energy_j)}`;
+    pill.textContent = `${intensity.label} · ${signal}`;
     const observation = document.createElement("span");
     observation.className = "lightning-characteristics-location";
     observation.textContent = locationAndTime;
     element.classList.add("lightning-characteristics");
     element.append(pill, observation);
-    element.setAttribute("aria-label", `${intensity.label} lightning, ${formatLightningEnergy(traits.flash_energy_j)}, ${locationAndTime}`);
+    element.setAttribute("aria-label", `${intensity.label} lightning, ${lightningSourceLabel(event)}, ${signal}, ${locationAndTime}`);
     element.title = "";
   });
 }
@@ -1215,6 +1241,20 @@ if (settingsDialog && settingsForm) {
   lightningSampleSliders.forEach((slider) => {
     slider.addEventListener("input", () => syncLightningSampleRate(slider.value));
   });
+  const mtgLiToggle = byId("sourceMtgLi");
+  const mtgLiCredentials = byId("mtgLiCredentials");
+  const eumetsatConsumerKey = byId("eumetsatConsumerKey");
+  const eumetsatConsumerSecret = byId("eumetsatConsumerSecret");
+  const updateMtgLiCredentials = () => {
+    mtgLiCredentials.hidden = !mtgLiToggle.checked;
+    const needsInitialCredentials = (
+      mtgLiToggle.checked && mtgLiToggle.dataset.credentialsConfigured !== "true"
+    );
+    eumetsatConsumerKey.required = needsInitialCredentials;
+    eumetsatConsumerSecret.required = needsInitialCredentials;
+  };
+  mtgLiToggle.addEventListener("change", updateMtgLiCredentials);
+  updateMtgLiCredentials();
   ["event1Instrument", "event2Instrument", "event3Instrument"].forEach((selectId) => {
     const select = byId(selectId);
     const control = select.parentElement.querySelector("[data-lightning-sample-control]");
@@ -1281,7 +1321,7 @@ if (settingsDialog && settingsForm) {
           storm_outlook_locations: forecastLocationCatalogs.storm_outlook,
         }),
       });
-      await request("/api/settings/audio", {
+      const audioSettings = await request("/api/settings/audio", {
         method: "PUT",
         body: JSON.stringify({
           enabled_sources: [
@@ -1289,6 +1329,7 @@ if (settingsDialog && settingsForm) {
             ...(byId("sourceMarine").checked ? ["open_meteo_marine"] : []),
             ...(byId("sourceStorm").checked ? ["open_meteo_storm"] : []),
             ...(byId("sourceGlm").checked ? ["noaa_glm"] : []),
+            ...(byId("sourceMtgLi").checked ? ["eumetsat_mtg_li"] : []),
           ],
           instrument_slots: {
             event_1: byId("event1Instrument").value,
@@ -1303,9 +1344,19 @@ if (settingsDialog && settingsForm) {
             background: Number(byId("backgroundVolume").value) / 100,
           },
           lightning_sample_rate: Number(lightningSampleSliders[0].value),
+          eumetsat_consumer_key: eumetsatConsumerKey.value,
+          eumetsat_consumer_secret: eumetsatConsumerSecret.value,
           units: byId("displayUnits").value,
         }),
       });
+      if (audioSettings.eumetsat_credentials_configured) {
+        mtgLiToggle.dataset.credentialsConfigured = "true";
+        eumetsatConsumerKey.value = "";
+        eumetsatConsumerSecret.value = "";
+        eumetsatConsumerKey.placeholder = "Saved — enter only to replace";
+        eumetsatConsumerSecret.placeholder = "Saved — enter only to replace";
+        updateMtgLiCredentials();
+      }
       status.textContent = "Settings saved.";
       await updateEvents();
     } catch (error) {

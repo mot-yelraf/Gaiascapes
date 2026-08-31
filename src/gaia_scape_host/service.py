@@ -21,6 +21,7 @@ from gaia_scape.score import ScoreCue, build_score, event_duration
 
 from .capture import EventStore
 from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS, SUPPORTED_SOURCES
+from .eumetsat_li import EumetsatLiClient
 from .open_meteo import (
     OpenMeteoMarineClient,
     OpenMeteoStormClient,
@@ -38,6 +39,8 @@ BACKGROUND_HISTORY_KINDS = frozenset({"ocean_swell", "storm_potential"})
 HIDDEN_HISTORY_KINDS = frozenset({"lightning_flash"})
 LOGGER = logging.getLogger("uvicorn.error")
 GLM_SONIFICATION_TIME_SCALE = 1.0
+MTG_PRESENTATION_DELAY_SECONDS = 12 * 60.0
+MTG_LATE_EVENT_TOLERANCE_SECONDS = 5.0
 RECOVERY_MAX_RETRY_SECONDS = 15 * 60.0
 GLM_FALLBACK_MAX_AGE_SECONDS = 5 * 60.0
 FORECAST_FALLBACK_MAX_AGE_SECONDS = 3 * 60 * 60.0
@@ -46,11 +49,13 @@ SOURCE_LABELS = {
     "open_meteo_marine": "Open-Meteo marine",
     "open_meteo_storm": "Open-Meteo storm outlook",
     "noaa_glm": "NOAA GLM lightning",
+    "eumetsat_mtg_li": "EUMETSAT MTG lightning",
 }
 SOURCE_FALLBACK_MAX_AGE = {
     "open_meteo_marine": FORECAST_FALLBACK_MAX_AGE_SECONDS,
     "open_meteo_storm": FORECAST_FALLBACK_MAX_AGE_SECONDS,
     "noaa_glm": GLM_FALLBACK_MAX_AGE_SECONDS,
+    "eumetsat_mtg_li": 30 * 60.0,
 }
 
 
@@ -82,6 +87,7 @@ class GaiaScapeService:
         marine_client=None,
         storm_client=None,
         glm_client=None,
+        mtg_li_client=None,
     ):
         self.config = config
         self.data_dir = Path(data_dir)
@@ -103,6 +109,9 @@ class GaiaScapeService:
         )
         self.glm = glm_client or NoaaGlmClient()
         self.glm.sonification_sample_stride = config.lightning_sample_rate
+        self.mtg_li = mtg_li_client or EumetsatLiClient(
+            config.eumetsat_consumer_key, config.eumetsat_consumer_secret
+        )
         self.renderer = OscRenderer(
             config.osc_host,
             config.osc_port,
@@ -126,6 +135,11 @@ class GaiaScapeService:
         self._glm_sonification_task = None
         self._last_glm_sonification_events = ()
         self._glm_replaying_cached_field = False
+        self._mtg_sonification_tasks = set()
+        self._mtg_scheduled_products = deque(maxlen=2048)
+        self.last_mtg_scheduled_count = 0
+        self.mtg_played_count = 0
+        self.mtg_skipped_late_count = 0
         self._continuous_task = None
         self._glm_capture_lock = asyncio.Lock()
         self._live_play_lock = asyncio.Lock()
@@ -393,6 +407,7 @@ class GaiaScapeService:
             self._continuous_task = asyncio.create_task(
                 self._continuous_loop(), name="gaia-scape-continuous"
             )
+            await self._restore_mtg_schedule()
 
     async def stop_continuous(self) -> None:
         """Stop only the ambient live-event stream."""
@@ -414,6 +429,7 @@ class GaiaScapeService:
                 pass
         self._glm_sonification_task = None
         self._glm_replaying_cached_field = False
+        await self._cancel_mtg_sonification()
         await asyncio.to_thread(self.renderer.stop_layer, "ocean_swell")
         await asyncio.to_thread(self.renderer.stop_layer, "storm_potential")
 
@@ -469,6 +485,7 @@ class GaiaScapeService:
                 ("usgs", self.usgs),
                 ("open_meteo_marine", self.marine),
                 ("open_meteo_storm", self.storm),
+                ("eumetsat_mtg_li", self.mtg_li),
             )
             enabled_clients = tuple(
                 (source, client)
@@ -484,6 +501,7 @@ class GaiaScapeService:
                 events = []
                 errors = []
                 forecast_catalogs = []
+                source_event_sets = {}
                 backing_off = []
                 for source, client in enabled_clients:
                     if respect_backoff and not self._source_can_retry(source):
@@ -492,6 +510,7 @@ class GaiaScapeService:
                     self._mark_source_recovering(source)
                     try:
                         source_events = tuple(await asyncio.to_thread(client.fetch))
+                        source_event_sets[source] = source_events
                         events.extend(source_events)
                         locations = getattr(client, "locations", ())
                         if source.startswith("open_meteo_") and locations:
@@ -522,12 +541,16 @@ class GaiaScapeService:
                 )
                 self.last_capture_error = "; ".join(dict.fromkeys(active_errors))
                 if self.config.live_mode == "continuous":
-                    for kind in ("earthquake", "lightning_flash"):
-                        matching = [event for event in inserted_events if event.kind == kind]
-                        if matching:
-                            await self._play_live_event(
-                                max(matching, key=lambda event: event.strength)
-                            )
+                    earthquakes = [
+                        event for event in inserted_events if event.kind == "earthquake"
+                    ]
+                    if earthquakes:
+                        await self._play_live_event(
+                            max(earthquakes, key=lambda event: event.strength)
+                        )
+                    mtg_events = source_event_sets.get("eumetsat_mtg_li", ())
+                    if mtg_events:
+                        self._start_mtg_sonification(mtg_events)
                 return {
                     "received": len(events),
                     "inserted": inserted,
@@ -711,6 +734,9 @@ class GaiaScapeService:
             default=None,
         )
         glm_status = self.glm.status() if hasattr(self.glm, "status") else {}
+        mtg_li_status = (
+            self.mtg_li.status() if hasattr(self.mtg_li, "status") else {}
+        )
         source_health = {
             source: self._source_recovery_status(source)
             for source in SUPPORTED_SOURCES
@@ -763,6 +789,21 @@ class GaiaScapeService:
                 "last_error": self.last_glm_error
                 or str(glm_status.get("last_error", "")),
             },
+            "mtg_li": {
+                **mtg_li_status,
+                "enabled": "eumetsat_mtg_li" in self.config.enabled_sources,
+                "configured": bool(
+                    self.config.eumetsat_consumer_key
+                    and self.config.eumetsat_consumer_secret
+                ),
+                "interval_seconds": self.config.poll_seconds,
+                "presentation_mode": "delayed_once",
+                "presentation_delay_seconds": MTG_PRESENTATION_DELAY_SECONDS,
+                "active_timeline_count": len(self._mtg_sonification_tasks),
+                "last_scheduled_count": self.last_mtg_scheduled_count,
+                "played_count": self.mtg_played_count,
+                "skipped_late_count": self.mtg_skipped_late_count,
+            },
         }
 
     def _latest_emitted_event(self, role: str, kind: str | None = None) -> dict | None:
@@ -798,6 +839,8 @@ class GaiaScapeService:
         units: str | None = None,
         instrument_volumes=None,
         lightning_sample_rate=None,
+        eumetsat_consumer_key=None,
+        eumetsat_consumer_secret=None,
     ) -> None:
         """Apply validated capture and instrument settings to live components."""
         previous_sources = self.config.enabled_sources
@@ -805,6 +848,8 @@ class GaiaScapeService:
         previous_units = self.config.units
         previous_volumes = self.config.instrument_volumes
         previous_lightning_sample_rate = self.config.lightning_sample_rate
+        previous_eumetsat_consumer_key = self.config.eumetsat_consumer_key
+        previous_eumetsat_consumer_secret = self.config.eumetsat_consumer_secret
         try:
             self.config.enabled_sources = list(enabled_sources)
             self.config.event_instruments = dict(event_instruments)
@@ -814,6 +859,10 @@ class GaiaScapeService:
                 self.config.instrument_volumes = dict(instrument_volumes)
             if lightning_sample_rate is not None:
                 self.config.lightning_sample_rate = lightning_sample_rate
+            if eumetsat_consumer_key is not None:
+                self.config.eumetsat_consumer_key = eumetsat_consumer_key
+            if eumetsat_consumer_secret is not None:
+                self.config.eumetsat_consumer_secret = eumetsat_consumer_secret
             self.config.validate()
         except (TypeError, ValueError):
             self.config.enabled_sources = previous_sources
@@ -821,8 +870,15 @@ class GaiaScapeService:
             self.config.units = previous_units
             self.config.instrument_volumes = previous_volumes
             self.config.lightning_sample_rate = previous_lightning_sample_rate
+            self.config.eumetsat_consumer_key = previous_eumetsat_consumer_key
+            self.config.eumetsat_consumer_secret = previous_eumetsat_consumer_secret
             raise
         self.glm.sonification_sample_stride = self.config.lightning_sample_rate
+        if hasattr(self.mtg_li, "set_credentials"):
+            self.mtg_li.set_credentials(
+                self.config.eumetsat_consumer_key,
+                self.config.eumetsat_consumer_secret,
+            )
         for source in set(self.config.enabled_sources) - set(previous_sources):
             self._source_recovery[source] = _SourceRecovery(
                 last_data_at=self.store.latest_ingested_at_for_provider(source)
@@ -1088,6 +1144,96 @@ class GaiaScapeService:
             if delay > 0:
                 await asyncio.sleep(delay)
             await self._play_live_event(event)
+
+    async def _restore_mtg_schedule(self) -> None:
+        """Resume the still-future portion of the latest stored MTG timeline."""
+        recent = await asyncio.to_thread(
+            self.store.events_of_kinds_since,
+            ("lightning_flash",),
+            time.time() - MTG_PRESENTATION_DELAY_SECONDS,
+            1000,
+        )
+        products = {}
+        for event in recent:
+            if event.provider != "eumetsat_mtg_li":
+                continue
+            product = str(event.traits.get("product", "")) or event.event_id
+            products.setdefault(product, []).append(event)
+        if products:
+            latest = max(
+                products.values(),
+                key=lambda events: max(event.timestamp for event in events),
+            )
+            self._start_mtg_sonification(latest)
+
+    def _start_mtg_sonification(self, events) -> bool:
+        """Queue one MTG product once on its fixed delayed presentation timeline."""
+        events = tuple(sorted(events, key=lambda event: (event.timestamp, event.event_id)))
+        if not events or not self._instruments_for_kind("lightning_flash"):
+            return False
+        product = str(events[0].traits.get("product", "")) or (
+            f"{events[0].timestamp:.3f}:{events[-1].timestamp:.3f}:{len(events)}"
+        )
+        if product in self._mtg_scheduled_products:
+            return False
+        self._mtg_scheduled_products.append(product)
+        stride = max(1, int(self.config.lightning_sample_rate))
+        scheduled_events = events[::stride]
+        self.last_mtg_scheduled_count = len(scheduled_events)
+        task = asyncio.create_task(
+            self._run_mtg_sonification(scheduled_events),
+            name="gaia-scape-mtg-li-sonification",
+        )
+        self._mtg_sonification_tasks.add(task)
+        task.add_done_callback(self._finish_mtg_sonification)
+        LOGGER.info(
+            "EUMETSAT MTG LI update: %d flashes scheduled once at %.0f-minute delay",
+            len(scheduled_events),
+            MTG_PRESENTATION_DELAY_SECONDS / 60.0,
+        )
+        return True
+
+    def _finish_mtg_sonification(self, task) -> None:
+        """Retire a completed MTG timeline and report unexpected failures."""
+        self._mtg_sonification_tasks.discard(task)
+        if task.cancelled():
+            return
+        error = task.exception()
+        if error is not None:
+            LOGGER.warning("EUMETSAT MTG LI presentation failed: %s", error)
+
+    async def _cancel_mtg_sonification(self) -> None:
+        """Cancel every active MTG product timeline during mode changes or shutdown."""
+        tasks = tuple(self._mtg_sonification_tasks)
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        self._mtg_sonification_tasks.clear()
+
+    async def _run_mtg_sonification(self, events) -> None:
+        """Present each MTG flash once at its observation time plus a fixed delay."""
+        for event in events:
+            if (
+                self.config.live_mode != "continuous"
+                or "eumetsat_mtg_li" not in self.config.enabled_sources
+                or not self._instruments_for_kind("lightning_flash")
+            ):
+                break
+            target = event.timestamp + MTG_PRESENTATION_DELAY_SECONDS
+            remaining = target - time.time()
+            if remaining < -MTG_LATE_EVENT_TOLERANCE_SECONDS:
+                self.mtg_skipped_late_count += 1
+                continue
+            if remaining > 0:
+                await asyncio.sleep(remaining)
+            if (
+                self.config.live_mode != "continuous"
+                or "eumetsat_mtg_li" not in self.config.enabled_sources
+            ):
+                break
+            await self._play_live_event(event)
+            self.mtg_played_count += 1
 
     async def _continuous_loop(self) -> None:
         while True:

@@ -12,6 +12,7 @@ mirrors them in `requirements.txt`:
 
 | Package | Purpose | License |
 | --- | --- | --- |
+| EUMDAC | EUMETSAT Data Store access | MIT |
 | FastAPI | HTTP application and API routing | MIT |
 | Uvicorn | ASGI server | BSD-3-Clause |
 | Jinja2 | HTML template rendering | BSD-3-Clause |
@@ -79,6 +80,24 @@ implies endorsement or presents modified material as an official NOAA product.
 Credit: NOAA/NESDIS GOES-R Series Geostationary Lightning Mapper. Gaia Scape's
 normalization, filtering, sampling, visualization, and sonification are not
 official NOAA products.
+
+## EUMETSAT MTG Lightning Imager data
+
+Gaia Scape can retrieve the EUMETSAT Meteosat Third Generation Lightning
+Imager Level 2 Lightning Flashes collection through the user-authenticated Data
+Store. The source normalizes and samples the observations for local display,
+storage, and sonification.
+
+The collection is offered as free and unrestricted data under Creative Commons
+Attribution 4.0 (CC BY 4.0):
+
+- Collection: <https://user.eumetsat.int/catalogue/EO%3AEUM%3ADAT%3A0691>
+- EUMETSAT data access: <https://user.eumetsat.int/data-access/data-store>
+- CC BY 4.0: <https://creativecommons.org/licenses/by/4.0/>
+
+Credit: Contains modified EUMETSAT Meteosat Third Generation Lightning Imager
+data. Gaia Scape is not an official EUMETSAT product and is not endorsed by
+EUMETSAT.
 
 ## Open-Meteo forecast and marine data
 

@@ -42,6 +42,23 @@ class FakeGlm:
         }
 
 
+class FakeMtgLi:
+    def __init__(self, events=()):
+        self.events = tuple(events)
+        self.consumer_key = ""
+        self.consumer_secret = ""
+
+    def set_credentials(self, consumer_key, consumer_secret):
+        self.consumer_key = consumer_key
+        self.consumer_secret = consumer_secret
+
+    def fetch(self):
+        return self.events
+
+    def status(self):
+        return {"configured": bool(self.consumer_key and self.consumer_secret)}
+
+
 class FakeGeoIpResolver:
     def resolve(self):
         return {
@@ -228,6 +245,8 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert "element.append(pill, observation)" in script
         assert "lightning-characteristics-details" not in script
         assert "flash_energy_j" in script
+        assert "flash_radiance_mw_m2_sr" in script
+        assert 'return compact ? "MTG-LI · 12m delay"' in script
         assert "flash_duration_ms" in script
         assert 'areaUnit: "mi²"' in script
         assert 'durationUnit: "s"' in script
@@ -250,6 +269,8 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert ".swell-height--extreme" in stylesheet
         assert ".lightning-intensity--faint" in stylesheet
         assert ".lightning-intensity--intense" in stylesheet
+        assert ".map-cue--provider-eumetsat_mtg_li .map-cue-pulse" in stylesheet
+        assert "text-transform: none" in stylesheet
         assert ".earthquake-magnitude--micro" in stylesheet
         assert ".earthquake-magnitude--great" in stylesheet
         assert ".status-card--background { --status-accent: #6ab5bd; }" in stylesheet
@@ -350,7 +371,7 @@ def test_selected_app_view_persists_across_restart(tmp_path):
     assert '<body data-app-view=' not in home.text
     assert 'class="view-option is-active" id="mapViewButton"' in home.text
     assert 'id="dashboardView" data-app-view="dashboard" hidden' in home.text
-    assert 'id="mapView" data-app-view="map" aria-labelledby="mapViewTitle">' in home.text
+    assert 'id="mapView" data-app-view="map" aria-label="Global event map">' in home.text
 
 
 def test_open_meteo_message_clears_after_provider_recovers(tmp_path):
@@ -860,6 +881,50 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path):
     ).read_text(encoding="utf-8")
 
 
+def test_eumetsat_credentials_enable_source_without_api_or_html_disclosure(tmp_path):
+    event = GaiaEvent(
+        "eumetsat_mtg_li", "mtg-one", "lightning_flash", time.time(),
+        latitude=5.0, longitude=20.0, strength=0.7,
+    )
+    mtg_li = FakeMtgLi((event,))
+    app = create_app(
+        tmp_path,
+        auto_capture=False,
+        usgs_client=FakeUsgs(),
+        mtg_li_client=mtg_li,
+    )
+
+    with TestClient(app) as client:
+        response = client.put(
+            "/api/settings/audio",
+            json={
+                "enabled_sources": ["eumetsat_mtg_li"],
+                "instrument_slots": app.state.config.instrument_slots(),
+                "eumetsat_consumer_key": "private-key",
+                "eumetsat_consumer_secret": "private-secret",
+            },
+        )
+        capture = client.post("/api/capture")
+        public_config = client.get("/api/config")
+        home = client.get("/")
+
+    assert response.status_code == 200
+    assert response.json()["eumetsat_credentials_configured"] is True
+    assert capture.json()["received"] == 1
+    assert public_config.json()["eumetsat_credentials_configured"] is True
+    assert "eumetsat_consumer_key" not in public_config.json()
+    assert "eumetsat_consumer_secret" not in public_config.json()
+    assert "private-key" not in home.text
+    assert "private-secret" not in home.text
+    assert 'id="sourceMtgLi"' in home.text
+    assert 'placeholder="Saved — enter only to replace"' in home.text
+    assert mtg_li.consumer_key == "private-key"
+    assert mtg_li.consumer_secret == "private-secret"
+    saved = (tmp_path / "config.json").read_text(encoding="utf-8")
+    assert '"eumetsat_consumer_key": "private-key"' in saved
+    assert '"eumetsat_consumer_secret": "private-secret"' in saved
+
+
 def test_forecast_location_editor_renders_and_persists_catalogs(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
     ocean = [dict(location) for location in app.state.config.ocean_swell_locations]
@@ -1315,6 +1380,104 @@ def test_glm_capture_reports_raw_counts_and_sounds_each_satellite(
         "NOAA GLM update: 2 granules, 389 raw flashes, 2 sampled, "
         "2 new, 2 sonified"
     ) in caplog.text
+
+
+def test_mtg_capture_schedules_each_flash_once_on_delayed_timeline(
+    tmp_path, monkeypatch
+):
+    now = time.time()
+    flashes = tuple(
+        GaiaEvent(
+            "eumetsat_mtg_li",
+            f"mtg-{index}",
+            "lightning_flash",
+            now + (index / 100),
+            latitude=index,
+            longitude=20 + index,
+            strength=0.6 + (index / 10),
+            traits={"product": "mtg-product-one", "flash_id": index},
+        )
+        for index in range(3)
+    )
+    mtg_li = FakeMtgLi(flashes)
+    app = create_app(
+        tmp_path,
+        auto_capture=False,
+        usgs_client=FakeUsgs(),
+        mtg_li_client=mtg_li,
+    )
+    app.state.service.apply_audio_settings(
+        ["eumetsat_mtg_li"],
+        app.state.config.instrument_slots(),
+        eumetsat_consumer_key="key",
+        eumetsat_consumer_secret="secret",
+    )
+    app.state.config.live_mode = "continuous"
+    monkeypatch.setattr(service, "MTG_PRESENTATION_DELAY_SECONDS", 0.0)
+    monkeypatch.setattr(service, "MTG_LATE_EVENT_TOLERANCE_SECONDS", 60.0)
+    played = []
+    app.state.service.renderer.play = (
+        lambda cue, instrument=None: played.append((cue.event.event_id, instrument))
+        or True
+    )
+
+    async def capture_and_finish_timeline():
+        result = await app.state.service.capture_once()
+        duplicate_started = app.state.service._start_mtg_sonification(flashes)
+        await asyncio.gather(*tuple(app.state.service._mtg_sonification_tasks))
+        return result, duplicate_started, await app.state.service.status()
+
+    result, duplicate_started, status = asyncio.run(capture_and_finish_timeline())
+
+    assert result["received"] == 3
+    assert [event_id for event_id, _instrument in played] == [
+        "mtg-0", "mtg-1", "mtg-2"
+    ]
+    assert {instrument for _event_id, instrument in played} == {"lightning_glass"}
+    assert duplicate_started is False
+    assert status["mtg_li"]["presentation_mode"] == "delayed_once"
+    assert status["mtg_li"]["last_scheduled_count"] == 3
+    assert status["mtg_li"]["played_count"] == 3
+    assert status["mtg_li"]["skipped_late_count"] == 0
+    assert status["mtg_li"]["active_timeline_count"] == 0
+
+
+def test_mtg_timeline_skips_late_flashes_instead_of_bursting(tmp_path, monkeypatch):
+    app = create_app(
+        tmp_path,
+        auto_capture=False,
+        usgs_client=FakeUsgs(),
+        mtg_li_client=FakeMtgLi(),
+    )
+    app.state.service.apply_audio_settings(
+        ["eumetsat_mtg_li"],
+        app.state.config.instrument_slots(),
+        eumetsat_consumer_key="key",
+        eumetsat_consumer_secret="secret",
+    )
+    app.state.config.live_mode = "continuous"
+    monkeypatch.setattr(service, "MTG_PRESENTATION_DELAY_SECONDS", 0.0)
+    monkeypatch.setattr(service, "MTG_LATE_EVENT_TOLERANCE_SECONDS", 0.0)
+    played = []
+    app.state.service.renderer.play = (
+        lambda cue, instrument=None: played.append(cue.event.event_id) or True
+    )
+    old_events = tuple(
+        GaiaEvent(
+            "eumetsat_mtg_li",
+            f"late-{index}",
+            "lightning_flash",
+            time.time() - 30,
+            traits={"product": "late-product"},
+        )
+        for index in range(2)
+    )
+
+    asyncio.run(app.state.service._run_mtg_sonification(old_events))
+
+    assert played == []
+    assert app.state.service.mtg_played_count == 0
+    assert app.state.service.mtg_skipped_late_count == 2
 
 
 def test_glm_sonification_can_play_a_hundred_hidden_notes(tmp_path, monkeypatch):
