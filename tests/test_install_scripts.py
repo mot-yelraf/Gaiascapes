@@ -54,13 +54,21 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     assert 'kill -TERM "$child_pid"' in gui
     assert "trap cleanup EXIT" in gui
     assert "data/audio-device" in audio
+    assert "data/audio-device-map" in audio
     assert "GAIA_SCAPE_AUDIO_DEVICE" in audio
+    assert "resolve_macos_audio.py" in audio
+    assert "Following system audio output" in audio
     assert 'GAIA_SCAPE_SCLANG_PORT:-57131' in audio
     assert 'exec "$SCLANG" -u "$SCLANG_PORT"' in audio
     assert 'GAIA_SCAPE_HTTP_HOST="${GAIA_SCAPE_HTTP_HOST:-0.0.0.0}"' in gui
     assert '\"GAIA_SCAPE_AUDIO_DEVICE\".getenv' in synth
+    assert "s.options.inDevice = audioDevice" in synth
     assert "s.options.outDevice = audioDevice" in synth
     assert "s.options.memSize = 65536" in synth
+    assert "s.options.numInputBusChannels = 0" in synth
+    assert synth.index("s.options.numInputBusChannels = 0") < synth.index(
+        "if(audioDevice.notNil"
+    )
     assert synth.index("s.waitForBoot") < synth.index("SynthDef")
     assert synth.index("s.sync") < synth.index("OSCdef")
     assert "msg[2].asString" in synth
@@ -70,7 +78,10 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     assert "SynthDef(\\stormRainLayer" in synth
     assert "SynthDef(\\lightningGlass" in synth
     assert "SynthDef(\\naturalThunder" in synth
+    assert "SynthDef(\\testTone" in synth
     assert 'if(instrument == "natural_thunder", { synthName = \\naturalThunder })' in synth
+    assert 'if(instrument == "test_tone", { synthName = \\testTone })' in synth
+    assert "SinOsc.ar(440" in synth
     assert 'if(kind != "lightning_flash"' in synth
     assert "pitchContour = XLine.kr" in synth
     assert "Dust2.ar(8 + (strength * 28)" in synth

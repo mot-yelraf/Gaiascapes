@@ -79,6 +79,20 @@ def test_lightning_glass_routes_only_lightning_flashes():
     assert config.instruments_for_event("lightning_flash") == ("lightning_glass",)
 
 
+def test_test_tone_routes_with_earthquake_events():
+    config = AppConfig(
+        event_instruments={
+            "event_1": "test_tone",
+            "event_2": "none",
+            "event_3": "none",
+            "background": "none",
+        }
+    )
+    config.validate()
+
+    assert config.instruments_for_event("earthquake") == ("test_tone",)
+
+
 def test_natural_thunder_routes_only_lightning_flashes():
     config = AppConfig(
         event_instruments={

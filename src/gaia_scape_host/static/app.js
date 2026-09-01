@@ -777,6 +777,7 @@ function instrumentLabel(instrument) {
   if (instrument === "seismic_bells") return "Seismic Bell";
   if (instrument === "lightning_glass") return "Lightning R2D2";
   if (instrument === "natural_thunder") return "Natural Thunder";
+  if (instrument === "test_tone") return "440 Hz Test Tone";
   if (instrument === "ocean_swell") return "Ocean Swells";
   if (instrument === "storm_potential") return "Storm Outlook";
   if (instrument === "none") return "No instrument";

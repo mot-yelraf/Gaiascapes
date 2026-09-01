@@ -191,12 +191,18 @@ it so system interfaces identify the process as Gaia Scape instead of Python.
 Set `GAIA_SCAPE_HEADLESS=1` to suppress this GUI-only relaunch when embedding the
 desktop module in an unattended process.
 
-To select and remember a particular audio output, write its exact
-SuperCollider device name to `data/audio-device`. For example:
+By default, Gaia Scape follows the sound output selected in the operating
+system each time it starts. To pin a particular audio output instead, write
+its exact SuperCollider device name to `data/audio-device`. For example:
 
 ```sh
 printf '%s\n' 'DELL S2725QC' > data/audio-device
 ```
+
+Write `system` to that file to restore system-output following. On macOS,
+`data/audio-device-map` may contain tab-separated system and SuperCollider
+device names. This supports output-only Bluetooth aggregate devices without
+pinning other system outputs.
 
 For separate-process operation, run `./run_supercollider.sh` in one terminal
 and `./run_gaia_scape_gui.sh` in another. You can override the remembered

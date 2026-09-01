@@ -6,9 +6,13 @@ var audioDevice = "GAIA_SCAPE_AUDIO_DEVICE".getenv;
 
 thisProcess.openUDPPort(oscPort);
 s.options.memSize = 65536;
+s.options.numInputBusChannels = 0;
 
 if(audioDevice.notNil and: { audioDevice.size > 0 }, {
-    s.options.numInputBusChannels = 0;
+    // Use the selected output-only device for both sides of CoreAudio setup.
+    // Otherwise CoreAudio opens the system-default microphone even with zero
+    // input buses, which forces Bluetooth headsets into their 16 kHz call mode.
+    s.options.inDevice = audioDevice;
     s.options.outDevice = audioDevice;
     ("Gaia Scape selected audio output: " ++ audioDevice).postln;
 });
@@ -75,6 +79,17 @@ SynthDef(\seismicBells, {
     shimmer = SinOsc.ar(freq * [1, 1.507, 2.013], 0, [0.5, 0.25, 0.12]).sum;
     lowBell = SinOsc.ar((freq * 0.5).max(28), 0, 0.24 + (strength * 0.12));
     Out.ar(out, Pan2.ar((shimmer + lowBell) * envelope * amp, pan));
+}).add;
+
+SynthDef(\testTone, {
+    |out=0, amp=0.35, duration=2.4, pan=0|
+    var envelope, signal;
+    envelope = EnvGen.kr(
+        Env.linen(0.03, (duration - 0.08).max(0.1), 0.05),
+        doneAction: Done.freeSelf
+    );
+    signal = SinOsc.ar(440, 0, amp * 0.3) * envelope;
+    Out.ar(out, Limiter.ar(Pan2.ar(signal, pan), 0.25, 0.005));
 }).add;
 
 SynthDef(\lightningGlass, {
@@ -291,6 +306,7 @@ SynthDef(\stormRainLayer, {
         if(instrument == "seismic_bells", { synthName = \seismicBells });
         if(instrument == "lightning_glass", { synthName = \lightningGlass });
         if(instrument == "natural_thunder", { synthName = \naturalThunder });
+        if(instrument == "test_tone", { synthName = \testTone });
         if(instrument == "tectonic_drone", { synthName = \tectonicDrone });
         if(instrument == "ocean_swell", { synthName = \oceanSwell });
         if(instrument == "tidal_bell", { synthName = \tidalBell });

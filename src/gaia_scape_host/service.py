@@ -11,6 +11,7 @@ import logging
 import os
 import random
 import shutil
+import threading
 import time
 from collections import deque
 from dataclasses import dataclass
@@ -44,6 +45,7 @@ MTG_LATE_EVENT_TOLERANCE_SECONDS = 5.0
 RECOVERY_MAX_RETRY_SECONDS = 15 * 60.0
 GLM_FALLBACK_MAX_AGE_SECONDS = 5 * 60.0
 FORECAST_FALLBACK_MAX_AGE_SECONDS = 3 * 60 * 60.0
+SOURCE_FETCH_TIMEOUT_SECONDS = 45.0
 SOURCE_LABELS = {
     "usgs": "USGS earthquakes",
     "open_meteo_marine": "Open-Meteo marine",
@@ -132,6 +134,9 @@ class GaiaScapeService:
         self._capture_lock = asyncio.Lock()
         self._poll_task = None
         self._glm_poll_task = None
+        self._source_fetch_locks = {
+            source: threading.Lock() for source in SUPPORTED_SOURCES
+        }
         self._glm_sonification_task = None
         self._last_glm_sonification_events = ()
         self._glm_replaying_cached_field = False
@@ -172,6 +177,28 @@ class GaiaScapeService:
         self._last_glm_sonification_events = tuple(
             event for event in recent if event.timestamp >= newest - GLM_POLL_SECONDS
         )[-120:]
+
+    def _fetch_source_sync(self, source: str, client):
+        """Fetch one provider without overlapping a previously timed-out worker."""
+        lock = self._source_fetch_locks[source]
+        if not lock.acquire(blocking=False):
+            raise RuntimeError("Previous provider fetch is still running.")
+        try:
+            return client.fetch()
+        finally:
+            lock.release()
+
+    async def _fetch_source(self, source: str, client):
+        """Bound one provider fetch so it cannot stall its polling loop."""
+        try:
+            return await asyncio.wait_for(
+                asyncio.to_thread(self._fetch_source_sync, source, client),
+                timeout=SOURCE_FETCH_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError as exc:
+            raise TimeoutError(
+                f"Provider fetch exceeded {SOURCE_FETCH_TIMEOUT_SECONDS:g} seconds."
+            ) from exc
 
     def _source_can_retry(self, source: str) -> bool:
         retry_at = self._source_recovery[source].retry_at
@@ -509,7 +536,7 @@ class GaiaScapeService:
                         continue
                     self._mark_source_recovering(source)
                     try:
-                        source_events = tuple(await asyncio.to_thread(client.fetch))
+                        source_events = tuple(await self._fetch_source(source, client))
                         source_event_sets[source] = source_events
                         events.extend(source_events)
                         locations = getattr(client, "locations", ())
@@ -579,7 +606,7 @@ class GaiaScapeService:
                 }
             try:
                 self._mark_source_recovering("noaa_glm")
-                events = tuple(await asyncio.to_thread(self.glm.fetch))
+                events = tuple(await self._fetch_source("noaa_glm", self.glm))
                 self._mark_source_success("noaa_glm", events, self.glm)
                 inserted_events = await asyncio.to_thread(
                     self.store.add_new_events, events

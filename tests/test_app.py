@@ -6,6 +6,7 @@ provider doubles while verifying rendered controls and persisted settings.
 
 import asyncio
 import re
+import threading
 import time
 
 import pytest
@@ -137,13 +138,14 @@ def test_web_app_captures_and_reports_status(tmp_path):
         )[0]
         expected_event_choices = [
             "earthquake", "tidal_bell", "seismic_bells", "lightning_glass",
-            "natural_thunder", "none"
+            "natural_thunder", "test_tone", "none"
         ]
         assert re.findall(r'<option value="([^"]+)"', event_1_markup) == expected_event_choices
         assert re.findall(r'<option value="([^"]+)"', event_2_markup) == expected_event_choices
         assert re.findall(r'<option value="([^"]+)"', event_3_markup) == expected_event_choices
         assert home.text.count("Lightning R2D2") == 3
         assert home.text.count("Natural Thunder") == 3
+        assert home.text.count("440 Hz Test Tone") == 3
         assert "Open-Meteo surf & tides" in home.text
         assert 'id="sourceGlm"' in home.text
         assert "NOAA GOES GLM lightning" in home.text
@@ -429,6 +431,67 @@ def test_provider_failure_backs_off_and_reports_offline_status(tmp_path, monkeyp
     assert "All enabled environmental data sources are offline" in (
         status["sources"]["recovery"]["message"]
     )
+
+
+def test_provider_timeout_does_not_block_remaining_sources_or_overlap_retries(
+    tmp_path, monkeypatch
+):
+    class BlockingUsgs:
+        def __init__(self):
+            self.calls = 0
+            self.release = threading.Event()
+
+        def fetch(self):
+            self.calls += 1
+            self.release.wait()
+            return ()
+
+    class AvailableMarine:
+        def __init__(self):
+            self.calls = 0
+
+        def fetch(self):
+            self.calls += 1
+            return (
+                GaiaEvent(
+                    "open_meteo_marine", "swell", "ocean_swell", time.time()
+                ),
+            )
+
+    usgs = BlockingUsgs()
+    marine = AvailableMarine()
+    app = create_app(
+        tmp_path,
+        auto_capture=False,
+        usgs_client=usgs,
+        marine_client=marine,
+    )
+    app.state.config.enabled_sources = ["usgs", "open_meteo_marine"]
+    monkeypatch.setattr(service, "SOURCE_FETCH_TIMEOUT_SECONDS", 0.01)
+    monkeypatch.setattr(service.random, "uniform", lambda _start, _end: 0.0)
+
+    async def capture_twice():
+        first = await app.state.service.capture_once()
+        first_status = await app.state.service.status()
+        second = await app.state.service.capture_once()
+        status = await app.state.service.status()
+        usgs.release.set()
+        await asyncio.sleep(0.01)
+        return first, first_status, second, status
+
+    first, first_status, second, status = asyncio.run(capture_twice())
+
+    assert first["received"] == 1
+    assert second["received"] == 1
+    assert usgs.calls == 1
+    assert marine.calls == 2
+    health = status["sources"]["health"]
+    assert health["usgs"]["state"] == "offline"
+    assert "fetch exceeded" in (
+        first_status["sources"]["health"]["usgs"]["last_error"]
+    )
+    assert "Previous provider fetch is still running" in health["usgs"]["last_error"]
+    assert health["open_meteo_marine"]["state"] == "online"
 
 
 def test_provider_retry_delay_grows_exponentially_with_a_bound(tmp_path, monkeypatch):
@@ -1125,6 +1188,28 @@ def test_instrument_preview_uses_unsaved_slider_volume(tmp_path):
     assert response.status_code == 200
     assert played[0].velocity < 116
     assert emitted[0]["volume"] == 0.25
+
+
+def test_440_hz_test_tone_preview_routes_as_an_event(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    played = []
+    app.state.service.renderer.play = (
+        lambda cue, instrument=None: played.append((cue, instrument)) or True
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/instruments/preview",
+            json={"instrument": "test_tone", "volume": 0.5},
+        )
+
+    assert response.json() == {
+        "played": True,
+        "instrument": "test_tone",
+        "kind": "earthquake",
+    }
+    assert played[0][1] == "test_tone"
+    assert played[0][0].velocity < 116
 
 
 def test_natural_thunder_preview_routes_to_lightning(tmp_path):

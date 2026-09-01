@@ -67,7 +67,7 @@ else
 fi
 
 case "$INSTALL_DIR" in ""|/|"$HOME") fail "The install location must name a dedicated application directory." ;; /*) ;; *) fail "The install location must be absolute." ;; esac
-mkdir -p "$INSTALL_DIR/data" "$INSTALL_DIR/supercollider"
+mkdir -p "$INSTALL_DIR/data" "$INSTALL_DIR/scripts" "$INSTALL_DIR/supercollider"
 INSTALL_DIR="$(CDPATH= cd -- "$INSTALL_DIR" && pwd -P)"
 if [[ -n "${GAIA_SCAPE_AUDIO_DEVICE:-}" ]]; then
   printf '%s\n' "$GAIA_SCAPE_AUDIO_DEVICE" > "$INSTALL_DIR/data/audio-device"
@@ -103,6 +103,7 @@ if [[ "$SOURCE_DIR" != "$INSTALL_DIR" ]]; then
   install -m 755 "$SOURCE_DIR/run_gaia_scape.sh" "$INSTALL_DIR/run_gaia_scape.sh"
   install -m 755 "$SOURCE_DIR/run_gaia_scape_gui.sh" "$INSTALL_DIR/run_gaia_scape_gui.sh"
   install -m 755 "$SOURCE_DIR/run_supercollider.sh" "$INSTALL_DIR/run_supercollider.sh"
+  install -m 755 "$SOURCE_DIR/scripts/resolve_macos_audio.py" "$INSTALL_DIR/scripts/resolve_macos_audio.py"
   install -m 644 "$SOURCE_DIR/supercollider/gaia-scape.scd" "$INSTALL_DIR/supercollider/gaia-scape.scd"
   install -m 644 "$SOURCE_DIR/README.md" "$INSTALL_DIR/README.md"
   install -m 644 "$SOURCE_DIR/requirements.txt" "$INSTALL_DIR/requirements.txt"
