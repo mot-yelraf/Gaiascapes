@@ -9,7 +9,12 @@ import zipfile
 
 from netCDF4 import Dataset
 
-from gaia_scape_host.eumetsat_li import parse_li_product
+from gaia_scape.events import GaiaEvent
+from gaia_scape_host.eumetsat_li import (
+    MAX_FLASHES_PER_PRODUCT,
+    _select_geographically_distributed,
+    parse_li_product,
+)
 
 
 def _li_chunk(path):
@@ -51,3 +56,66 @@ def test_li_zip_product_normalizes_nested_flash_variables(tmp_path):
     assert events[1].traits["group_count"] == 4
     assert events[1].traits["flash_footprint_pixels"] == 5
     assert events[1].traits["product"] == "MTG-LI-product"
+
+
+def test_li_sampling_distributes_flashes_across_geographic_cells():
+    dense = [
+        GaiaEvent(
+            "eumetsat_mtg_li",
+            f"dense-{index}",
+            "lightning_flash",
+            float(index),
+            latitude=1.0,
+            longitude=21.0,
+            strength=1.0,
+        )
+        for index in range(MAX_FLASHES_PER_PRODUCT + 40)
+    ]
+    outliers = [
+        GaiaEvent(
+            "eumetsat_mtg_li",
+            "europe",
+            "lightning_flash",
+            500.0,
+            latitude=48.0,
+            longitude=10.0,
+            strength=0.1,
+        ),
+        GaiaEvent(
+            "eumetsat_mtg_li",
+            "south-america",
+            "lightning_flash",
+            501.0,
+            latitude=-20.0,
+            longitude=-45.0,
+            strength=0.1,
+        ),
+    ]
+
+    sampled = _select_geographically_distributed(
+        dense + outliers, MAX_FLASHES_PER_PRODUCT
+    )
+
+    assert len(sampled) == MAX_FLASHES_PER_PRODUCT
+    assert {event.event_id for event in outliers}.issubset(
+        event.event_id for event in sampled
+    )
+
+
+def test_li_sampling_keeps_strongest_flashes_within_each_cell():
+    events = [
+        GaiaEvent(
+            "eumetsat_mtg_li",
+            str(index),
+            "lightning_flash",
+            float(index),
+            latitude=1.0,
+            longitude=21.0,
+            strength=index / 10.0,
+        )
+        for index in range(5)
+    ]
+
+    sampled = _select_geographically_distributed(events, 2)
+
+    assert [event.event_id for event in sampled] == ["4", "3"]

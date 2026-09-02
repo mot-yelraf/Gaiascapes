@@ -24,7 +24,8 @@ from gaia_scape.events import GaiaEvent
 COLLECTION_ID = "EO:EUM:DAT:0691"
 MAX_PRODUCT_BYTES = 96 * 1024 * 1024
 MAX_CHUNK_BYTES = 16 * 1024 * 1024
-MAX_FLASHES_PER_PRODUCT = 120
+MAX_FLASHES_PER_PRODUCT = 1000
+GEOGRAPHIC_CELL_DEGREES = 10.0
 
 
 @contextmanager
@@ -154,6 +155,43 @@ def parse_li_chunk(
     return tuple(events)
 
 
+def _select_geographically_distributed(events, maximum: int):
+    """Select strong flashes round-robin across occupied geographic cells."""
+    if len(events) <= maximum:
+        return tuple(events)
+    cells = {}
+    for event in sorted(
+        events,
+        key=lambda event: (-event.strength, event.timestamp, event.event_id),
+    ):
+        cell = (
+            math.floor((event.latitude + 90.0) / GEOGRAPHIC_CELL_DEGREES),
+            math.floor((event.longitude + 180.0) / GEOGRAPHIC_CELL_DEGREES),
+        )
+        cells.setdefault(cell, []).append(event)
+    selected = []
+    depth = 0
+    ordered_cells = sorted(cells)
+    while len(selected) < maximum:
+        candidates = [
+            cells[cell][depth]
+            for cell in ordered_cells
+            if depth < len(cells[cell])
+        ]
+        if not candidates:
+            break
+        remaining = maximum - len(selected)
+        if len(candidates) <= remaining:
+            selected.extend(candidates)
+        else:
+            step = len(candidates) / remaining
+            selected.extend(
+                candidates[math.floor(index * step)] for index in range(remaining)
+            )
+        depth += 1
+    return tuple(selected)
+
+
 def parse_li_product(payload: bytes, product_id: str) -> tuple[GaiaEvent, ...]:
     """Extract LI BODY chunks from one EUMETSAT Data Store ZIP product."""
     if not payload or len(payload) > MAX_PRODUCT_BYTES:
@@ -174,10 +212,8 @@ def parse_li_product(payload: bytes, product_id: str) -> tuple[GaiaEvent, ...]:
             events.extend(
                 parse_li_chunk(archive.read(member), member.filename, product_id)
             )
-    strongest = sorted(events, key=lambda event: event.strength, reverse=True)[
-        :MAX_FLASHES_PER_PRODUCT
-    ]
-    return tuple(sorted(strongest, key=lambda event: (event.timestamp, event.event_id)))
+    sampled = _select_geographically_distributed(events, MAX_FLASHES_PER_PRODUCT)
+    return tuple(sorted(sampled, key=lambda event: (event.timestamp, event.event_id)))
 
 
 class EumetsatLiClient:

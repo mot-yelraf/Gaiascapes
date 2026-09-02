@@ -44,7 +44,8 @@ An optional EUMETSAT Meteosat Third Generation Lightning Imager source extends
 observed lightning coverage across Europe and Africa. It downloads the operational
 LI Level 2 Lightning Flashes collection (`EO:EUM:DAT:0691`) through EUMETSAT's
 EUMDAC client, normalizes flash time, position, radiance, duration, and composition,
-and bounds each product to 120 of its strongest observations. In Settings → Sound
+and geographically samples each product to at most 1,000 observations, favoring
+stronger flashes within each occupied map region. In Settings → Sound
 sources, enable **EUMETSAT MTG Lightning Imager** and enter the Consumer Key and
 Consumer Secret issued by the EUMETSAT Data Store. The credentials are saved only
 in the selected installation's local `data/config.json`, whose permissions are
