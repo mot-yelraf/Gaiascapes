@@ -43,6 +43,34 @@ class FakeGlm:
         }
 
 
+class FakeBirdsong:
+    def __init__(self):
+        self.indices = []
+
+    def event_at(self, index):
+        self.indices.append(index)
+        return GaiaEvent(
+            "wikimedia_commons",
+            f"birdsong-{index}",
+            "birdsong",
+            time.time(),
+            latitude=10.3,
+            longitude=-84.8,
+            strength=0.6,
+            traits={
+                "place": "Costa Rican Cloud Forest",
+                "magnitude": 1.0,
+                "media_url": "/birdsong-media/costa-rica.ogg",
+                "title": "Forest birds",
+                "creator": "A. Recordist",
+                "license": "CC BY 4.0",
+                "license_url": "https://creativecommons.org/licenses/by/4.0/",
+                "source_url": "https://commons.wikimedia.org/wiki/File:Forest_birds.ogg",
+                "commons_page_id": 42,
+            },
+        )
+
+
 class FakeMtgLi:
     def __init__(self, events=()):
         self.events = tuple(events)
@@ -192,6 +220,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'aria-label="Map application status"' in home.text
         assert "Open-Meteo Storm Outlook" in home.text
         assert '<option value="storm_potential" >Storm Outlook</option>' in home.text
+        assert '<option value="birdsong" >Birdsong Atlas</option>' in home.text
         assert "Event Time" not in home.text
         assert "Event Sounds" not in home.text
         assert 'id="scStatus"' not in home.text
@@ -692,6 +721,37 @@ def test_storm_background_replaces_ocean_with_persistent_rain_layer(tmp_path):
     assert [cue.kind for _, cue in played] == ["storm_potential"]
 
 
+def test_birdsong_background_rotates_commons_media_without_osc(tmp_path):
+    birdsong = FakeBirdsong()
+    app = create_app(
+        tmp_path,
+        auto_capture=False,
+        usgs_client=FakeUsgs(),
+        birdsong_client=birdsong,
+    )
+    app.state.service.apply_audio_settings(
+        [],
+        {
+            "event_1": "none",
+            "event_2": "none",
+            "event_3": "none",
+            "background": "birdsong",
+        },
+    )
+    app.state.service.renderer.update_layer = lambda *_args, **_kwargs: pytest.fail(
+        "recorded birdsong should be rendered by the web media player"
+    )
+
+    kinds = asyncio.run(app.state.service.play_next_ambient_layers())
+
+    assert kinds == ("birdsong",)
+    assert birdsong.indices == [0]
+    emitted = app.state.service._emitted_cues[-1]
+    assert emitted["role"] == "background"
+    assert emitted["instrument"] == "birdsong"
+    assert emitted["event"]["traits"]["commons_page_id"] == 42
+
+
 def test_event_history_returns_newest_records_with_small_limit(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
     now = time.time()
@@ -925,6 +985,7 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path):
         "ocean_swell": "none",
         "tide_turn": "none",
         "storm_potential": "storm_potential",
+        "birdsong": "none",
     }
     assert app.state.service._voices_for_kind("storm_potential") == (
         ("storm_potential", 0.5),
@@ -1710,6 +1771,39 @@ def test_background_preview_does_not_add_captured_event(tmp_path):
     assert response.status_code == 200
     assert count == 0
     assert emitted[0]["role"] == "background"
+
+
+def test_birdsong_preview_emits_cached_media_without_osc(tmp_path):
+    birdsong = FakeBirdsong()
+    app = create_app(
+        tmp_path,
+        auto_capture=False,
+        usgs_client=FakeUsgs(),
+        birdsong_client=birdsong,
+    )
+    app.state.service.renderer.play = lambda *_args: pytest.fail(
+        "birdsong preview should use the web media player"
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/instruments/preview",
+            json={"kind": "birdsong", "instrument": "birdsong", "volume": 0.4},
+        )
+        emitted = client.get("/api/cues", params={"after": 0}).json()["cues"]
+        count = client.get("/api/status").json()["history"]["event_count"]
+
+    assert response.json() == {
+        "played": True,
+        "instrument": "birdsong",
+        "kind": "birdsong",
+    }
+    assert birdsong.indices == [0]
+    assert count == 0
+    assert emitted[0]["role"] == "background"
+    assert emitted[0]["duration"] == 8.0
+    assert emitted[0]["volume"] == 0.4
+    assert emitted[0]["event"]["traits"]["media_url"].endswith("costa-rica.ogg")
 
 
 def test_cue_long_poll_releases_shutdown_connections_promptly(tmp_path, monkeypatch):

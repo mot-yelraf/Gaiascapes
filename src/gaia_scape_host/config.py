@@ -33,13 +33,16 @@ EVENT_VOICE_OPTIONS = (
     "test_tone",
     "none",
 )
-BACKGROUND_INSTRUMENT_OPTIONS = ("ocean_swell", "storm_potential", "none")
+BACKGROUND_INSTRUMENT_OPTIONS = (
+    "ocean_swell", "storm_potential", "birdsong", "none"
+)
 EVENT_INSTRUMENT_OPTIONS = {
     "earthquake": ("earthquake", "seismic_bells", "test_tone", "none"),
     "ocean_swell": ("ocean_swell", "none"),
     "tide_turn": ("tidal_bell", "none"),
     "lightning_flash": ("lightning_glass", "natural_thunder", "none"),
     "storm_potential": ("storm_potential", "none"),
+    "birdsong": ("birdsong", "none"),
 }
 EVENT_KIND_BY_VOICE = {
     "earthquake": "earthquake",
@@ -243,6 +246,7 @@ class AppConfig:
             "storm_potential": (
                 "storm_potential" if background == "storm_potential" else "none"
             ),
+            "birdsong": "birdsong" if background == "birdsong" else "none",
         }
 
     def _migrate_legacy_instruments(self) -> None:

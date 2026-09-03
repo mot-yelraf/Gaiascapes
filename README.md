@@ -14,8 +14,9 @@ installed.
 The first source is the USGS all-day earthquake feed. Events are normalized,
 deduplicated in SQLite, and retained locally. The Live Events tile offers two modes:
 Capture replays a selected history window, while Continuous sounds newly captured
-earthquakes immediately and rotates ambient data globally. The selected ocean-swell
-or Storm Outlook background remains continuous while event voices play over it.
+earthquakes immediately and rotates ambient data globally. The selected ocean-swell,
+Storm Outlook, or Birdsong Atlas background remains continuous while event voices play
+over it.
 Event 1, Event 2, and Event 3 are independent: Earthquake and Seismic Bell voices
 follow USGS earthquakes, Tidal Bell follows modeled tide turns, and Lightning R2D2
 or Natural Thunder follows normalized lightning-flash observations. Selecting the
@@ -26,6 +27,11 @@ Continuous mode does not derive ocean sound from the listener’s location. Ambi
 cues play at 75% of their mapped level so full-level earthquake cues remain distinct.
 The global Background Sounds location rotates every 23 seconds. Background cues span 24.5
 seconds, retaining a 1.5-second overlap while the next location fades in.
+Birdsong Atlas cycles through 19 regions on six continents using freely licensed
+Wikimedia Commons recordings. Gaia Scape resolves files through the keyless Commons
+API, accepts only public-domain, CC0, CC BY, or CC BY-SA audio, and caches each selected
+recording under `data/media/birdsong/`. The interface displays the recording's creator,
+license, and Commons source page; no Wikimedia account or API key is required.
 Lightning R2D2 uses a short crack, descending pitch contour, glassy decay, and
 pentatonic flash-by-flash pitch variation at least four semitones above other
 events, paired with a yellow-gold map pulse. Each slot's volume also scales its
@@ -228,12 +234,14 @@ Continuous ocean or storm state uses the same arguments at `/gaia/layer`; repeat
 messages smoothly update one persistent synth instead of replacing it. Storm
 forecast strength controls rainfall density and intensity. `/gaia/layer/stop`
 releases the synth when continuous mode stops or the background selection changes.
+Birdsong uses the renderer-neutral emitted-cue stream and is played from Gaia Scape's
+local media cache by the web view, so it does not require a SuperCollider sampler.
 
 The included `supercollider/gaia-scape.scd` listens on UDP 57130 and provides
 earthquake, seismic-bell, Lightning R2D2, Natural Thunder, ocean-swell, tidal-bell, and Storm Outlook
 voices. The
 Settings menu selects capture sources, three independent event voices, and one continuous
-background. Each musical role can also be set to None. The persisted Units setting
+background, including Birdsong Atlas. Each musical role can also be set to None. The persisted Units setting
 displays swell and tide heights in meters or feet and earthquake depth in kilometers
 or miles. The Dashboard or Map selection is also stored with the installation and
 restored when Gaia Scape starts. Both views show a three-column status strip with the

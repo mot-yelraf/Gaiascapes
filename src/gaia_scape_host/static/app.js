@@ -10,6 +10,83 @@ let pendingLightningEvent = null;
 let lightningIntensityTimer = null;
 let lastLightningIntensityUpdate = 0;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+let birdsongAudio = null;
+let birdsongFadeTimer = null;
+let birdsongPreviewTimer = null;
+let birdsongPreviewUntil = 0;
+const activeBirdsongAudio = new Set();
+
+function stopBirdsongPlayback(fadeMilliseconds = 700) {
+  if (birdsongFadeTimer) clearInterval(birdsongFadeTimer);
+  if (birdsongPreviewTimer) clearTimeout(birdsongPreviewTimer);
+  birdsongFadeTimer = null;
+  birdsongPreviewTimer = null;
+  birdsongPreviewUntil = 0;
+  const players = Array.from(activeBirdsongAudio);
+  birdsongAudio = null;
+  if (!players.length) return;
+  const initialVolumes = players.map((audio) => audio.volume);
+  const startedAt = performance.now();
+  const timer = setInterval(() => {
+    const progress = Math.min(1, (performance.now() - startedAt) / fadeMilliseconds);
+    players.forEach((audio, index) => { audio.volume = initialVolumes[index] * (1 - progress); });
+    if (progress >= 1) {
+      clearInterval(timer);
+      players.forEach((audio) => {
+        audio.pause();
+        audio.removeAttribute("src");
+        activeBirdsongAudio.delete(audio);
+      });
+    }
+  }, 50);
+}
+
+async function playBirdsongCue(cue) {
+  const mediaUrl = cue.event?.traits?.media_url;
+  if (!mediaUrl) return;
+  const previous = birdsongAudio;
+  const next = new Audio(mediaUrl);
+  next.loop = true;
+  next.preload = "auto";
+  next.volume = 0;
+  try {
+    await next.play();
+  } catch (error) {
+    console.warn("Browser blocked birdsong playback", error);
+    message("Birdsong is ready. Select Start or Preview again to allow audio.", true);
+    return;
+  }
+  birdsongAudio = next;
+  activeBirdsongAudio.add(next);
+  if (birdsongPreviewTimer) clearTimeout(birdsongPreviewTimer);
+  const cueDuration = Number(cue.duration ?? 0);
+  if (cueDuration > 0 && cueDuration <= 10) {
+    birdsongPreviewUntil = Date.now() + (cueDuration * 1000);
+    birdsongPreviewTimer = setTimeout(() => stopBirdsongPlayback(), cueDuration * 1000);
+  } else {
+    birdsongPreviewTimer = null;
+    birdsongPreviewUntil = 0;
+  }
+  if (birdsongFadeTimer) clearInterval(birdsongFadeTimer);
+  const startedAt = performance.now();
+  const fadeMilliseconds = 3000;
+  const targetVolume = Math.max(0, Math.min(1, Number(cue.volume ?? 1) * 0.75));
+  const previousVolume = previous?.volume || 0;
+  birdsongFadeTimer = setInterval(() => {
+    const progress = Math.min(1, (performance.now() - startedAt) / fadeMilliseconds);
+    next.volume = targetVolume * progress;
+    if (previous) previous.volume = previousVolume * (1 - progress);
+    if (progress >= 1) {
+      clearInterval(birdsongFadeTimer);
+      birdsongFadeTimer = null;
+      if (previous) {
+        previous.pause();
+        previous.removeAttribute("src");
+        activeBirdsongAudio.delete(previous);
+      }
+    }
+  }, 50);
+}
 
 const ROBINSON_X = [1, .9986, .9954, .99, .9822, .973, .96, .9427, .9216, .8962, .8679, .835, .7986, .7597, .7186, .6732, .6213, .5722, .5322];
 const ROBINSON_Y = [0, .062, .124, .186, .248, .31, .372, .434, .4958, .5571, .6176, .6769, .7346, .7903, .8435, .8936, .9394, .9761, 1];
@@ -401,6 +478,21 @@ function updateBackgroundCharacteristics(event, fallbackText = null) {
       element.setAttribute("aria-label", backgroundCharacteristics(event));
       return;
     }
+    if (event?.kind === "birdsong") {
+      const traits = event.traits || {};
+      const source = document.createElement("a");
+      source.href = traits.source_url || "https://commons.wikimedia.org/";
+      source.target = "_blank";
+      source.rel = "noopener noreferrer";
+      source.textContent = traits.title || "Wikimedia Commons recording";
+      const credit = document.createElement("span");
+      credit.className = "forecast-characteristics-details";
+      credit.textContent = `${traits.creator || "Unknown contributor"} · ${traits.license || "Commons"}`;
+      element.classList.add("forecast-characteristics");
+      element.append(source, credit);
+      element.setAttribute("aria-label", `${source.textContent}; ${credit.textContent}`);
+      return;
+    }
     element.removeAttribute("aria-label");
     element.textContent = fallbackText ?? backgroundCharacteristics(event);
   });
@@ -430,6 +522,7 @@ function eventKindLabel(kind) {
     lightning_flash: "Lightning Flash",
     ocean_swell: "Ocean Swell",
     storm_potential: "Storm Outlook",
+    birdsong: "Birdsong Atlas",
   };
   return labels[kind] || instrumentLabel(kind);
 }
@@ -624,6 +717,7 @@ function updateLastEarthquakeStatus(event) {
 function backgroundSoundLabel(instrument) {
   if (instrument === "ocean_swell") return "Ocean Swells";
   if (instrument === "storm_potential") return "Storm Outlook";
+  if (instrument === "birdsong") return "Birdsong Atlas";
   return "Background Sounds";
 }
 
@@ -637,6 +731,7 @@ const EVENT_PALETTES = {
   tide_turn: ["#244d68", "#2e6685", "#3c80a0", "#579bb7", "#7bb5ca"],
   lightning_flash: ["#79500a", "#9d6a10", "#c58a1b", "#e5aa2b", "#ffd15a"],
   storm_potential: ["#3b4568", "#4c5782", "#606b9d", "#7882b5", "#969dcc"],
+  birdsong: ["#355c37", "#467847", "#5a965a", "#75b873", "#99d493"],
   default: ["#476352", "#567966", "#679079", "#7ca68d", "#96bba1"],
 };
 
@@ -655,7 +750,7 @@ function eventColors(event, instrument = "") {
 
 function cueRole(cue) {
   if (cue.role) return cue.role;
-  return ["ocean_swell", "storm_potential"].includes(cue.event?.kind) ? "background" : "event";
+  return ["ocean_swell", "storm_potential", "birdsong"].includes(cue.event?.kind) ? "background" : "event";
 }
 
 function animateCapturedEvent(event, instrument = "", role = "event", cueDuration = 3.6, volume = 1) {
@@ -710,6 +805,11 @@ async function updateStatus() {
       ...(status.sources?.health || {}),
     });
     const continuous = status.live.mode === "continuous";
+    const previewingBirdsong = Date.now() < birdsongPreviewUntil;
+    if ((!continuous || !status.live.running
+        || byId("backgroundInstrument")?.value !== "birdsong") && !previewingBirdsong) {
+      stopBirdsongPlayback();
+    }
     byId("liveMode").value = status.live.mode;
     applyLiveMode(status.live.mode);
     const active = continuous ? status.live.running : status.performance.running;
@@ -731,6 +831,7 @@ async function updateEmittedCues() {
     const query = observedCueSequence === null ? "" : `?after=${observedCueSequence}`;
     const payload = await request(`/api/cues${query}`);
     payload.cues.forEach((cue) => {
+      if (cue.event?.kind === "birdsong") playBirdsongCue(cue);
       animateCapturedEvent(
         cue.event, cue.instrument, cueRole(cue), cue.duration, cue.volume ?? 1
       );
@@ -834,7 +935,7 @@ byId("startButton").addEventListener("click", async () => {
   try {
     if (byId("liveMode").value === "continuous") {
       await request("/api/live/start", {method: "POST", body: "{}"});
-      message("Continuous environmental sound is running with global ocean and storm rotation.");
+      message("Continuous environmental sound is running with the selected global background.");
     } else {
       const payload = await request("/api/performance/replay", {
         method: "POST",
@@ -1303,6 +1404,7 @@ if (settingsDialog && settingsForm) {
     });
   });
   byId("backgroundInstrument").addEventListener("change", (event) => {
+    if (event.target.value !== "birdsong") stopBirdsongPlayback();
     updateBackgroundStatus(null);
   });
   updateBackgroundSoundsTitle(byId("backgroundInstrument").value);

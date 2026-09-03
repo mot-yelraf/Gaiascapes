@@ -70,7 +70,7 @@
       </section>
 
       <section class="metrics" aria-label="Application status">
-        <article class="status-card status-card--background"><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting forecast</small></article>
+        <article class="status-card status-card--background"><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% else %}Background Sounds{% endif %}</span><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></article>
         <article class="status-card status-card--event"><span>Last Event</span><strong id="lastEventType" data-status-field="last-event-type">—</strong><small id="lastEventTime" data-status-field="last-event-time">Not yet</small></article>
         <article class="status-card status-card--earthquake"><span>Last Earthquake Event</span><strong id="lastEarthquakeLocation" data-status-field="last-earthquake-location">—</strong><small id="lastEarthquakeDetail" data-status-field="last-earthquake-detail">Not yet</small></article>
       </section>
@@ -101,7 +101,7 @@
         <output class="map-coordinate-readout" id="mapCoordinateReadout" aria-live="polite">Move over the map to inspect coordinates</output>
       </div>
       <section class="metrics map-status" aria-label="Map application status">
-        <article class="status-card status-card--background"><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% else %}Background Sounds{% endif %}</span><strong data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting forecast</small></article>
+        <article class="status-card status-card--background"><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% else %}Background Sounds{% endif %}</span><strong data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></article>
         <article class="status-card status-card--event"><span>Last Event</span><strong data-status-field="last-event-type">—</strong><small data-status-field="last-event-time">Not yet</small></article>
         <article class="status-card status-card--earthquake"><span>Last Earthquake Event</span><strong data-status-field="last-earthquake-location">—</strong><small data-status-field="last-earthquake-detail">Not yet</small></article>
       </section>
@@ -139,7 +139,7 @@
             <p class="settings-tip"><span>ⓘ</span><span>Marine forecasts are not suitable for navigation. Data: Open-Meteo and contributing weather agencies.</span></p>
           </section>
           <section class="settings-pane" data-pane="instruments" hidden>
-            <div class="pane-heading"><span>02</span><div><h3>Instrument layers</h3><p>Each event slot independently follows the source represented by its selected voice. Background follows one continuous global forecast.</p></div></div>
+            <div class="pane-heading"><span>02</span><div><h3>Instrument layers</h3><p>Each event slot independently follows the source represented by its selected voice. Background follows one continuous global forecast or birdsong rotation.</p></div></div>
             <div class="event-mapping-grid">
               <div class="event-mapping-column">
                 <label class="event-mapping-label" for="event1Instrument">Event 1</label>
@@ -155,7 +155,7 @@
               </div>
             </div>
             <div class="mapping-control mapping-control--section">
-              <label class="settings-field" for="backgroundInstrument"><span>Background</span><select id="backgroundInstrument">{% for instrument in background_options %}<option value="{{ instrument }}" {% if instrument == instrument_slots.background %}selected{% endif %}>{% if instrument == "ocean_swell" %}Ocean Swells{% elif instrument == "storm_potential" %}Storm Outlook{% else %}None{% endif %}</option>{% endfor %}</select></label>
+              <label class="settings-field" for="backgroundInstrument"><span>Background</span><select id="backgroundInstrument">{% for instrument in background_options %}<option value="{{ instrument }}" {% if instrument == instrument_slots.background %}selected{% endif %}>{% if instrument == "ocean_swell" %}Ocean Swells{% elif instrument == "storm_potential" %}Storm Outlook{% elif instrument == "birdsong" %}Birdsong Atlas{% else %}None{% endif %}</option>{% endfor %}</select></label>
               <div class="preview-volume-column"><button type="button" class="preview-instrument-button" data-kind="background" data-select="backgroundInstrument" data-volume="backgroundVolume">▶ Preview</button><label class="volume-control" for="backgroundVolume"><input id="backgroundVolume" type="range" min="0" max="100" step="1" value="{{ (instrument_volumes.background * 100) | round | int }}" aria-label="Background volume"><output>{{ (instrument_volumes.background * 100) | round | int }}%</output></label></div>
             </div>
             <div class="mapping-control mapping-control--single">

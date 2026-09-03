@@ -119,6 +119,21 @@ lightning strikes and are not suitable for navigation. Individual upstream
 datasets named on the Open-Meteo license page may carry additional attribution
 or source terms that remain applicable.
 
+## Wikimedia Commons birdsong
+
+Gaia Scape can resolve and locally cache birdsong recordings from Wikimedia
+Commons through its keyless public API. The recordings are downloaded at runtime
+and are not bundled with Gaia Scape. Each recording remains under the license shown
+on its Commons file page; Gaia Scape accepts only public-domain, CC0, CC BY, and
+CC BY-SA files and displays the creator, license, and source link in the interface.
+
+Redistributors remain responsible for preserving each recording's attribution and
+license information and for satisfying any share-alike terms that apply to the
+recording itself.
+
+- Commons reuse guidance: <https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia>
+- MediaWiki API etiquette: <https://www.mediawiki.org/wiki/API:Etiquette>
+
 ## Approximate system location
 
 Gaia Scape requests an approximate location for the host's public IP from

@@ -45,11 +45,13 @@ def create_app(
     storm_client=None,
     glm_client=None,
     mtg_li_client=None,
+    birdsong_client=None,
     geoip_resolver=None,
 ) -> FastAPI:
     """Create an isolated application, optionally disabling network polling."""
     runtime_data = Path(data_dir) if data_dir is not None else resolve_data_dir()
     runtime_data.mkdir(parents=True, exist_ok=True)
+    (runtime_data / "media" / "birdsong").mkdir(parents=True, exist_ok=True)
     config_path = runtime_data / "config.json"
     config = AppConfig.load(config_path)
     if not config_path.exists():
@@ -62,6 +64,7 @@ def create_app(
         storm_client=storm_client,
         glm_client=glm_client,
         mtg_li_client=mtg_li_client,
+        birdsong_client=birdsong_client,
     )
     system_location = geoip_resolver or GeoIpLocationResolver()
 
@@ -81,6 +84,11 @@ def create_app(
     app.state.service = service
     app.state.system_location = system_location
     app.mount("/static", StaticFiles(directory=PACKAGE_DIR / "static"), name="static")
+    app.mount(
+        "/birdsong-media",
+        StaticFiles(directory=runtime_data / "media" / "birdsong"),
+        name="birdsong-media",
+    )
 
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):

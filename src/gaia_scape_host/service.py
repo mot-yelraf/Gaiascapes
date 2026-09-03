@@ -21,6 +21,7 @@ from gaia_scape.events import GaiaEvent
 from gaia_scape.score import ScoreCue, build_score, event_duration
 
 from .capture import EventStore
+from .commons_birdsong import BIRDSONG_LOCATIONS, CommonsBirdsongClient
 from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS, SUPPORTED_SOURCES
 from .eumetsat_li import EumetsatLiClient
 from .open_meteo import (
@@ -36,7 +37,7 @@ from .usgs import UsgsClient
 
 CUE_LONG_POLL_SECONDS = 2.0
 EMITTED_CUE_LIMIT = 10000
-BACKGROUND_HISTORY_KINDS = frozenset({"ocean_swell", "storm_potential"})
+BACKGROUND_HISTORY_KINDS = frozenset({"ocean_swell", "storm_potential", "birdsong"})
 HIDDEN_HISTORY_KINDS = frozenset({"lightning_flash"})
 LOGGER = logging.getLogger("uvicorn.error")
 GLM_SONIFICATION_TIME_SCALE = 1.0
@@ -90,6 +91,7 @@ class GaiaScapeService:
         storm_client=None,
         glm_client=None,
         mtg_li_client=None,
+        birdsong_client=None,
     ):
         self.config = config
         self.data_dir = Path(data_dir)
@@ -114,6 +116,7 @@ class GaiaScapeService:
         self.mtg_li = mtg_li_client or EumetsatLiClient(
             config.eumetsat_consumer_key, config.eumetsat_consumer_secret
         )
+        self.birdsong = birdsong_client or CommonsBirdsongClient(self.data_dir)
         self.renderer = OscRenderer(
             config.osc_host,
             config.osc_port,
@@ -149,7 +152,7 @@ class GaiaScapeService:
         self._glm_capture_lock = asyncio.Lock()
         self._live_play_lock = asyncio.Lock()
         self._ambient_cursors = {
-            kind: 0 for kind in ("ocean_swell", "storm_potential")
+            kind: 0 for kind in ("ocean_swell", "storm_potential", "birdsong")
         }
         self._last_continuous_cycle_at = time.time()
         self.continuous_played_count = 0
@@ -983,6 +986,15 @@ class GaiaScapeService:
             raise ValueError(f"Unsupported event kind: {kind}")
         if instrument not in EVENT_INSTRUMENT_OPTIONS[kind]:
             raise ValueError(f"Unsupported SuperCollider instrument for {kind}: {instrument}")
+        if kind == "birdsong":
+            volume = _preview_volume(volume)
+            event = await asyncio.to_thread(self.birdsong.event_at, 0)
+            cue = cue_with_gain(
+                ScoreCue(0, event, pitch=60, velocity=116, duration=8.0, pan=0.0),
+                volume,
+            )
+            self._record_emitted_cue(cue, instrument, volume=volume)
+            return {"played": True, "instrument": instrument, "kind": kind}
         examples = {
             "earthquake": (18.0, -35.0, 0.875, 6.0, 12.0, "Earthquake preview"),
             "ocean_swell": (-17.86, -149.28, 0.7, 4.2, 14.0, "Ocean swell preview"),
@@ -1007,12 +1019,7 @@ class GaiaScapeService:
             0, event, pitch=preview_pitch, velocity=116,
             duration=preview_duration, pan=0.0,
         )
-        try:
-            volume = float(volume)
-        except (TypeError, ValueError) as exc:
-            raise ValueError("Preview volume must be 0..1") from exc
-        if not 0.0 <= volume <= 1.0:
-            raise ValueError("Preview volume must be 0..1")
+        volume = _preview_volume(volume)
         cue = cue_with_gain(cue, volume)
         rendered = await asyncio.to_thread(self.renderer.play, cue, instrument)
         if rendered is not False:
@@ -1087,7 +1094,7 @@ class GaiaScapeService:
             history_updated=history_updated,
             role=(
                 "background"
-                if cue.kind in {"ocean_swell", "storm_potential"}
+                if cue.kind in BACKGROUND_HISTORY_KINDS
                 else "event"
             ),
             event=event,
@@ -1278,7 +1285,7 @@ class GaiaScapeService:
         cycle_at = time.time()
         background_events = await asyncio.to_thread(
             self.store.latest_events_by_kind_and_place,
-            BACKGROUND_HISTORY_KINDS,
+            ("ocean_swell", "storm_potential"),
         )
         freshness_cutoff = time.time() - FORECAST_FALLBACK_MAX_AGE_SECONDS
         background_events = tuple(
@@ -1300,6 +1307,14 @@ class GaiaScapeService:
             cursor = self._ambient_cursors[kind]
             selected.append(choices[cursor % len(choices)])
             self._ambient_cursors[kind] = cursor + 1
+        if self._instruments_for_kind("birdsong"):
+            cursor = self._ambient_cursors["birdsong"]
+            selected.append(
+                await asyncio.to_thread(self.birdsong.event_at, cursor)
+            )
+            self._ambient_cursors["birdsong"] = (
+                cursor + 1
+            ) % len(BIRDSONG_LOCATIONS)
         tide_events = await asyncio.to_thread(
             self.store.events_of_kinds_since,
             ("tide_turn",),
@@ -1331,10 +1346,11 @@ class GaiaScapeService:
             "ocean_swell": ambient_duration,
             "tide_turn": ambient_duration,
             "storm_potential": ambient_duration,
+            "birdsong": ambient_duration,
         }
         source = build_score((event,), event.timestamp, 1.0, 1.0)[0]
         velocity = source.velocity
-        if event.kind in {"ocean_swell", "tide_turn", "storm_potential"}:
+        if event.kind in {"ocean_swell", "tide_turn", "storm_potential", "birdsong"}:
             # SuperCollider maps 20..127 to amplitude 0.08..0.58. Convert
             # through that mapping so 75% means amplitude, not MIDI velocity.
             current_amplitude = 0.08 + ((source.velocity - 20) / 107.0 * 0.5)
@@ -1346,7 +1362,7 @@ class GaiaScapeService:
         )
         async with self._live_play_lock:
             persistent_background = (
-                event.kind in {"ocean_swell", "storm_potential"}
+                event.kind in BACKGROUND_HISTORY_KINDS
                 and self.config.background_mappings()[event.kind] == event.kind
             )
             render = (
@@ -1354,7 +1370,11 @@ class GaiaScapeService:
             )
             for instrument, gain in self._voices_for_kind(event.kind):
                 rendered_cue = cue_with_gain(cue, gain)
-                rendered = await asyncio.to_thread(render, rendered_cue, instrument)
+                rendered = (
+                    True
+                    if event.kind == "birdsong"
+                    else await asyncio.to_thread(render, rendered_cue, instrument)
+                )
                 if rendered is not False:
                     self._record_emitted_cue(
                         rendered_cue,
@@ -1386,6 +1406,17 @@ def _capture_error_message(source: str, error: Exception) -> str:
     return f"{source}: {type(error).__name__}: {error}"
 
 
+def _preview_volume(value) -> float:
+    """Validate a preview gain shared by generated and recorded voices."""
+    try:
+        volume = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Preview volume must be 0..1") from exc
+    if not 0.0 <= volume <= 1.0:
+        raise ValueError("Preview volume must be 0..1")
+    return volume
+
+
 def _resolve_event_database(data_dir: Path) -> Path:
     """Move a database from an earlier project name without losing history."""
     current = data_dir / "gaia_scape.sqlite3"
@@ -1414,6 +1445,9 @@ def _background_forecast_signature(event: GaiaEvent):
         "ocean_swell": (
             "wave_height_m", "swell_height_m", "swell_period_s",
             "swell_direction_deg",
+        ),
+        "birdsong": (
+            "commons_page_id", "title", "creator", "license",
         ),
     }[event.kind]
     return (
