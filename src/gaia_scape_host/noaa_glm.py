@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import PurePosixPath
 
-from netCDF4 import Dataset, num2date
+from .netcdf_worker import netcdf_decoder
 
 from gaia_scape.events import GaiaEvent
 
@@ -44,6 +44,8 @@ SATELLITES = (
 @contextmanager
 def _open_dataset(payload: bytes):
     """Open NetCDF bytes through a real temporary file without HDF5 diagnostics."""
+    from netCDF4 import Dataset
+
     descriptor, path = tempfile.mkstemp(prefix="gaia-glm-", suffix=".nc")
     try:
         with os.fdopen(descriptor, "wb") as output:
@@ -72,10 +74,13 @@ def _strength_for_energy(energy_j: float) -> float:
     return max(0.05, min(1.0, (math.log10(energy_j) + 15.0) / 4.0))
 
 
+@netcdf_decoder
 def parse_glm_document(payload: bytes, object_key: str) -> tuple[GaiaEvent, ...]:
     """Normalize quality-accepted flashes from one GLM LCFA NetCDF granule."""
     if not payload or len(payload) > MAX_GRANULE_BYTES:
         raise ValueError("NOAA GLM granule is empty or exceeds the size limit")
+    from netCDF4 import num2date
+
     with _open_dataset(payload) as dataset:
         required = (
             "flash_id",
@@ -173,6 +178,7 @@ def parse_glm_document(payload: bytes, object_key: str) -> tuple[GaiaEvent, ...]
     return tuple(events)
 
 
+@netcdf_decoder
 def count_glm_flashes(payload: bytes) -> int:
     """Return the unfiltered flash count declared by one LCFA granule."""
     with _open_dataset(payload) as dataset:

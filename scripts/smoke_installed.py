@@ -1,0 +1,42 @@
+"""Smoke-test an installed headless wheel outside the source import path.
+
+CI runs this in a clean virtual environment without desktop or lightning
+extras. The caller must provide a newly created, empty runtime directory.
+"""
+
+import importlib.util
+from importlib.metadata import version
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+
+def main() -> None:
+    """Verify installed assets, entry points, version, and offline HTTP routes."""
+    data_dir = Path(os.environ['GAIA_SCAPE_DATA_DIR'])
+    if not data_dir.is_dir() or any(data_dir.iterdir()):
+        raise RuntimeError('Smoke test requires a new, empty GAIA_SCAPE_DATA_DIR')
+    for dependency in ('webview', 'netCDF4', 'eumdac'):
+        assert importlib.util.find_spec(dependency) is None, dependency
+
+    from fastapi.testclient import TestClient
+    from gaia_scape import __version__
+    from gaia_scape_host.app import create_app
+    from gaia_scape_host.config import AppConfig
+
+    assert version('gaia-scape') == __version__.removeprefix('v')
+    AppConfig(enabled_sources=[], osc_enabled=False).save(data_dir / 'config.json')
+    with TestClient(create_app(auto_capture=False)) as client:
+        assert client.get('/healthz').json()['version'] == __version__
+        assert client.get('/').status_code == 200
+        assert client.get('/static/app.js').status_code == 200
+        assert client.get('/api/events').json() == {'events': []}
+        assert client.post('/api/capture').json()['disabled'] is True
+    launcher = Path(sys.executable).parent / 'gaia-scape-server'
+    subprocess.run([str(launcher), '--help'], cwd=data_dir, check=True, capture_output=True)
+    print(f'Headless wheel {__version__}: assets, entry point, and offline APIs passed')
+
+
+if __name__ == '__main__':
+    main()

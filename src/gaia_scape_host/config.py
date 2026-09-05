@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
@@ -283,13 +284,19 @@ class AppConfig:
         """Atomically save the current configuration."""
         self.validate()
         path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_suffix(path.suffix + ".tmp")
         document = asdict(self)
         document.update(getattr(self, "_persisted_environment_values", {}))
-        temporary.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
-        temporary.chmod(0o600)
-        temporary.replace(path)
-        path.chmod(0o600)
+        descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+        temporary = Path(temporary_name)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as output:
+                json.dump(document, output, indent=2)
+                output.write("\n")
+                output.flush()
+                os.fsync(output.fileno())
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
 
 
 def resolve_data_dir() -> Path:

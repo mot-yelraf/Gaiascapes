@@ -11,6 +11,9 @@ import time
 
 from gaia_scape.score import ScoreCue
 
+from .contracts import Renderer
+from .playback import render_call
+
 
 def cue_with_gain(cue, gain: float):
     """Return a cue whose MIDI velocity produces the requested amplitude gain."""
@@ -31,11 +34,12 @@ def cue_with_gain(cue, gain: float):
 class PerformancePlayer:
     """Own at most one score playback task."""
 
-    def __init__(self, renderer, on_played=None, instruments_for_cue=None):
+    def __init__(self, renderer: Renderer, on_played=None, instruments_for_cue=None):
         self.renderer = renderer
         self.on_played = on_played
         self.instruments_for_cue = instruments_for_cue
         self._task = None
+        self._lifecycle_lock = asyncio.Lock()
         self.started_at = None
         self.finished_at = None
         self.cue_count = 0
@@ -49,17 +53,22 @@ class PerformancePlayer:
 
     async def start(self, score) -> None:
         """Cancel an existing performance and begin the supplied score."""
-        await self.stop()
-        score = tuple(score)
-        self.started_at = time.time()
-        self.finished_at = None
-        self.cue_count = sum(len(self._voices(cue)) for cue in score)
-        self.played_count = 0
-        self.last_error = ""
-        self._task = asyncio.create_task(self._run(score), name="gaia-scape-performance")
+        async with self._lifecycle_lock:
+            await self._stop()
+            score = tuple(score)
+            self.started_at = time.time()
+            self.finished_at = None
+            self.cue_count = sum(len(self._voices(cue)) for cue in score)
+            self.played_count = 0
+            self.last_error = ""
+            self._task = asyncio.create_task(self._run(score), name="gaia-scape-performance")
 
     async def stop(self) -> None:
         """Stop current playback promptly."""
+        async with self._lifecycle_lock:
+            await self._stop()
+
+    async def _stop(self) -> None:
         if self._task is not None and not self._task.done():
             self._task.cancel()
             try:
@@ -78,7 +87,7 @@ class PerformancePlayer:
                     await asyncio.sleep(delay)
                 for instrument, gain in self._voices(cue):
                     rendered_cue = cue_with_gain(cue, gain)
-                    rendered = await asyncio.to_thread(
+                    rendered = await render_call(
                         self.renderer.play, rendered_cue, instrument
                     )
                     if rendered is not False:

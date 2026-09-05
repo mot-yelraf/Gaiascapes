@@ -3,6 +3,12 @@ set -euo pipefail
 
 SOURCE_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 PYTHON_BIN="${GAIA_SCAPE_PYTHON:-python3}"
+INSTALL_MODE="${GAIA_SCAPE_INSTALL_MODE:-desktop}"
+case "$INSTALL_MODE" in
+  desktop) PACKAGE_EXTRAS="desktop,lightning,eumetsat" ;;
+  headless) PACKAGE_EXTRAS="lightning,eumetsat" ;;
+  *) printf 'GAIA_SCAPE_INSTALL_MODE must be desktop or headless.\n' >&2; exit 1 ;;
+esac
 DEFAULT_INSTALL_DIR="${HOME}/Gaia_Scape"
 STATE_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/gaia-scape"
 STATE_FILE="$STATE_DIR/install-location"
@@ -85,15 +91,17 @@ if [[ "$(uname -s)" == Linux ]]; then
 else
   "$PYTHON_BIN" -m venv "$INSTALL_DIR/.venv" || fail "Could not create the virtual environment."
 fi
-if ! "$INSTALL_DIR/.venv/bin/python" -m pip install --disable-pip-version-check --upgrade "$SOURCE_DIR" 2>&1 | tee -a "$LOG_FILE"; then
+if ! "$INSTALL_DIR/.venv/bin/python" -m pip install --disable-pip-version-check --upgrade "$SOURCE_DIR[$PACKAGE_EXTRAS]" 2>&1 | tee -a "$LOG_FILE"; then
   fail "Python package installation failed. Check $LOG_FILE for details."
 fi
-"$INSTALL_DIR/.venv/bin/python" -c 'import webview' \
-  || fail "pywebview could not be imported after installation."
-if [[ "$(uname -s)" == Linux ]]; then
-  "$INSTALL_DIR/.venv/bin/python" -c \
-    "import gi; gi.require_version('Gtk', '3.0'); gi.require_version('WebKit2', '4.1'); from gi.repository import Gtk, WebKit2" \
-    || fail "GTK/WebKit is missing. On Debian, Ubuntu, or Raspberry Pi OS install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 and run this installer again."
+if [[ "$INSTALL_MODE" == desktop ]]; then
+  "$INSTALL_DIR/.venv/bin/python" -c 'import webview' \
+    || fail "pywebview could not be imported after installation."
+  if [[ "$(uname -s)" == Linux ]]; then
+    "$INSTALL_DIR/.venv/bin/python" -c \
+      "import gi; gi.require_version('Gtk', '3.0'); gi.require_version('WebKit2', '4.1'); from gi.repository import Gtk, WebKit2" \
+      || fail "GTK/WebKit is missing. On Debian, Ubuntu, or Raspberry Pi OS install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 and run this installer again."
+  fi
 fi
 "$INSTALL_DIR/.venv/bin/python" -m pip uninstall --yes earth-rhythms >/dev/null 2>&1 || true
 

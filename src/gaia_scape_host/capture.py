@@ -59,6 +59,10 @@ class EventStore:
                 "ON gaia_events (kind, occurred_at)"
             )
             connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_gaia_events_provider_kind_occurred "
+                "ON gaia_events (provider, kind, occurred_at)"
+            )
+            connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS retained_status_events (
                     kind TEXT PRIMARY KEY,
@@ -190,27 +194,52 @@ class EventStore:
             ).fetchall()
         return tuple(_event_from_row(row) for row in rows)
 
-    def events_of_kinds_since(self, kinds, since_timestamp: float, limit: int = 5000):
+    def events_of_kinds_since(
+        self, kinds, since_timestamp: float, limit: int = 5000,
+        provider: str | None = None, newest_first: bool = False,
+    ):
         """Return only the requested event kinds on or after a timestamp."""
         kinds = tuple(dict.fromkeys(str(kind) for kind in kinds))
         if not kinds:
             return ()
         placeholders = ",".join("?" for _kind in kinds)
+        provider_filter = " AND provider = ?" if provider is not None else ""
+        order = "DESC" if newest_first else "ASC"
         with closing(sqlite3.connect(self.path)) as connection:
             rows = connection.execute(
                 f"""
                 SELECT provider, event_id, kind, occurred_at, latitude,
                        longitude, strength, traits_json
                 FROM gaia_events
-                WHERE kind IN ({placeholders}) AND occurred_at >= ?
-                ORDER BY occurred_at ASC, provider ASC, event_id ASC
+                WHERE kind IN ({placeholders}) AND occurred_at >= ?{provider_filter}
+                ORDER BY occurred_at {order}, provider {order}, event_id {order}
                 LIMIT ?
                 """,
                 (
                     *kinds,
                     float(since_timestamp),
+                    *((provider,) if provider is not None else ()),
                     max(1, min(20000, int(limit))),
                 ),
+            ).fetchall()
+        return tuple(_event_from_row(row) for row in rows)
+
+    def recent_visible_events(self, since_timestamp, excluded_kinds, limit=500):
+        """Filter history in SQL before taking the newest bounded result."""
+        excluded = tuple(excluded_kinds)
+        placeholders = ",".join("?" for _ in excluded)
+        exclusion = f" AND kind NOT IN ({placeholders})" if excluded else ""
+        with closing(sqlite3.connect(self.path)) as connection:
+            rows = connection.execute(
+                f"""
+                SELECT provider, event_id, kind, occurred_at, latitude,
+                       longitude, strength, traits_json
+                FROM gaia_events
+                WHERE occurred_at >= ?{exclusion}
+                ORDER BY occurred_at DESC, provider DESC, event_id DESC
+                LIMIT ?
+                """,
+                (float(since_timestamp), *excluded, max(1, min(20000, int(limit)))),
             ).fetchall()
         return tuple(_event_from_row(row) for row in rows)
 

@@ -11,16 +11,16 @@ import logging
 import os
 import random
 import shutil
-import threading
 import time
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 
 from gaia_scape.events import GaiaEvent
 from gaia_scape.score import ScoreCue, build_score, event_duration
 
 from .capture import EventStore
+from .contracts import EventProvider
 from .commons_birdsong import BIRDSONG_LOCATIONS, CommonsBirdsongClient
 from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS, SUPPORTED_SOURCES
 from .eumetsat_li import EumetsatLiClient
@@ -31,14 +31,16 @@ from .open_meteo import (
 )
 from .noaa_glm import GLM_POLL_SECONDS, NoaaGlmClient
 from .osc import OscRenderer
+from .history import HistoryView, BACKGROUND_HISTORY_KINDS, HIDDEN_HISTORY_KINDS
+from .settings import settings_candidate, persist_settings
+from .polling import PollingCoordinator
+from .playback import PlaybackController, render_call
 from .performance import PerformancePlayer, cue_with_gain
 from .usgs import UsgsClient
 
 
 CUE_LONG_POLL_SECONDS = 2.0
 EMITTED_CUE_LIMIT = 10000
-BACKGROUND_HISTORY_KINDS = frozenset({"ocean_swell", "storm_potential", "birdsong"})
-HIDDEN_HISTORY_KINDS = frozenset({"lightning_flash"})
 LOGGER = logging.getLogger("uvicorn.error")
 GLM_SONIFICATION_TIME_SCALE = 1.0
 MTG_PRESENTATION_DELAY_SECONDS = 12 * 60.0
@@ -86,17 +88,22 @@ class GaiaScapeService:
         self,
         config: AppConfig,
         data_dir: Path,
-        usgs_client=None,
-        marine_client=None,
-        storm_client=None,
-        glm_client=None,
-        mtg_li_client=None,
+        usgs_client: EventProvider | None = None,
+        marine_client: EventProvider | None = None,
+        storm_client: EventProvider | None = None,
+        glm_client: EventProvider | None = None,
+        mtg_li_client: EventProvider | None = None,
         birdsong_client=None,
     ):
         self.config = config
         self.data_dir = Path(data_dir)
         self.store = EventStore(_resolve_event_database(self.data_dir))
         self.store.initialize()
+        self.history = HistoryView(self.store)
+        self.polling = PollingCoordinator(SUPPORTED_SOURCES)
+        self.playback = PlaybackController()
+        self._settings_lock = asyncio.Lock()
+        self._playback_lifecycle_lock = asyncio.Lock()
         self._source_recovery = {
             source: _SourceRecovery(
                 last_data_at=self.store.latest_ingested_at_for_provider(source)
@@ -134,12 +141,6 @@ class GaiaScapeService:
             self._record_emitted_cue,
             lambda cue: self._voices_for_kind(cue.kind),
         )
-        self._capture_lock = asyncio.Lock()
-        self._poll_task = None
-        self._glm_poll_task = None
-        self._source_fetch_locks = {
-            source: threading.Lock() for source in SUPPORTED_SOURCES
-        }
         self._glm_sonification_task = None
         self._last_glm_sonification_events = ()
         self._glm_replaying_cached_field = False
@@ -172,36 +173,18 @@ class GaiaScapeService:
         recent = self.store.events_of_kinds_since(
             ("lightning_flash",),
             time.time() - GLM_FALLBACK_MAX_AGE_SECONDS,
-            500,
+            500, provider="noaa_glm", newest_first=True,
         )
         if not recent:
             return
         newest = max(event.timestamp for event in recent)
         self._last_glm_sonification_events = tuple(
-            event for event in recent if event.timestamp >= newest - GLM_POLL_SECONDS
+            event for event in reversed(recent) if event.timestamp >= newest - GLM_POLL_SECONDS
         )[-120:]
 
-    def _fetch_source_sync(self, source: str, client):
-        """Fetch one provider without overlapping a previously timed-out worker."""
-        lock = self._source_fetch_locks[source]
-        if not lock.acquire(blocking=False):
-            raise RuntimeError("Previous provider fetch is still running.")
-        try:
-            return client.fetch()
-        finally:
-            lock.release()
-
     async def _fetch_source(self, source: str, client):
-        """Bound one provider fetch so it cannot stall its polling loop."""
-        try:
-            return await asyncio.wait_for(
-                asyncio.to_thread(self._fetch_source_sync, source, client),
-                timeout=SOURCE_FETCH_TIMEOUT_SECONDS,
-            )
-        except asyncio.TimeoutError as exc:
-            raise TimeoutError(
-                f"Provider fetch exceeded {SOURCE_FETCH_TIMEOUT_SECONDS:g} seconds."
-            ) from exc
+        """Bound a provider fetch and prevent overlapping worker calls."""
+        return await self.polling.fetch(source, client, SOURCE_FETCH_TIMEOUT_SECONDS)
 
     def _source_can_retry(self, source: str) -> bool:
         retry_at = self._source_recovery[source].retry_at
@@ -420,48 +403,44 @@ class GaiaScapeService:
         }
 
     async def start_polling(self) -> None:
-        """Start one idempotent background polling loop."""
-        if self._poll_task is None or self._poll_task.done():
-            self._poll_task = asyncio.create_task(
-                self._poll_loop(), name="gaia-scape-capture"
-            )
-        if self._glm_poll_task is None or self._glm_poll_task.done():
-            self._glm_poll_task = asyncio.create_task(
-                self._glm_poll_loop(), name="gaia-scape-glm-capture"
-            )
+        """Start one independently scheduled loop per provider."""
+        for source in SUPPORTED_SOURCES:
+            if source == "noaa_glm":
+                self.polling.start(
+                    source, lambda: self.capture_glm_once(respect_backoff=True),
+                    lambda: GLM_POLL_SECONDS,
+                )
+            else:
+                self.polling.start(
+                    source,
+                    lambda source=source: self.capture_once(True, source),
+                    lambda: self.config.poll_seconds,
+                )
 
     async def start_continuous(self) -> None:
         """Start the ambient live-event stream without duplicating it."""
-        if self._continuous_task is None or self._continuous_task.done():
-            self._last_continuous_cycle_at = time.time()
-            self._continuous_task = asyncio.create_task(
-                self._continuous_loop(), name="gaia-scape-continuous"
-            )
-            await self._restore_mtg_schedule()
+        async with self._playback_lifecycle_lock:
+            self.playback.start()
+            if self._continuous_task is None or self._continuous_task.done():
+                self._last_continuous_cycle_at = time.time()
+                self._continuous_task = self.playback.schedule(
+                    self._continuous_loop(), name="gaia-scape-continuous"
+                )
+                await self._restore_mtg_schedule()
 
     async def stop_continuous(self) -> None:
-        """Stop only the ambient live-event stream."""
-        if self._continuous_task is not None and not self._continuous_task.done():
-            self._continuous_task.cancel()
-            try:
-                await self._continuous_task
-            except asyncio.CancelledError:
-                pass
-        self._continuous_task = None
-        if (
-            self._glm_sonification_task is not None
-            and not self._glm_sonification_task.done()
-        ):
-            self._glm_sonification_task.cancel()
-            try:
-                await self._glm_sonification_task
-            except asyncio.CancelledError:
-                pass
-        self._glm_sonification_task = None
-        self._glm_replaying_cached_field = False
-        await self._cancel_mtg_sonification()
-        await asyncio.to_thread(self.renderer.stop_layer, "ocean_swell")
-        await asyncio.to_thread(self.renderer.stop_layer, "storm_potential")
+        """Pause all continuous playback while leaving capture enabled."""
+        async with self._playback_lifecycle_lock:
+            await self.playback.stop()
+            self._continuous_task = None
+            self._glm_sonification_task = None
+            self._glm_replaying_cached_field = False
+            self._mtg_sonification_tasks.clear()
+            # Cancelled products can resume their remaining timeline on Start.
+            self._mtg_scheduled_products.clear()
+            async with self._live_play_lock:
+                await asyncio.to_thread(self.renderer.stop_layer, "ocean_swell")
+                await asyncio.to_thread(self.renderer.stop_layer, "storm_potential")
 
     async def set_live_mode(self, mode: str) -> None:
         """Select capture or continuous behavior and apply it immediately."""
@@ -479,116 +458,85 @@ class GaiaScapeService:
             await self.stop_continuous()
 
     async def stop(self) -> None:
-        """Stop capture and playback tasks."""
-        if self._poll_task is not None and not self._poll_task.done():
-            self._poll_task.cancel()
-            try:
-                await self._poll_task
-            except asyncio.CancelledError:
-                pass
-        self._poll_task = None
-        if self._glm_poll_task is not None and not self._glm_poll_task.done():
-            self._glm_poll_task.cancel()
-            try:
-                await self._glm_poll_task
-            except asyncio.CancelledError:
-                pass
-        self._glm_poll_task = None
-        if (
-            self._glm_sonification_task is not None
-            and not self._glm_sonification_task.done()
-        ):
-            self._glm_sonification_task.cancel()
-            try:
-                await self._glm_sonification_task
-            except asyncio.CancelledError:
-                pass
-        self._glm_sonification_task = None
+        """Stop provider polling and drain playback tasks."""
+        await self.polling.stop()
         await self.stop_continuous()
         await self.player.stop()
 
-    async def capture_once(self, respect_backoff: bool = False) -> dict:
-        """Fetch, normalize, persist, and prune all enabled provider feeds."""
-        async with self._capture_lock:
-            self.last_capture_at = time.time()
-            clients = (
-                ("usgs", self.usgs),
-                ("open_meteo_marine", self.marine),
-                ("open_meteo_storm", self.storm),
-                ("eumetsat_mtg_li", self.mtg_li),
-            )
-            enabled_clients = tuple(
-                (source, client)
-                for source, client in clients
-                if source in self.config.enabled_sources
-            )
-            if not enabled_clients:
-                self.last_capture_count = 0
-                self.last_capture_inserted = 0
-                self.last_capture_error = ""
+    def _capture_clients(self) -> dict[str, EventProvider]:
+        return {
+            "usgs": self.usgs,
+            "open_meteo_marine": self.marine,
+            "open_meteo_storm": self.storm,
+            "eumetsat_mtg_li": self.mtg_li,
+        }
+
+    async def _capture_source(self, source, respect_backoff):
+        async with self.polling.capture_locks[source]:
+            if source not in self.config.enabled_sources:
                 return {"received": 0, "inserted": 0, "pruned": 0, "disabled": True}
+            if respect_backoff and not self._source_can_retry(source):
+                return {"received": 0, "inserted": 0, "pruned": 0, "backing_off": True}
+            client = self._capture_clients()[source]
+            locations = getattr(client, "locations", None)
+            self._mark_source_recovering(source)
             try:
-                events = []
-                errors = []
-                forecast_catalogs = []
-                source_event_sets = {}
-                backing_off = []
-                for source, client in enabled_clients:
-                    if respect_backoff and not self._source_can_retry(source):
-                        backing_off.append(source)
-                        continue
-                    self._mark_source_recovering(source)
-                    try:
-                        source_events = tuple(await self._fetch_source(source, client))
-                        source_event_sets[source] = source_events
-                        events.extend(source_events)
-                        locations = getattr(client, "locations", ())
-                        if source.startswith("open_meteo_") and locations:
-                            forecast_catalogs.append((source, tuple(locations)))
-                        self._mark_source_success(source, source_events, client)
-                    except Exception as exc:
-                        self._mark_source_failure(source, exc)
-                        error = _capture_error_message(source, exc)
-                        if error not in errors:
-                            errors.append(error)
-                if errors and not events and not backing_off:
-                    raise RuntimeError("; ".join(errors))
-                inserted_events = await asyncio.to_thread(self.store.add_new_events, events)
-                inserted = len(inserted_events)
-                cutoff = time.time() - (self.config.retention_days * 86400)
-                pruned = await asyncio.to_thread(self.store.prune_before, cutoff)
-                for provider, active_places in forecast_catalogs:
-                    pruned += await asyncio.to_thread(
-                        self.store.prune_provider_locations, provider, active_places
+                events = tuple(await self._fetch_source(source, client))
+                async with self._settings_lock:
+                    if (source not in self.config.enabled_sources
+                            or client is not self._capture_clients()[source]
+                            or locations != getattr(client, "locations", None)):
+                        return {"received": 0, "inserted": 0, "pruned": 0, "discarded": True}
+                    inserted_events = await asyncio.to_thread(self.store.add_new_events, events)
+                    pruned = await asyncio.to_thread(
+                        self.store.prune_before,
+                        time.time() - self.config.retention_days * 86400,
                     )
-                self.last_capture_count = len(events)
-                self.last_capture_inserted = inserted
-                active_errors = list(errors)
-                active_errors.extend(
-                    self._source_recovery[source].last_error
-                    for source in backing_off
-                    if self._source_recovery[source].last_error
-                )
-                self.last_capture_error = "; ".join(dict.fromkeys(active_errors))
-                if self.config.live_mode == "continuous":
-                    earthquakes = [
-                        event for event in inserted_events if event.kind == "earthquake"
-                    ]
-                    if earthquakes:
-                        await self._play_live_event(
-                            max(earthquakes, key=lambda event: event.strength)
+                    if source.startswith("open_meteo_") and locations:
+                        pruned += await asyncio.to_thread(
+                            self.store.prune_provider_locations, source, locations
                         )
-                    mtg_events = source_event_sets.get("eumetsat_mtg_li", ())
-                    if mtg_events:
-                        self._start_mtg_sonification(mtg_events)
-                return {
-                    "received": len(events),
-                    "inserted": inserted,
-                    "pruned": pruned,
-                }
+                    self._mark_source_success(source, events, client)
+                    try:
+                        if self.playback.enabled and self.config.live_mode == "continuous":
+                            earthquakes = [event for event in inserted_events if event.kind == "earthquake"]
+                            if earthquakes:
+                                await self._play_live_event(max(earthquakes, key=lambda event: event.strength))
+                            if source == "eumetsat_mtg_li" and events:
+                                self._start_mtg_sonification(events)
+                    except Exception as exc:
+                        # Audio transport failure must not mark capture offline.
+                        self.continuous_last_error = f"Playback failed: {exc}"
+                        LOGGER.warning("Live event playback failed: %s", exc)
+                    return {"received": len(events), "inserted": len(inserted_events), "pruned": pruned}
             except Exception as exc:
-                self.last_capture_error = f"{type(exc).__name__}: {exc}"
-                raise
+                if client is not self._capture_clients()[source]:
+                    return {"received": 0, "inserted": 0, "pruned": 0, "discarded": True}
+                self._mark_source_failure(source, exc)
+                return {"received": 0, "inserted": 0, "pruned": 0, "error": _capture_error_message(source, exc)}
+
+    async def capture_once(self, respect_backoff: bool = False, source=None) -> dict:
+        """Capture enabled feeds concurrently and publish each batch promptly."""
+        self.last_capture_at = time.time()
+        sources = (source,) if source is not None else tuple(self._capture_clients())
+        results = await asyncio.gather(*(
+            self._capture_source(item, respect_backoff) for item in sources
+        ))
+        summary = {key: sum(result[key] for result in results) for key in ("received", "inserted", "pruned")}
+        self.last_capture_count = summary["received"]
+        self.last_capture_inserted = summary["inserted"]
+        errors = [result["error"] for result in results if "error" in result]
+        errors.extend(
+            self._source_recovery[item].last_error for item, result in zip(sources, results)
+            if result.get("backing_off") and self._source_recovery[item].last_error
+        )
+        self.last_capture_error = "; ".join(dict.fromkeys(errors))
+        if results and all(result.get("disabled") for result in results):
+            summary["disabled"] = True
+        attempted = [result for result in results if not result.get("disabled")]
+        if attempted and all("error" in result for result in attempted):
+            raise RuntimeError(self.last_capture_error)
+        return summary
 
     async def capture_glm_once(self, respect_backoff: bool = False) -> dict:
         """Retrieve, persist, and sound one independent NOAA GLM update."""
@@ -638,7 +586,7 @@ class GaiaScapeService:
                 if sonification_events:
                     self._last_glm_sonification_events = sonification_events
                     self._glm_replaying_cached_field = False
-                    if self.config.live_mode == "continuous":
+                    if self.playback.enabled and self.config.live_mode == "continuous":
                         self._start_glm_sonification(sonification_events)
                 else:
                     self._replay_last_glm_sonification()
@@ -679,73 +627,12 @@ class GaiaScapeService:
         }
 
     async def recent_events(self, hours=None, limit=500):
-        """Return recently occurring or recently emitted stored events."""
-        hours = self.config.replay_hours if hours is None else float(hours)
-        hours = max(0.05, min(24.0, hours))
-        cutoff = time.time() - (hours * 3600.0)
-        events = await asyncio.to_thread(
-            self.store.events_since, cutoff, 20000
+        """Return a filtered, newest-first snapshot of visible history."""
+        return await self.history.recent_events(
+            self.config.replay_hours if hours is None else hours, limit,
+            tuple(self._emitted_cues), tuple(self._published_background_state.values()),
+            self._instruments_for_kind,
         )
-        events = tuple(
-            event
-            for event in events
-            if event.kind not in BACKGROUND_HISTORY_KINDS
-            and event.kind not in HIDDEN_HISTORY_KINDS
-        )
-        recent_cues = tuple(
-            cue
-            for cue in self._emitted_cues
-            if cue["emitted_at"] >= cutoff
-            and cue["event"]["kind"] not in BACKGROUND_HISTORY_KINDS
-            and cue["event"]["kind"] not in HIDDEN_HISTORY_KINDS
-        )
-        event_keys = {(event.provider, event.event_id) for event in events}
-        emitted_keys = {
-            (cue["event"]["provider"], cue["event"]["event_id"])
-            for cue in recent_cues
-        }
-        missing_events = await asyncio.to_thread(
-            self.store.events_by_keys, emitted_keys - event_keys
-        )
-        events = (*events, *missing_events)
-        emitted_instruments = {}
-        for cue in recent_cues:
-            key = (cue["event"]["provider"], cue["event"]["event_id"])
-            instruments = emitted_instruments.setdefault(key, [])
-            if cue["instrument"] not in instruments:
-                instruments.append(cue["instrument"])
-        emitted_times = {
-            (cue["event"]["provider"], cue["event"]["event_id"]): cue["emitted_at"]
-            for cue in recent_cues
-        }
-        history = []
-        for event in events:
-            item = event.as_dict()
-            key = (event.provider, event.event_id)
-            instruments = emitted_instruments.get(key)
-            if instruments is None:
-                instruments = list(dict.fromkeys(self._instruments_for_kind(event.kind)))
-            item["instruments"] = instruments
-            item["instrument"] = instruments[0] if instruments else "none"
-            item["emitted_at"] = emitted_times.get(key)
-            history.append(item)
-        for state in self._published_background_state.values():
-            event = state["event"]
-            if event["timestamp"] < cutoff:
-                continue
-            item = dict(event)
-            item["instruments"] = [state["instrument"]]
-            item["instrument"] = state["instrument"]
-            item["emitted_at"] = state["published_at"]
-            history.append(item)
-        history.sort(
-            key=lambda item: (
-                item["emitted_at"] is not None,
-                item["emitted_at"] or item["timestamp"],
-            ),
-            reverse=True,
-        )
-        return tuple(history[:max(1, min(20000, int(limit)))])
 
     async def status(self) -> dict:
         """Build the observable application status contract."""
@@ -773,7 +660,7 @@ class GaiaScapeService:
         }
         return {
             "capture": {
-                "polling": self._poll_task is not None and not self._poll_task.done(),
+                "polling": any(self.polling.running(source) for source in SUPPORTED_SOURCES if source != "noaa_glm"),
                 "last_at": self.last_capture_at,
                 "last_received": self.last_capture_count,
                 "last_inserted": self.last_capture_inserted,
@@ -808,8 +695,7 @@ class GaiaScapeService:
             "glm": {
                 **glm_status,
                 "enabled": "noaa_glm" in self.config.enabled_sources,
-                "polling": self._glm_poll_task is not None
-                and not self._glm_poll_task.done(),
+                "polling": self.polling.running("noaa_glm"),
                 "interval_seconds": GLM_POLL_SECONDS,
                 "last_at": self.last_glm_capture_at,
                 "last_received": self.last_glm_received,
@@ -863,108 +749,53 @@ class GaiaScapeService:
         return instruments
 
     def apply_audio_settings(
-        self,
-        enabled_sources,
-        event_instruments,
-        units: str | None = None,
-        instrument_volumes=None,
-        lightning_sample_rate=None,
-        eumetsat_consumer_key=None,
-        eumetsat_consumer_secret=None,
+        self, enabled_sources, event_instruments, units=None,
+        instrument_volumes=None, lightning_sample_rate=None,
+        eumetsat_consumer_key=None, eumetsat_consumer_secret=None,
     ) -> None:
-        """Apply validated capture and instrument settings to live components."""
-        previous_sources = self.config.enabled_sources
-        previous_instruments = self.config.event_instruments
-        previous_units = self.config.units
-        previous_volumes = self.config.instrument_volumes
-        previous_lightning_sample_rate = self.config.lightning_sample_rate
-        previous_eumetsat_consumer_key = self.config.eumetsat_consumer_key
-        previous_eumetsat_consumer_secret = self.config.eumetsat_consumer_secret
-        try:
-            self.config.enabled_sources = list(enabled_sources)
-            self.config.event_instruments = dict(event_instruments)
-            if units is not None:
-                self.config.units = units
-            if instrument_volumes is not None:
-                self.config.instrument_volumes = dict(instrument_volumes)
-            if lightning_sample_rate is not None:
-                self.config.lightning_sample_rate = lightning_sample_rate
-            if eumetsat_consumer_key is not None:
-                self.config.eumetsat_consumer_key = eumetsat_consumer_key
-            if eumetsat_consumer_secret is not None:
-                self.config.eumetsat_consumer_secret = eumetsat_consumer_secret
-            self.config.validate()
-        except (TypeError, ValueError):
-            self.config.enabled_sources = previous_sources
-            self.config.event_instruments = previous_instruments
-            self.config.units = previous_units
-            self.config.instrument_volumes = previous_volumes
-            self.config.lightning_sample_rate = previous_lightning_sample_rate
-            self.config.eumetsat_consumer_key = previous_eumetsat_consumer_key
-            self.config.eumetsat_consumer_secret = previous_eumetsat_consumer_secret
-            raise
-        self.glm.sonification_sample_stride = self.config.lightning_sample_rate
-        if hasattr(self.mtg_li, "set_credentials"):
-            self.mtg_li.set_credentials(
-                self.config.eumetsat_consumer_key,
-                self.config.eumetsat_consumer_secret,
-            )
-        for source in set(self.config.enabled_sources) - set(previous_sources):
-            self._source_recovery[source] = _SourceRecovery(
-                last_data_at=self.store.latest_ingested_at_for_provider(source)
-            )
-        self.renderer.instrument_mappings = self.config.background_mappings()
-        for kind in ("ocean_swell", "storm_potential"):
-            if self.renderer.instrument_mappings[kind] != kind:
-                self.renderer.stop_layer(kind)
+        """Configure audio before polling starts; HTTP uses update_settings."""
+        changes = {"enabled_sources": list(enabled_sources), "event_instruments": dict(event_instruments)}
+        optional = {
+            "units": units, "instrument_volumes": instrument_volumes,
+            "lightning_sample_rate": lightning_sample_rate,
+            "eumetsat_consumer_key": eumetsat_consumer_key,
+            "eumetsat_consumer_secret": eumetsat_consumer_secret,
+        }
+        changes.update({key: value for key, value in optional.items() if value is not None})
+        self._apply_config(settings_candidate(self.config, changes))
 
-    def apply_forecast_locations(self, ocean_swell_locations, storm_outlook_locations) -> int:
-        """Validate and apply editable Open-Meteo sampling catalogs."""
-        previous_ocean = self.config.ocean_swell_locations
-        previous_storm = self.config.storm_outlook_locations
-        try:
-            self.config.ocean_swell_locations = ocean_swell_locations
-            self.config.storm_outlook_locations = storm_outlook_locations
-            self.config.validate()
-        except (TypeError, ValueError):
-            self.config.ocean_swell_locations = previous_ocean
-            self.config.storm_outlook_locations = previous_storm
-            raise
-        ocean_changed = previous_ocean != self.config.ocean_swell_locations
-        storm_changed = previous_storm != self.config.storm_outlook_locations
-        marine_locations = provider_locations(
-            self.config.ocean_swell_locations, "swell"
-        )
-        storm_locations = provider_locations(
-            self.config.storm_outlook_locations, "storm"
-        )
-        if isinstance(self.marine, OpenMeteoMarineClient):
-            self.marine.locations = marine_locations
-            self.marine._has_cache = False
-        if isinstance(self.storm, OpenMeteoStormClient):
-            self.storm.locations = storm_locations
-            self.storm._has_cache = False
-        pruned = self.store.prune_provider_locations(
-            "open_meteo_marine", marine_locations
-        )
-        pruned += self.store.prune_provider_locations(
-            "open_meteo_storm", storm_locations
-        )
-        if ocean_changed or storm_changed:
-            changed_kinds = {
-                kind
-                for kind, changed in (
-                    ("ocean_swell", ocean_changed),
-                    ("storm_potential", storm_changed),
-                )
-                if changed
-            }
+    def _apply_config(self, candidate):
+        previous_sources = set(self.config.enabled_sources)
+        changed_kinds = set()
+        for field_name, client_name, kind, prefix, client_type in (
+            ("ocean_swell_locations", "marine", "ocean_swell", "swell", OpenMeteoMarineClient),
+            ("storm_outlook_locations", "storm", "storm_potential", "storm", OpenMeteoStormClient),
+        ):
+            if getattr(self.config, field_name) != getattr(candidate, field_name):
+                changed_kinds.add(kind)
+                # Replace rather than mutate a client with an in-flight worker.
+                if isinstance(getattr(self, client_name), client_type):
+                    setattr(self, client_name, client_type(
+                        locations=provider_locations(getattr(candidate, field_name), prefix)
+                    ))
+        credentials = (candidate.eumetsat_consumer_key, candidate.eumetsat_consumer_secret)
+        if credentials != (self.config.eumetsat_consumer_key, self.config.eumetsat_consumer_secret):
+            if isinstance(self.mtg_li, EumetsatLiClient):
+                self.mtg_li = EumetsatLiClient(*credentials)
+            elif hasattr(self.mtg_li, "set_credentials"):
+                self.mtg_li.set_credentials(*credentials)
+        for item in fields(AppConfig):
+            setattr(self.config, item.name, getattr(candidate, item.name))
+        self.glm.sonification_sample_stride = self.config.lightning_sample_rate
+        self.renderer.instrument_mappings = self.config.background_mappings()
+        for source in set(self.config.enabled_sources) - previous_sources:
+            self._source_recovery[source] = _SourceRecovery(
+                last_data_at=self._source_recovery[source].last_data_at
+            )
+        if changed_kinds:
             self._emitted_cues = deque(
-                (
-                    cue for cue in self._emitted_cues
-                    if cue["event"]["kind"] not in changed_kinds
-                ),
-                maxlen=1000,
+                (cue for cue in self._emitted_cues if cue["event"]["kind"] not in changed_kinds),
+                maxlen=EMITTED_CUE_LIMIT,
             )
             for key in tuple(self._published_background_state):
                 if key[1] in changed_kinds:
@@ -973,8 +804,37 @@ class GaiaScapeService:
             self._latest_sound_location = None
             for kind in changed_kinds:
                 self._ambient_cursors[kind] = 0
-                self.renderer.stop_layer(kind)
-        return pruned
+        return changed_kinds
+
+    async def update_settings(self, changes: dict, path: Path) -> int:
+        """Persist a candidate before applying coordinated runtime changes."""
+        async with self._settings_lock:
+            candidate = settings_candidate(self.config, changes)
+            await persist_settings(candidate, path)
+            pruned = 0
+            try:
+                changed_kinds = self._apply_config(candidate)
+                for kind, source, catalog, prefix in (
+                    ("ocean_swell", "open_meteo_marine", self.config.ocean_swell_locations, "swell"),
+                    ("storm_potential", "open_meteo_storm", self.config.storm_outlook_locations, "storm"),
+                ):
+                    if kind in changed_kinds:
+                        pruned += await asyncio.to_thread(
+                            self.store.prune_provider_locations, source, provider_locations(catalog, prefix)
+                        )
+                    if kind in changed_kinds or self.renderer.instrument_mappings[kind] != kind:
+                        async with self._live_play_lock:
+                            await asyncio.to_thread(self.renderer.stop_layer, kind)
+                if "live_mode" in changes:
+                    if self.config.live_mode == "continuous":
+                        await self.player.stop()
+                        await self.start_continuous()
+                    else:
+                        await self.stop_continuous()
+            except Exception as exc:
+                self.continuous_last_error = f"Settings saved, but runtime update failed: {exc}"
+                raise RuntimeError(self.continuous_last_error) from exc
+            return pruned
 
     async def preview_instrument(
         self, instrument: str, kind: str = "earthquake", volume: float = 1.0
@@ -1102,30 +962,6 @@ class GaiaScapeService:
         self._emitted_cues.append(payload)
         self._cue_event.set()
 
-    async def _poll_loop(self) -> None:
-        while True:
-            try:
-                await self.capture_once(respect_backoff=True)
-            except Exception:
-                # The error is retained in status; the next interval retries.
-                pass
-            await asyncio.sleep(self.config.poll_seconds)
-
-    async def _glm_poll_loop(self) -> None:
-        """Poll GLM on its native cadence, independently of hourly forecasts."""
-        while True:
-            cycle_started = time.monotonic()
-            if "noaa_glm" in self.config.enabled_sources:
-                try:
-                    await self.capture_glm_once(respect_backoff=True)
-                except asyncio.CancelledError:
-                    raise
-                except Exception:
-                    # The provider-specific error remains visible in status and logs.
-                    pass
-            elapsed = time.monotonic() - cycle_started
-            await asyncio.sleep(max(1.0, GLM_POLL_SECONDS - elapsed))
-
     def _start_glm_sonification(self, events) -> None:
         """Replace an older flash field with the newest 20-second observation."""
         if (
@@ -1133,7 +969,7 @@ class GaiaScapeService:
             and not self._glm_sonification_task.done()
         ):
             self._glm_sonification_task.cancel()
-        self._glm_sonification_task = asyncio.create_task(
+        self._glm_sonification_task = self.playback.schedule(
             self._run_glm_sonification(tuple(events)),
             name="gaia-scape-glm-sonification",
         )
@@ -1147,6 +983,7 @@ class GaiaScapeService:
         )
         can_replay = (
             fresh
+            and self.playback.enabled
             and self.config.live_mode == "continuous"
             and "noaa_glm" in self.config.enabled_sources
             and bool(self._instruments_for_kind("lightning_flash"))
@@ -1170,7 +1007,7 @@ class GaiaScapeService:
         loop = asyncio.get_running_loop()
         origin = loop.time()
         for event in events:
-            if "noaa_glm" not in self.config.enabled_sources:
+            if not self.playback.enabled or "noaa_glm" not in self.config.enabled_sources:
                 break
             observed_offset = max(0.0, event.timestamp - first_timestamp)
             target = origin + (observed_offset * GLM_SONIFICATION_TIME_SCALE)
@@ -1185,7 +1022,7 @@ class GaiaScapeService:
             self.store.events_of_kinds_since,
             ("lightning_flash",),
             time.time() - MTG_PRESENTATION_DELAY_SECONDS,
-            1000,
+            20000, provider="eumetsat_mtg_li", newest_first=True,
         )
         products = {}
         for event in recent:
@@ -1193,17 +1030,13 @@ class GaiaScapeService:
                 continue
             product = str(event.traits.get("product", "")) or event.event_id
             products.setdefault(product, []).append(event)
-        if products:
-            latest = max(
-                products.values(),
-                key=lambda events: max(event.timestamp for event in events),
-            )
-            self._start_mtg_sonification(latest)
+        for events in products.values():
+            self._start_mtg_sonification(events)
 
     def _start_mtg_sonification(self, events) -> bool:
         """Queue one MTG product once on its fixed delayed presentation timeline."""
         events = tuple(sorted(events, key=lambda event: (event.timestamp, event.event_id)))
-        if not events or not self._instruments_for_kind("lightning_flash"):
+        if not self.playback.enabled or not events or not self._instruments_for_kind("lightning_flash"):
             return False
         product = str(events[0].traits.get("product", "")) or (
             f"{events[0].timestamp:.3f}:{events[-1].timestamp:.3f}:{len(events)}"
@@ -1214,7 +1047,7 @@ class GaiaScapeService:
         stride = max(1, int(self.config.lightning_sample_rate))
         scheduled_events = events[::stride]
         self.last_mtg_scheduled_count = len(scheduled_events)
-        task = asyncio.create_task(
+        task = self.playback.schedule(
             self._run_mtg_sonification(scheduled_events),
             name="gaia-scape-mtg-li-sonification",
         )
@@ -1249,7 +1082,8 @@ class GaiaScapeService:
         """Present each MTG flash once at its observation time plus a fixed delay."""
         for event in events:
             if (
-                self.config.live_mode != "continuous"
+                not self.playback.enabled
+                or self.config.live_mode != "continuous"
                 or "eumetsat_mtg_li" not in self.config.enabled_sources
                 or not self._instruments_for_kind("lightning_flash")
             ):
@@ -1262,7 +1096,8 @@ class GaiaScapeService:
             if remaining > 0:
                 await asyncio.sleep(remaining)
             if (
-                self.config.live_mode != "continuous"
+                not self.playback.enabled
+                or self.config.live_mode != "continuous"
                 or "eumetsat_mtg_li" not in self.config.enabled_sources
             ):
                 break
@@ -1361,6 +1196,8 @@ class GaiaScapeService:
             duration=durations.get(event.kind, source.duration), pan=source.pan,
         )
         async with self._live_play_lock:
+            if not self.playback.enabled:
+                return
             persistent_background = (
                 event.kind in BACKGROUND_HISTORY_KINDS
                 and self.config.background_mappings()[event.kind] == event.kind
@@ -1373,7 +1210,7 @@ class GaiaScapeService:
                 rendered = (
                     True
                     if event.kind == "birdsong"
-                    else await asyncio.to_thread(render, rendered_cue, instrument)
+                    else await render_call(render, rendered_cue, instrument)
                 )
                 if rendered is not False:
                     self._record_emitted_cue(

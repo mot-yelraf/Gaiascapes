@@ -18,7 +18,10 @@ sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
 ```
 
 The browser-accessible web UI and headless service continue to work without
-these desktop-window packages.
+these desktop-window packages. Use `GAIA_SCAPE_INSTALL_MODE=headless ./install.sh`
+to skip their installation checks. A minimal `pip install .` also omits satellite
+decoders; `[lightning]` adds NetCDF and `[eumetsat]` adds EUMDAC. The supplied
+headless installer includes both satellite extras.
 
 ## Audio
 

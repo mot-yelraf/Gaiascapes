@@ -28,7 +28,7 @@ Python 3.10 or newer is required. From the repository root:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install -e '.[dev]'
+.venv/bin/python -m pip install -e '.[dev,lightning,eumetsat]'
 ```
 
 Run a development instance with an isolated data directory so captured events
@@ -150,7 +150,7 @@ Run the smallest relevant tests while developing. Before submitting a code
 change, run the repository-required checks:
 
 ```sh
-python -m pytest -q
+GAIA_SCAPE_DATA_DIR=$(mktemp -d) python -m pytest -q
 python -m compileall -q src tests
 ```
 
@@ -162,13 +162,14 @@ the pull request.
 
 ## Versioning
 
-Runtime changes update the version in `pyproject.toml` using:
+Runtime changes update `__version__` in `src/gaia_scape/__init__.py`;
+`pyproject.toml` reads it dynamically. Use:
 
 ```text
 v0.<two-digit-year>.<day-of-year>.<patch>
 ```
 
-For example, the first runtime release on day 237 of 2026 is `v0.26.237.0`.
+For example, the first runtime release on day 237 of 2026 is `v0.26.237.1`.
 Documentation-only changes do not require a runtime version bump.
 
 ## Pull request checklist
@@ -186,3 +187,6 @@ A pull request should include:
 Gaia Scape is a pre-1.0 project under active development. Internal structure
 may evolve, but normalized event contracts, persisted user state, and existing
 installations should remain compatible whenever practical.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for normalized metric units, provider
+threading constraints, settings commit ordering, and platform validation.

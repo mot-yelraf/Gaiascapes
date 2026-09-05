@@ -1,0 +1,40 @@
+name: Tests and package installation
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-24.04, ubuntu-24.04-arm]
+        python: ['3.10', '3.13']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install test and provider dependencies
+        run: python -m pip install '.[dev,lightning,eumetsat]' wheel
+      - name: Test with isolated runtime state
+        shell: bash
+        run: |
+          export GAIA_SCAPE_DATA_DIR="$(mktemp -d)"
+          python -m pytest -q
+          python -m compileall -q src tests
+          bash -n install.sh run_gaia_scape.sh run_gaia_scape_gui.sh run_supercollider.sh
+      - name: Build and smoke-test a clean headless installation
+        shell: bash
+        run: |
+          package_dir="$(mktemp -d)"
+          python -m pip wheel --no-deps . --wheel-dir "$package_dir/wheels"
+          python -m venv "$package_dir/venv"
+          "$package_dir/venv/bin/python" -m pip install "$package_dir"/wheels/*.whl httpx
+          export GAIA_SCAPE_DATA_DIR="$(mktemp -d)"
+          "$package_dir/venv/bin/python" scripts/smoke_installed.py

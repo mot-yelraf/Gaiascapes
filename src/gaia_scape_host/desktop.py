@@ -7,7 +7,6 @@ platform-specific application identity and icon behavior where available.
 from __future__ import annotations
 
 import ctypes
-import importlib.metadata
 import os
 import plistlib
 import shutil
@@ -19,6 +18,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
+
+from gaia_scape import __version__
 
 from .config import AppConfig, resolve_data_dir
 
@@ -71,10 +72,7 @@ def _should_relaunch_for_macos_identity() -> bool:
 
 def _macos_bundle_version() -> str:
     """Return a three-component numeric version suitable for bundle metadata."""
-    try:
-        raw_version = importlib.metadata.version("gaia-scape").removeprefix("v")
-    except importlib.metadata.PackageNotFoundError:
-        return "1.0.0"
+    raw_version = __version__.removeprefix("v")
     components = raw_version.split(".")
     if len(components) == 4 and components[0] == "0":
         components = components[1:]

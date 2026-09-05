@@ -259,6 +259,7 @@ class _OpenMeteoClient:
     def fetch(self):
         """Retrieve and normalize one forecast update for all locations."""
         now = time.monotonic()
+        locations = self.locations
         self.last_fetch_used_fallback = False
         if self._has_cache and (
             now - self._cache_updated_at < self.refresh_seconds
@@ -273,8 +274,8 @@ class _OpenMeteoClient:
             )
         parameters = urllib.parse.urlencode(
             {
-                "latitude": ",".join(str(item[2]) for item in self.locations),
-                "longitude": ",".join(str(item[3]) for item in self.locations),
+                "latitude": ",".join(str(item[2]) for item in locations),
+                "longitude": ",".join(str(item[3]) for item in locations),
                 "hourly": ",".join(self.variables),
                 "past_hours": 1,
                 "forecast_hours": 2,
@@ -315,9 +316,10 @@ class _OpenMeteoClient:
             raise
         if len(payload) > MAX_DOCUMENT_BYTES:
             raise ValueError("Open-Meteo response exceeds size limit")
-        self._cached_events = self.parser(
-            json.loads(payload.decode("utf-8")), self.locations
-        )
+        events = self.parser(json.loads(payload.decode("utf-8")), locations)
+        if locations != self.locations:
+            raise RuntimeError("Forecast locations changed during fetch; discarded old response")
+        self._cached_events = events
         self._cache_updated_at = now
         self._has_cache = True
         self._retry_not_before = 0.0

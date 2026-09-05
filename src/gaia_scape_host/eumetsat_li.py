@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import PurePosixPath
 
-from netCDF4 import Dataset, num2date
+from .netcdf_worker import netcdf_decoder
 
 from gaia_scape.events import GaiaEvent
 
@@ -31,6 +31,8 @@ GEOGRAPHIC_CELL_DEGREES = 10.0
 @contextmanager
 def _open_dataset(payload: bytes):
     """Open one bounded NetCDF chunk through a temporary file."""
+    from netCDF4 import Dataset
+
     descriptor, path = tempfile.mkstemp(prefix="gaia-mtg-li-", suffix=".nc")
     try:
         with os.fdopen(descriptor, "wb") as output:
@@ -68,12 +70,15 @@ def _strength_for_radiance(radiance: float) -> float:
     return max(0.05, min(1.0, math.log10(1.0 + max(0.0, radiance)) / 4.0))
 
 
+@netcdf_decoder
 def parse_li_chunk(
     payload: bytes, chunk_name: str, product_id: str
 ) -> tuple[GaiaEvent, ...]:
     """Normalize flashes from one LI Level 2 BODY NetCDF chunk."""
     if not payload or len(payload) > MAX_CHUNK_BYTES:
         raise ValueError("EUMETSAT LI chunk is empty or exceeds the size limit")
+    from netCDF4 import num2date
+
     with _open_dataset(payload) as dataset:
         group = _flash_group(dataset)
         if group is None:

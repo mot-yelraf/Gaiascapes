@@ -16,7 +16,7 @@
   capture, history, or the web UI to operate.
 - Run `python -m pytest -q` and `python -m compileall -q src tests` after code
   changes.
-- Version runtime changes in `pyproject.toml` using `v0.<yy>.<doy>.<patch>`.
+- Version runtime changes through `src/gaia_scape/__init__.py`; `pyproject.toml` reads that canonical version.
 
 ## Code Generation Rules
 
@@ -59,7 +59,7 @@
 ## Versioning Rule
 
 When you make a code content change, update the canonical `__version__` in
-`caelus/__init__.py` using:
+`src/gaia_scape/__init__.py` using:
 
 ```text
 v0.<year>.<doy>.<x>

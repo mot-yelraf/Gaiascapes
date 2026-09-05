@@ -583,6 +583,7 @@ def test_live_mode_persists_and_controls_continuous_task(tmp_path):
 
 def test_continuous_cycle_overlays_independent_ambient_layers(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.playback.start()
     now = time.time()
     events = (
         GaiaEvent(
@@ -639,6 +640,7 @@ def test_continuous_cycle_overlays_independent_ambient_layers(tmp_path):
 
 def test_ambient_rotation_ignores_unrelated_event_query_volume(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.playback.start()
     now = time.time()
     unrelated = tuple(
         GaiaEvent(
@@ -675,6 +677,7 @@ def test_ambient_rotation_ignores_unrelated_event_query_volume(tmp_path):
 
 def test_storm_background_replaces_ocean_with_persistent_rain_layer(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.playback.start()
     now = time.time()
     app.state.service.store.add_events(
         (
@@ -729,6 +732,7 @@ def test_birdsong_background_rotates_commons_media_without_osc(tmp_path):
         usgs_client=FakeUsgs(),
         birdsong_client=birdsong,
     )
+    app.state.service.playback.start()
     app.state.service.apply_audio_settings(
         [],
         {
@@ -914,6 +918,7 @@ def test_status_restores_latest_earthquake_without_an_emitted_cue(tmp_path):
 
 def test_event_history_includes_older_event_emitted_inside_window(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.playback.start()
     event = GaiaEvent(
         "usgs",
         "older-but-just-heard",
@@ -1323,6 +1328,7 @@ def test_event_history_identifies_seismic_bell_voice(tmp_path):
 
 def test_independent_event_slots_follow_the_selected_voice_source(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.playback.start()
     app.state.service.apply_audio_settings(
         ["usgs", "open_meteo_marine"],
         {
@@ -1358,6 +1364,7 @@ def test_independent_event_slots_follow_the_selected_voice_source(tmp_path):
 
 def test_strong_live_earthquake_uses_seven_second_cue(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.playback.start()
     app.state.service.apply_audio_settings(
         ["usgs"],
         {
@@ -1385,6 +1392,7 @@ def test_strong_live_earthquake_uses_seven_second_cue(tmp_path):
 
 def test_matching_duplicate_slots_each_emit_a_cue(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.playback.start()
     app.state.service.apply_audio_settings(
         ["usgs"],
         {
@@ -1494,6 +1502,7 @@ def test_glm_capture_reports_raw_counts_and_sounds_each_satellite(
     app = create_app(
         tmp_path, auto_capture=False, usgs_client=FakeUsgs(), glm_client=glm
     )
+    app.state.service.playback.start()
     app.state.config.live_mode = "continuous"
     played = []
     app.state.service.renderer.play = (
@@ -1552,6 +1561,7 @@ def test_mtg_capture_schedules_each_flash_once_on_delayed_timeline(
         usgs_client=FakeUsgs(),
         mtg_li_client=mtg_li,
     )
+    app.state.service.playback.start()
     app.state.service.apply_audio_settings(
         ["eumetsat_mtg_li"],
         app.state.config.instrument_slots(),
@@ -1595,6 +1605,7 @@ def test_mtg_timeline_skips_late_flashes_instead_of_bursting(tmp_path, monkeypat
         usgs_client=FakeUsgs(),
         mtg_li_client=FakeMtgLi(),
     )
+    app.state.service.playback.start()
     app.state.service.apply_audio_settings(
         ["eumetsat_mtg_li"],
         app.state.config.instrument_slots(),
@@ -1630,6 +1641,7 @@ def test_glm_sonification_can_play_a_hundred_hidden_notes(tmp_path, monkeypatch)
     app = create_app(
         tmp_path, auto_capture=False, usgs_client=FakeUsgs(), glm_client=FakeGlm()
     )
+    app.state.service.playback.start()
     app.state.config.live_mode = "continuous"
     app.state.config.instrument_volumes["event_3"] = 0.2
     monkeypatch.setattr(service, "GLM_SONIFICATION_TIME_SCALE", 0.0)
@@ -1677,6 +1689,7 @@ def test_glm_replays_last_flash_field_when_no_new_granule_arrives(
     app = create_app(
         tmp_path, auto_capture=False, usgs_client=FakeUsgs(), glm_client=glm
     )
+    app.state.service.playback.start()
     app.state.config.live_mode = "continuous"
     monkeypatch.setattr(service, "GLM_SONIFICATION_TIME_SCALE", 0.0)
     played = []

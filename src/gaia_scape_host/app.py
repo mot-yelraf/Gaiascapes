@@ -8,13 +8,14 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from importlib import metadata
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+from gaia_scape import __version__
 
 from .config import (
     AppConfig,
@@ -71,12 +72,14 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app):
         """Start and stop background service tasks with the web application."""
-        if auto_capture:
-            await service.start_polling()
-        if config.live_mode == "continuous":
-            await service.start_continuous()
-        yield
-        await service.stop()
+        try:
+            if auto_capture:
+                await service.start_polling()
+            if config.live_mode == "continuous":
+                await service.start_continuous()
+            yield
+        finally:
+            await service.stop()
 
     app = FastAPI(title="Gaia Scape", version=_version(), lifespan=lifespan)
     app.state.config = config
@@ -178,23 +181,23 @@ def create_app(
         """Validate, apply, and persist the selected live mode."""
         body = await _json_body(request)
         try:
-            await service.set_live_mode(body.get("mode", ""))
-            config.save(config_path)
+            await service.update_settings({"live_mode": body.get("mode", "")}, config_path)
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except (OSError, RuntimeError) as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         return (await service.status())["live"]
 
     @app.put("/api/settings/view")
     async def update_app_view(request: Request):
         """Validate and persist the user's selected application view."""
         body = await _json_body(request)
-        previous_view = config.app_view
         try:
-            config.app_view = body.get("view", "")
-            config.save(config_path)
+            await service.update_settings({"app_view": body.get("view", "")}, config_path)
         except (TypeError, ValueError) as exc:
-            config.app_view = previous_view
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except (OSError, RuntimeError) as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {"view": config.app_view}
 
     @app.post("/api/live/start")
@@ -241,18 +244,20 @@ def create_app(
                 mappings = AppConfig(event_instruments=legacy)
                 mappings._migrate_legacy_instruments()
                 mappings = mappings.instrument_slots()
-            service.apply_audio_settings(
-                sources,
-                mappings,
-                body.get("units", config.units),
-                body.get("instrument_volumes", config.instrument_volumes),
-                body.get("lightning_sample_rate", config.lightning_sample_rate),
-                body.get("eumetsat_consumer_key") or None,
-                body.get("eumetsat_consumer_secret") or None,
-            )
-            config.save(config_path)
+            changes = {
+                "enabled_sources": sources, "event_instruments": mappings,
+                "units": body.get("units", config.units),
+                "instrument_volumes": body.get("instrument_volumes", config.instrument_volumes),
+                "lightning_sample_rate": body.get("lightning_sample_rate", config.lightning_sample_rate),
+            }
+            for name in ("eumetsat_consumer_key", "eumetsat_consumer_secret"):
+                if body.get(name):
+                    changes[name] = body[name]
+            await service.update_settings(changes, config_path)
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except (OSError, RuntimeError) as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {
             "enabled_sources": list(config.enabled_sources),
             "units": config.units,
@@ -270,13 +275,14 @@ def create_app(
         """Validate, apply, and persist editable forecast sampling locations."""
         body = await _json_body(request)
         try:
-            pruned = service.apply_forecast_locations(
-                body.get("ocean_swell_locations"),
-                body.get("storm_outlook_locations"),
-            )
-            config.save(config_path)
+            pruned = await service.update_settings({
+                "ocean_swell_locations": body.get("ocean_swell_locations"),
+                "storm_outlook_locations": body.get("storm_outlook_locations"),
+            }, config_path)
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except (OSError, RuntimeError) as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {
             "ocean_swell_locations": config.ocean_swell_locations,
             "storm_outlook_locations": config.storm_outlook_locations,
@@ -314,8 +320,4 @@ async def _json_body(request: Request) -> dict:
 
 
 def _version() -> str:
-    try:
-        value = metadata.version("gaia-scape")
-    except metadata.PackageNotFoundError:
-        return "development"
-    return value if value.startswith("v") else f"v{value}"
+    return __version__

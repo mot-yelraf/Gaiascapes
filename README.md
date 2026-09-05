@@ -140,7 +140,8 @@ to `http://<gaia-host-ip>:8768` from another computer. Set
 ## Installation
 
 Python 3.10 or newer and internet access are required during installation.
-Python packages are declared in `pyproject.toml` and mirrored in `requirements.txt`.
+Dependency versions are declared in `pyproject.toml`; `requirements.txt` delegates
+to its desktop and satellite extras.
 The map uses an approximate public-IP location from `ipapi.co`, with `ipwho.is`
 as an HTTPS fallback, to mark the host system with a small green circle. The
 result is held only in process memory. System and SuperCollider prerequisites
@@ -162,8 +163,15 @@ sudo apt install python3 python3-venv python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4
 
 The installer presents a folder selector, remembers the chosen location,
 creates a private `.venv`, installs a self-contained Python application, and
-preserves the selected installation's `data/` directory during updates. For an
-unattended installation:
+preserves the selected installation's `data/` directory during updates.
+For a headless installation without pywebview or GTK/WebKit:
+
+```sh
+GAIA_SCAPE_INSTALL_MODE=headless GAIA_SCAPE_INSTALL_DIR=/absolute/path/Gaia_Scape ./install.sh
+```
+
+For an
+unattended desktop installation:
 
 ```sh
 GAIA_SCAPE_INSTALL_DIR=/absolute/path/Gaia_Scape ./install.sh
@@ -259,10 +267,17 @@ SuperCollider script when selecting another receive port.
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install -e '.[dev]'
-.venv/bin/python -m pytest -q
+.venv/bin/python -m pip install -e '.[dev,lightning,eumetsat]'
+GAIA_SCAPE_DATA_DIR=$(mktemp -d) .venv/bin/python -m pytest -q
 GAIA_SCAPE_DATA_DIR=/tmp/gaia-scape-dev .venv/bin/python Gaia_Scape.py
 ```
 
 Runtime state consists of `config.json` and `gaia_scape.sqlite3` under the
 installation's `data/` directory.
+
+Architecture, normalized units, lifecycle ownership, and validation boundaries
+are documented in [ARCHITECTURE.md](ARCHITECTURE.md).
+For a minimal server install use `pip install .`; add `[lightning]` for NOAA,
+`[eumetsat]` for MTG, or `[desktop]` for the native window. The supplied headless
+installer includes both satellite extras. Stop pauses continuous playback while
+capture and retention continue; Start resumes it.
