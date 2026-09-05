@@ -104,6 +104,7 @@ def create_app(
             default_duration=config.performance_seconds,
             live_mode=config.live_mode,
             app_view=config.app_view,
+            map_projection=config.map_projection,
             enabled_sources=set(config.enabled_sources),
             units=config.units,
             instrument_slots=config.instrument_slots(),
@@ -272,10 +273,11 @@ def create_app(
 
     @app.put("/api/settings/locations")
     async def update_forecast_locations(request: Request):
-        """Validate, apply, and persist editable forecast sampling locations."""
+        """Persist forecast sampling locations and the shared map projection."""
         body = await _json_body(request)
         try:
             pruned = await service.update_settings({
+                "map_projection": body.get("map_projection", config.map_projection),
                 "ocean_swell_locations": body.get("ocean_swell_locations"),
                 "storm_outlook_locations": body.get("storm_outlook_locations"),
             }, config_path)
@@ -284,6 +286,7 @@ def create_app(
         except (OSError, RuntimeError) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {
+            "map_projection": config.map_projection,
             "ocean_swell_locations": config.ocean_swell_locations,
             "storm_outlook_locations": config.storm_outlook_locations,
             "pruned": pruned,

@@ -88,6 +88,8 @@ async function playBirdsongCue(cue) {
   }, 50);
 }
 
+let mapProjection = byId("mapProjection")?.value || "robinson";
+
 const ROBINSON_X = [1, .9986, .9954, .99, .9822, .973, .96, .9427, .9216, .8962, .8679, .835, .7986, .7597, .7186, .6732, .6213, .5722, .5322];
 const ROBINSON_Y = [0, .062, .124, .186, .248, .31, .372, .434, .4958, .5571, .6176, .6769, .7346, .7903, .8435, .8936, .9394, .9761, 1];
 
@@ -101,6 +103,23 @@ function interpolateRobinson(table, latitude) {
 function projectCoordinates(longitude, latitude) {
   const safeLongitude = Math.max(-180, Math.min(180, Number(longitude) || 0));
   const safeLatitude = Math.max(-90, Math.min(90, Number(latitude) || 0));
+  if (mapProjection === "eckert_iv") {
+    // Solve theta + sin(theta) * (cos(theta) + 2) = (2 + pi/2) * sin(latitude).
+    // Bisection remains stable at the poles, where the derivative vanishes.
+    const target = (2 + Math.PI / 2) * Math.sin(safeLatitude * Math.PI / 180);
+    let lower = -Math.PI / 2;
+    let upper = Math.PI / 2;
+    for (let step = 0; step < 48; step += 1) {
+      const theta = (lower + upper) / 2;
+      if (theta + Math.sin(theta) * (Math.cos(theta) + 2) < target) lower = theta;
+      else upper = theta;
+    }
+    const theta = Math.abs(safeLatitude) === 90 ? Math.sign(safeLatitude) * Math.PI / 2 : (lower + upper) / 2;
+    return {
+      x: 512 + 443 * (safeLongitude / 180) * (1 + Math.cos(theta)) / 2,
+      y: 512 - 221.5 * Math.sin(theta),
+    };
+  }
   const xScale = interpolateRobinson(ROBINSON_X, safeLatitude);
   const yScale = interpolateRobinson(ROBINSON_Y, safeLatitude);
   return {
@@ -110,6 +129,15 @@ function projectCoordinates(longitude, latitude) {
 }
 
 function inverseProjectCoordinates(x, y) {
+  if (mapProjection === "eckert_iv") {
+    const sine = Math.max(-1, Math.min(1, (512 - y) / 221.5));
+    const theta = Math.asin(sine);
+    const latitudeSine = (theta + sine * (Math.cos(theta) + 2)) / (2 + Math.PI / 2);
+    return {
+      latitude: Math.asin(Math.max(-1, Math.min(1, latitudeSine))) * 180 / Math.PI,
+      longitude: ((x - 512) / (443 * (1 + Math.cos(theta)) / 2)) * 180,
+    };
+  }
   const normalizedY = Math.max(-1, Math.min(1, (512 - y) / 290));
   const targetY = Math.abs(normalizedY);
   let band = 0;
@@ -140,16 +168,16 @@ function mapProjectionBoundary() {
 
 function renderMapProjection() {
   const boundary = mapProjectionBoundary();
-  ["mapGlobeClipPath", "mapGlowPath", "mapOceanPath"].forEach((id) => {
+  ["mapGlobeClipPath", "mapGlowPath", "mapOceanPath", "forecastMapClipPath", "forecastMapOceanPath"].forEach((id) => {
     byId(id)?.setAttribute("d", boundary);
   });
 }
 
 function mapContainsPoint(x, y) {
-  const normalizedY = (512 - Number(y)) / 290;
+  const normalizedY = (512 - Number(y)) / (mapProjection === "eckert_iv" ? 221.5 : 290);
   if (Math.abs(normalizedY) > 1) return false;
   const latitude = inverseProjectCoordinates(512, y).latitude;
-  const halfWidth = 443 * interpolateRobinson(ROBINSON_X, latitude);
+  const halfWidth = projectCoordinates(180, latitude).x - 512;
   return Math.abs(Number(x) - 512) <= halfWidth;
 }
 
@@ -157,6 +185,8 @@ function renderMapGrid() {
   const layer = byId("mapGridLayer");
   const labels = byId("mapCoordinateLabels");
   if (!layer || !labels) return;
+  layer.replaceChildren();
+  labels.replaceChildren();
   for (let latitude = -60; latitude <= 60; latitude += 30) {
     const points = [];
     for (let longitude = -180; longitude <= 180; longitude += 4) points.push(projectCoordinates(longitude, latitude));
@@ -1230,6 +1260,30 @@ if (settingsDialog && settingsForm) {
     renderForecastLocationList();
   }
 
+  byId("mapProjection").addEventListener("change", () => {
+    const markers = Array.from(document.querySelectorAll(
+      "#mapHistoryLayer circle, #mapBackgroundLayer circle, #mapPulseLayer circle, #mapSystemLocationLayer circle"
+    )).map((marker) => ({
+      marker,
+      coordinates: inverseProjectCoordinates(Number(marker.getAttribute("cx")), Number(marker.getAttribute("cy"))),
+    }));
+    mapProjection = byId("mapProjection").value;
+    markers.forEach(({marker, coordinates}) => {
+      const position = projectCoordinates(coordinates.longitude, coordinates.latitude);
+      marker.setAttribute("cx", position.x);
+      marker.setAttribute("cy", position.y);
+    });
+    const asset = mapProjection === "eckert_iv" ? "world-land-eckert-iv.svg" : "gaia-scape-icon.svg";
+    document.querySelectorAll("[data-map-land]").forEach((land) => {
+      land.setAttribute("href", `/static/${asset}#realistic-land`);
+    });
+    byId("worldMapDescription").textContent = `${mapProjection === "eckert_iv" ? "Eckert IV" : "Robinson"} projection with latitude and longitude grid, approximate system location, recent environmental locations, and animated sound cues.`;
+    byId("mapCoordinateReadout").textContent = "Move over the map to inspect coordinates";
+    renderMapProjection();
+    renderMapGrid();
+    renderForecastMarkers();
+  });
+
   const forecastLocationMap = byId("forecastLocationMap");
   if (forecastLocationMap) {
     const boundary = mapProjectionBoundary();
@@ -1420,6 +1474,7 @@ if (settingsDialog && settingsForm) {
       await request("/api/settings/locations", {
         method: "PUT",
         body: JSON.stringify({
+          map_projection: mapProjection,
           ocean_swell_locations: forecastLocationCatalogs.ocean_swell,
           storm_outlook_locations: forecastLocationCatalogs.storm_outlook,
         }),

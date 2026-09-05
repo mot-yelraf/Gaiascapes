@@ -274,6 +274,7 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .location-editor-toolbar button { padding: .48rem .7rem; font-size: .72rem; }
 .location-editor-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(18rem, .85fr); flex: 1 1 auto; gap: .85rem; min-height: 0; }
 .forecast-map-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: .6rem; border: 1px solid var(--line); background: #0a1717; }
+#forecastMapOceanPath { fill: url(#forecastMapOcean); }
 #forecastLocationMap { display: block; width: 100%; min-height: 0; flex: 1 1 auto; cursor: crosshair; }
 .forecast-map-stage output { flex: 0 0 auto; min-height: 1.7rem; padding: .4rem .35rem 0; color: var(--muted); font-size: .7rem; }
 .forecast-location-marker { cursor: pointer; outline: none; }
@@ -292,7 +293,7 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .forecast-coordinate-input input { width: 100%; min-width: 0; padding: .3rem .35rem; background: #101b17; font-size: .68rem; font-variant-numeric: tabular-nums; }
 .forecast-location-name { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .45rem; color: var(--muted); font-size: .63rem; }
 .forecast-location-name input { width: 100%; min-width: 0; padding: .4rem .5rem; background: #101b17; }
-.location-settings-pane > .settings-tip { flex: 0 0 auto; margin-top: .8rem; }
+.location-settings-pane > .settings-field { flex: 0 0 auto; margin-top: .8rem; }
 .modal-footer { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 4.3rem; padding: .8rem 1.2rem; border-top: 1px solid var(--line); background: #0c1511; }
 .modal-footer p { color: var(--muted); font-size: .7rem; }
 .modal-footer p.error { color: var(--danger); }

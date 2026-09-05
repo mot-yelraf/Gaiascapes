@@ -1884,3 +1884,34 @@ def test_app_migrates_legacy_database_filename(tmp_path, legacy_name):
     assert migrated_app.state.service.store.count() == 1
     assert (tmp_path / "gaia_scape.sqlite3").exists()
     assert not legacy_path.exists()
+
+
+def test_map_projection_persists_and_rejects_unknown_models(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    assert app.state.config.map_projection == "robinson"
+    catalogs = {
+        "ocean_swell_locations": app.state.config.ocean_swell_locations,
+        "storm_outlook_locations": app.state.config.storm_outlook_locations,
+    }
+    with TestClient(app) as client:
+        response = client.put("/api/settings/locations", json={
+            **catalogs, "map_projection": "eckert_iv",
+        })
+        assert response.status_code == 200
+        assert response.json()["map_projection"] == "eckert_iv"
+        home = client.get("/").text
+        assert '<option value="eckert_iv" selected>' in home
+        assert home.count("world-land-eckert-iv.svg#realistic-land") == 2
+        assert "sea-cell preference" not in home
+        assert client.get("/static/world-land-eckert-iv.svg").status_code == 200
+        saved = (tmp_path / "config.json").read_text()
+        response = client.put("/api/settings/locations", json={
+            **catalogs, "map_projection": "mercator",
+        })
+        assert response.status_code == 422
+        assert (tmp_path / "config.json").read_text() == saved
+        # Older clients that omit the new setting must preserve it.
+        assert client.put("/api/settings/locations", json=catalogs).status_code == 200
+        assert app.state.config.map_projection == "eckert_iv"
+    restarted = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    assert restarted.state.config.map_projection == "eckert_iv"

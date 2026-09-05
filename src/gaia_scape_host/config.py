@@ -93,6 +93,7 @@ class AppConfig:
     performance_seconds: float = 120.0
     live_mode: str = "capture"
     app_view: str = "dashboard"
+    map_projection: str = "robinson"
     continuous_interval_seconds: float = 23.0
     osc_host: str = "127.0.0.1"
     osc_port: int = 57130
@@ -177,6 +178,9 @@ class AppConfig:
         self.app_view = str(self.app_view).strip().lower()
         if self.app_view not in {"dashboard", "map"}:
             raise ValueError("App view must be dashboard or map")
+        self.map_projection = str(self.map_projection).strip().lower()
+        if self.map_projection not in {"robinson", "eckert_iv"}:
+            raise ValueError("Projection model must be Robinson or Eckert IV")
         self.continuous_interval_seconds = max(
             5.0, min(300.0, float(self.continuous_interval_seconds))
         )

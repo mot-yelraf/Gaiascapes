@@ -83,7 +83,7 @@
       <div class="map-stage">
         <svg id="worldMap" viewBox="0 170 1024 684" role="img" aria-labelledby="worldMapTitle worldMapDescription">
           <title id="worldMapTitle">Live Gaia Scape world map</title>
-          <desc id="worldMapDescription">Robinson projection with latitude and longitude grid, approximate system location, recent environmental locations, and animated sound cues.</desc>
+          <desc id="worldMapDescription">{{ "Eckert IV" if map_projection == "eckert_iv" else "Robinson" }} projection with latitude and longitude grid, approximate system location, recent environmental locations, and animated sound cues.</desc>
           <defs>
             <radialGradient id="mapOcean" cx="50%" cy="44%" r="68%"><stop offset="0" stop-color="#173e48"/><stop offset=".62" stop-color="#0d2f39"/><stop offset="1" stop-color="#09232b"/></radialGradient>
             <clipPath id="mapGlobeClip"><path id="mapGlobeClipPath"/></clipPath>
@@ -91,7 +91,7 @@
           <path class="map-glow" id="mapGlowPath"/>
           <path class="map-ocean" id="mapOceanPath"/>
           <g id="mapGridLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
-          <g class="map-land" clip-path="url(#mapGlobeClip)"><use href="/static/gaia-scape-icon.svg#realistic-land"/></g>
+          <g class="map-land" clip-path="url(#mapGlobeClip)"><use data-map-land href="/static/{{ 'world-land-eckert-iv.svg' if map_projection == 'eckert_iv' else 'gaia-scape-icon.svg' }}#realistic-land"/></g>
           <g id="mapHistoryLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
           <g id="mapBackgroundLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
           <g id="mapPulseLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
@@ -163,10 +163,10 @@
             </div>
           </section>
           <section class="settings-pane location-settings-pane" data-pane="locations" hidden>
-            <div class="pane-heading"><span>03</span><div><h3>Forecast locations</h3><p>Select a numbered location, then click the map to move it. Edit its name or coordinates in the list. Each forecast uses exactly 19 locations.</p></div></div>
+            <div class="pane-heading"><span>03</span><div><h3>Forecast locations</h3></div></div>
             <div class="location-editor-tabs" role="group" aria-label="Forecast catalog">
-              <button type="button" class="is-active" data-location-catalog="ocean_swell">Ocean Swells</button>
-              <button type="button" data-location-catalog="storm_outlook">Storm Outlook</button>
+              <button type="button" class="is-active" title="Select a numbered location, then click the map to move it. Edit its name or coordinates in the list. Each forecast uses exactly 19 locations." data-location-catalog="ocean_swell">Ocean Swells</button>
+              <button type="button" title="Select a numbered location, then click the map to move it. Edit its name or coordinates in the list. Each forecast uses exactly 19 locations." data-location-catalog="storm_outlook">Storm Outlook</button>
             </div>
             <div class="location-editor-toolbar">
               <strong id="forecastLocationCount">19 / 19 locations</strong>
@@ -177,16 +177,22 @@
                 <svg id="forecastLocationMap" viewBox="0 170 1024 684" role="img" aria-labelledby="forecastLocationMapTitle forecastLocationMapDescription">
                   <title id="forecastLocationMapTitle">Editable forecast location map</title>
                   <desc id="forecastLocationMapDescription">Select a numbered marker and click another map coordinate to relocate it.</desc>
-                  <defs><clipPath id="forecastMapClip"><path id="forecastMapClipPath"/></clipPath></defs>
+                  <defs>
+                    <radialGradient id="forecastMapOcean" cx="50%" cy="44%" r="68%"><stop offset="0" stop-color="#173e48"/><stop offset=".62" stop-color="#0d2f39"/><stop offset="1" stop-color="#09232b"/></radialGradient>
+                    <clipPath id="forecastMapClip"><path id="forecastMapClipPath"/></clipPath>
+                  </defs>
                   <path class="map-ocean" id="forecastMapOceanPath"/>
-                  <g class="map-land" clip-path="url(#forecastMapClip)"><use href="/static/gaia-scape-icon.svg#realistic-land"/></g>
+                  <g class="map-land" clip-path="url(#forecastMapClip)"><use data-map-land href="/static/{{ 'world-land-eckert-iv.svg' if map_projection == 'eckert_iv' else 'gaia-scape-icon.svg' }}#realistic-land"/></g>
                   <g id="forecastLocationMarkerLayer" clip-path="url(#forecastMapClip)"></g>
                 </svg>
                 <output id="forecastLocationReadout" aria-live="polite">Location 1 selected. Click the map to move it.</output>
               </div>
               <div class="forecast-location-list" id="forecastLocationList" aria-label="Editable forecast locations"></div>
             </div>
-            <p class="settings-tip"><span>ⓘ</span><span>Ocean coordinates use Open-Meteo’s sea-cell preference. The returned model cell may be several kilometers from the point selected here. Marine forecasts are not suitable for navigation.</span></p>
+            <label class="settings-field" for="mapProjection"><span>Projection Model</span><select id="mapProjection">
+              <option value="robinson" {% if map_projection == "robinson" %}selected{% endif %}>Robinson</option>
+              <option value="eckert_iv" {% if map_projection == "eckert_iv" %}selected{% endif %}>Eckert IV</option>
+            </select></label>
           </section>
         </div>
       </div>
