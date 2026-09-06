@@ -6,6 +6,9 @@ Python on macOS, Linux, or Raspberry Pi. SuperCollider is the preferred audio
 engine; capture, history, and the web interface continue to work when it is not
 installed.
 
+For illustrated operating instructions, settings, and credential setup, see the
+[User Guide](USER_GUIDE.md). Installation instructions remain in this README.
+
 ## Who this is for
 
 - Makers and students who want a real-world python example.
