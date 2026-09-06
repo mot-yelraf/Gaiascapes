@@ -905,9 +905,10 @@ async function updateEvents() {
 }
 
 function instrumentLabel(instrument) {
-  if (instrument === "seismic_bells") return "Seismic Bell";
+  if (instrument === "tidal_bell") return "Tidal Tone";
+  if (instrument === "seismic_bells") return "Seismic Tone";
   if (instrument === "lightning_glass") return "Lightning R2D2";
-  if (instrument === "natural_thunder") return "Natural Thunder";
+  if (instrument === "natural_thunder") return "Thunder";
   if (instrument === "test_tone") return "440 Hz Test Tone";
   if (instrument === "ocean_swell") return "Ocean Swells";
   if (instrument === "storm_potential") return "Storm Outlook";
@@ -1378,6 +1379,76 @@ if (settingsDialog && settingsForm) {
     if (event.target !== settingsDialog) return;
     const rect = settingsDialog.getBoundingClientRect();
     if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeSettings();
+  });
+  settingsDialog.querySelectorAll("[data-sound-picker]").forEach((picker) => {
+    const select = byId(picker.dataset.select);
+    const track = picker.querySelector(".sound-track");
+    const options = Array.from(select.options);
+    const position = picker.querySelector(".sound-position");
+    let scrollTimer;
+    const cards = options.map((option) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "sound-choice";
+      card.setAttribute("role", "radio");
+      card.setAttribute("aria-label", option.textContent);
+      const art = document.createElement("img");
+      art.src = `/static/${picker.dataset.artPrefix || "sound"}-${option.hasAttribute("data-legacy") ? "none" : option.value}.svg`;
+      art.alt = "";
+      art.width = 512;
+      art.height = 512;
+      const caption = document.createElement("span");
+      caption.textContent = option.textContent;
+      card.append(art, caption);
+      track.append(card);
+      card.addEventListener("click", () => choose(options.indexOf(option), false));
+      return card;
+    });
+    const render = () => {
+      cards.forEach((card, index) => {
+        const selected = index === select.selectedIndex;
+        card.setAttribute("aria-checked", String(selected));
+        card.tabIndex = selected ? 0 : -1;
+      });
+      position.textContent = `${select.selectedIndex + 1} / ${options.length}`;
+    };
+    const align = () => { track.scrollLeft = select.selectedIndex * track.clientWidth; };
+    const choose = (index, focus) => {
+      select.selectedIndex = (index + options.length) % options.length;
+      // Keep an existing retired sound until the user explicitly replaces it.
+      if (!options[select.selectedIndex].hasAttribute("data-legacy")) {
+        const legacyIndex = options.findIndex((option) => option.hasAttribute("data-legacy"));
+        if (legacyIndex !== -1) {
+          cards.splice(legacyIndex, 1)[0].remove();
+          options.splice(legacyIndex, 1)[0].remove();
+        }
+      }
+      render();
+      align();
+      select.dispatchEvent(new Event("change", {bubbles: true}));
+      if (focus) cards[select.selectedIndex].focus({preventScroll: true});
+    };
+    picker.querySelectorAll("[data-sound-step]").forEach((button) => {
+      button.addEventListener("click", () => choose(select.selectedIndex + Number(button.dataset.soundStep), false));
+    });
+    track.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const index = event.key === "Home" ? 0 : event.key === "End" ? options.length - 1
+        : select.selectedIndex + (event.key === "ArrowRight" ? 1 : -1);
+      choose(index, true);
+    });
+    track.addEventListener("scroll", () => {
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => {
+        if (!track.clientWidth) return;
+        const index = Math.round(track.scrollLeft / track.clientWidth);
+        if (index !== select.selectedIndex) choose(index, false);
+      }, 120);
+    });
+    select.addEventListener("change", render);
+    new ResizeObserver(() => { if (track.clientWidth) align(); }).observe(track);
+    render();
   });
   settingsDialog.querySelectorAll('.volume-control input[type="range"]').forEach((slider) => {
     const output = slider.parentElement.querySelector("output");

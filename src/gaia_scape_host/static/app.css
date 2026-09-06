@@ -221,19 +221,30 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .pane-heading > span { color: var(--earth); font: 500 1.25rem Georgia, serif; }
 .pane-heading h3 { margin: 0; font: 500 1.28rem Georgia, serif; }
 .pane-heading p { margin: .25rem 0 0; color: var(--muted); font-size: .78rem; line-height: 1.5; }
-.source-option { position: relative; display: grid; grid-template-columns: auto 1fr; justify-content: start; padding: 1rem; border: 1px solid var(--line); background: #15201b; cursor: pointer; }
-.source-option input { width: auto; accent-color: var(--moss); }
-.source-option span, .source-option strong, .source-option small { display: block; }
-.source-option strong { color: var(--ink); }
-.source-option small { margin-top: .3rem; color: var(--muted); line-height: 1.45; }
-.source-option:has(input:checked) { border-color: rgba(158,211,154,.52); box-shadow: 0 0 0 2px rgba(158,211,154,.08); }
-.source-option + .source-option { margin-top: .7rem; }
-.source-credentials { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; padding: .85rem 1rem 1rem; border: 1px solid var(--line); border-top: 0; background: #0d1713; }
+/* Source controls share instrument artwork and retain native checkbox access. */
+.source-tile-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: .75rem; }
+.source-tile { min-width: 0; padding: .65rem; border: 2px solid var(--line); border-radius: 12px; background: #0b1511; }
+.source-tile:has(input[type="checkbox"]:checked) { border-color: var(--moss); }
+.source-tile:has(input[type="checkbox"]:focus-visible) { outline: 2px solid var(--earth); outline-offset: 3px; }
+.source-title { position: relative; }
+.source-title label { justify-content: start; align-items: start; gap: .45rem; cursor: pointer; }
+.source-title input { flex: 0 0 auto; width: auto; margin: .15rem 0 0; accent-color: var(--moss); }
+.source-title strong { color: var(--ink); font-size: .76rem; line-height: 1.35; }
+.source-hint { position: absolute; z-index: 2; top: 100%; left: 0; width: 100%; padding: .6rem; border: 1px solid var(--line); border-radius: 6px; background: #20332a; color: var(--ink); font-size: .68rem; line-height: 1.45; visibility: hidden; opacity: 0; pointer-events: none; }
+.source-title:hover .source-hint, .source-title:focus-within .source-hint { visibility: visible; opacity: 1; }
+.source-art { display: block; margin-top: .5rem; cursor: pointer; }
+.source-art img { display: block; width: 100%; height: clamp(3rem, 8.5vh, 6rem); object-fit: contain; }
+.source-credentials { display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; margin-top: .5rem; }
 .source-credentials[hidden] { display: none; }
-.source-credentials label { display: grid; gap: .35rem; color: var(--ink); font-size: .74rem; font-weight: 700; }
-.source-credentials input { width: 100%; min-width: 0; padding: .65rem .7rem; border: 1px solid var(--line); background: #08100d; color: var(--ink); font: inherit; }
-.source-credentials > small { grid-column: 1 / -1; color: var(--muted); font-size: .68rem; line-height: 1.45; }
-.source-credentials + .settings-tip { margin-top: 1.25rem; }
+.source-credentials label { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: .2rem; color: var(--ink); font-size: .65rem; font-weight: 700; }
+.source-credentials input { width: 100%; min-width: 0; padding: .4rem .45rem; border: 1px solid var(--line); background: #08100d; color: var(--ink); font: inherit; }
+.settings-dialog:has([data-pane="sources"]:not([hidden])) { height: min(54rem, calc(100vh - 2rem)); }
+.settings-pane[data-pane="sources"] { padding-block: .75rem; }
+.settings-pane[data-pane="sources"] .pane-heading { padding-bottom: .5rem; margin-bottom: .75rem; }
+.settings-pane[data-pane="sources"] .settings-tip { margin-top: .75rem; font-size: .65rem; padding: .6rem; }
+@media (max-width: 640px) {
+  .source-tile-grid { grid-template-columns: minmax(0, 1fr); }
+}
 .future-source { display: grid; gap: .3rem; margin-top: .75rem; padding: 1rem; border: 1px dashed var(--line); color: var(--muted); }
 .future-source strong { color: var(--muted); font-size: .85rem; }
 .future-source span { font-size: .72rem; line-height: 1.45; }
@@ -305,7 +316,6 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
   .header-actions { flex: 0 0 auto; }
   .map-heading, .map-stage { width: 100%; }
   .source-credentials { grid-template-columns: 1fr; }
-  .source-credentials > small { grid-column: 1; }
   .workspace { width: 100%; }
   .workspace-tabs { overflow-x: auto; padding: 0 12px; }
   .workspace-tab { flex: 1 0 auto; min-width: 8.5rem; padding-inline: 14px; }
@@ -334,4 +344,32 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 @media (prefers-reduced-motion: reduce) {
   .event-wave, .map-cue-pulse, .settings-dialog[open] { animation: none; }
   .event-wave { display: none; }
+}
+
+/* Compact artwork preserves tile widths and leaves room for both rows. */
+.settings-dialog:has([data-pane="instruments"]:not([hidden])) { height: min(64rem, calc(100vh - 2rem)); }
+.settings-pane[data-pane="instruments"] { padding-block: .75rem; }
+.settings-pane[data-pane="instruments"] .pane-heading { padding-bottom: .5rem; margin-bottom: .6rem; }
+.background-sound-row > .sound-tile { grid-column: 2; }
+.background-sound-row > .units-tile { grid-column: 1; }
+.units-note { margin: .25rem 0 0; color: var(--muted); font-size: .65rem; line-height: 1.4; }
+.background-sound-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; align-items: start; margin-bottom: .75rem; }
+.sound-tile { width: 100%; max-width: 11rem; justify-self: center; min-width: 0; display: flex; flex-direction: column; gap: .25rem; padding: .5rem; border: 1px solid var(--line); border-radius: 12px; background: #0b1511; }
+.sound-tile h4 { margin: 0; font-size: .95rem; }
+.sound-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: 8px; }
+.sound-choice { flex: 0 0 100%; min-width: 0; padding: 0; overflow: hidden; scroll-snap-align: center; scroll-snap-stop: always; background: #13231d; border: 2px solid transparent; border-radius: 8px; }
+.sound-choice[aria-checked="true"] { border-color: var(--moss); }
+.sound-track::-webkit-scrollbar { display: none; }
+.sound-choice img { display: block; width: 100%; height: clamp(2.5rem, calc((100dvh - 40rem) / 2), 5.5rem); object-fit: contain; background: #10221f; }
+.sound-choice span { display: block; padding: .3rem .2rem; font-size: .8rem; font-weight: 700; }
+.sound-navigation { display: flex; justify-content: space-between; align-items: center; margin-top: .35rem; }
+.sound-navigation button { padding: .2rem .65rem; }
+.sound-position { font-size: .68rem; color: var(--muted); }
+.sound-tile > .preview-instrument-button { width: 100%; padding: .4rem .65rem; font-size: .8rem; }
+.sound-event-grid { align-items: start; margin-bottom: 0; }
+.sound-choice:focus-visible, .sound-navigation button:focus-visible { outline: 2px solid var(--earth); outline-offset: -3px; }
+@media (max-width: 640px) {
+  .background-sound-row > .sound-tile { grid-column: 1; }
+  .background-sound-row, .sound-event-grid { grid-template-columns: minmax(0, 1fr); }
+  .sound-tile { width: 100%; max-width: 20rem; justify-self: center; }
 }

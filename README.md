@@ -19,7 +19,7 @@ Storm Outlook, or Birdsong Atlas background remains continuous while event voice
 over it.
 Event 1, Event 2, and Event 3 are independent: Earthquake and Seismic Bell voices
 follow USGS earthquakes, Tidal Bell follows modeled tide turns, and Lightning R2D2
-or Natural Thunder follows normalized lightning-flash observations. Selecting the
+or Thunder follows normalized lightning-flash observations. Selecting the
 same voice in multiple slots emits each configured cue for every matching event.
 The Earthquake voice uses depth-damped sub-bass and irregular low-frequency
 surface/body-wave modulation, with strength-scaled cues lasting up to seven seconds.
@@ -36,7 +36,7 @@ Lightning R2D2 uses a short crack, descending pitch contour, glassy decay, and
 pentatonic flash-by-flash pitch variation at least four semitones above other
 events, paired with a yellow-gold map pulse. Each slot's volume also scales its
 map-pulse radius, so quiet lightning remains visible as a compact burst without
-overwhelming the background animation. Natural Thunder replaces pitched oscillators with a
+overwhelming the background animation. Thunder replaces pitched oscillators with a
 strength-weighted brown-noise rumble, deep body, randomized envelope-shaped
 reflections, compression, and peak limiting. The reflections avoid per-cue delay
 buffers, and the audio server reserves additional real-time memory so the voice remains
@@ -246,7 +246,7 @@ Birdsong uses the renderer-neutral emitted-cue stream and is played from Gaia Sc
 local media cache by the web view, so it does not require a SuperCollider sampler.
 
 The included `supercollider/gaia-scape.scd` listens on UDP 57130 and provides
-earthquake, seismic-bell, Lightning R2D2, Natural Thunder, ocean-swell, tidal-bell, and Storm Outlook
+earthquake, seismic-bell, Lightning R2D2, Thunder, ocean-swell, tidal-bell, and Storm Outlook
 voices. The
 Settings menu selects capture sources, three independent event voices, and one continuous
 background, including Birdsong Atlas. Each musical role can also be set to None. The persisted Units setting

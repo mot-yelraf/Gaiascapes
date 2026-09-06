@@ -165,15 +165,28 @@ def test_web_app_captures_and_reports_status(tmp_path):
             "</select>", 1
         )[0]
         expected_event_choices = [
-            "earthquake", "tidal_bell", "seismic_bells", "lightning_glass",
-            "natural_thunder", "test_tone", "none"
+            "earthquake", "natural_thunder", "seismic_bells", "tidal_bell", "none"
         ]
         assert re.findall(r'<option value="([^"]+)"', event_1_markup) == expected_event_choices
         assert re.findall(r'<option value="([^"]+)"', event_2_markup) == expected_event_choices
-        assert re.findall(r'<option value="([^"]+)"', event_3_markup) == expected_event_choices
-        assert home.text.count("Lightning R2D2") == 3
-        assert home.text.count("Natural Thunder") == 3
-        assert home.text.count("440 Hz Test Tone") == 3
+        assert re.findall(r'<option value="([^"]+)"', event_3_markup) == expected_event_choices + ["lightning_glass"]
+        assert 'selected data-legacy' in event_3_markup
+        assert "Lightning R2D2" not in home.text
+        assert home.text.count("Thunder") == 3
+        assert "440 Hz Test Tone" not in home.text
+        assert home.text.index('id="backgroundInstrument"') < home.text.index('id="event1Instrument"')
+        assert home.text.count("data-sound-picker") == 5
+        assert home.text.index('id="displayUnits"') < home.text.index('id="backgroundInstrument"')
+        assert home.text.count('id="displayUnits"') == 1
+        for unit in ("metric", "imperial"):
+            artwork = client.get(f"/static/units-{unit}.svg")
+            assert artwork.status_code == 200
+            assert f"{unit.title()} measurements" in artwork.text
+        for sound in ("birdsong", "ocean_swell", "storm_potential", "earthquake",
+                      "natural_thunder", "seismic_bells", "tidal_bell", "none"):
+            artwork = client.get(f"/static/sound-{sound}.svg")
+            assert artwork.status_code == 200
+            assert 'viewBox="0 0 512 512"' in artwork.text
         assert "Open-Meteo surf & tides" in home.text
         assert 'id="sourceGlm"' in home.text
         assert "NOAA GOES GLM lightning" in home.text
@@ -220,7 +233,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'aria-label="Map application status"' in home.text
         assert "Open-Meteo Storm Outlook" in home.text
         assert '<option value="storm_potential" >Storm Outlook</option>' in home.text
-        assert '<option value="birdsong" >Birdsong Atlas</option>' in home.text
+        assert '<option value="birdsong" >Birdsong</option>' in home.text
         assert "Event Time" not in home.text
         assert "Event Sounds" not in home.text
         assert 'id="scStatus"' not in home.text
@@ -291,7 +304,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'label: "Great"' in script
         assert "earthquake-magnitude-pill" in script
         assert 'return "Lightning R2D2"' in script
-        assert 'return "Natural Thunder"' in script
+        assert 'return "Thunder"' in script
         assert "updateBackgroundStatus(null)" in script
         stylesheet = client.get("/static/app.css").text
         assert ".storm-cape--weak" in stylesheet
