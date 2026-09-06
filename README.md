@@ -32,6 +32,50 @@ Wikimedia Commons recordings. Gaia Scape resolves files through the keyless Comm
 API, accepts only public-domain, CC0, CC BY, or CC BY-SA audio, and caches each selected
 recording under `data/media/birdsong/`. The interface displays the recording's creator,
 license, and Commons source page; no Wikimedia account or API key is required.
+Frog Calls is another browser-played background, with its own source switch and
+19 editable global regions in Sound locations. Select Frog Calls in Instruments
+for volume and Preview controls. It uses Xeno-canto frog and toad recordings
+within 100 km of each region center, retaining the recording's actual location
+and attribution. Birdsong and Frog Calls share one Xeno-canto API key: enter or
+replace it in either source tile. Blank fields preserve the saved key. Frog Calls
+is disabled by default and caches its media under `data/media/frog_calls/`.
+Frog searches include ungraded recordings and calls of 1–180 seconds, accepting
+CC BY and CC BY-SA licenses. The background status strip reports loading and
+lookup failures, including regions without suitable recordings.
+
+Whale Song and Dolphin Calls use NOAA NCEI / SanctSound recordings without an
+API key. Enable their tiles under Background sound sources, select one in
+Instruments, and choose included sites in Sound locations. Whale Song includes
+six hydrophone sites in the Hawaiian Islands, Channel Islands, and Olympic
+Coast. Dolphin Calls includes eleven sites across the Hawaiian Islands,
+Papahānaumokuākea, California, Olympic Coast, Florida Keys, Gray’s Reef, and
+Stellwagen Bank. At least one site must remain selected. These are archived
+recordings, and map points identify hydrophones rather than animal positions.
+
+The bundled SanctSound catalog contains eight natural-speed humpback-song clips
+and eleven dolphin clips, verified against the public archive on 2026-09-06.
+Audio downloads are bounded to 64 MiB and cached beneath `data/media/whale_song/`
+and `data/media/dolphin_calls/`, with archive size and checksum verification.
+Playback rotates through selected sites and then through each site's clips.
+Each cue retains recording date, contributor credit, metadata URL, and the
+[NOAA/Navy SanctSound dataset citation and use constraints](https://doi.org/10.25921/saca-sp25).
+No access key or live acoustic feed is needed. Source attribution belongs to
+the recordings; the application's MIT license does not relicense archive audio.
+
+The Birdsong tile in Sound Sources enables archived recordings and selects
+Wikimedia Commons or Xeno-canto. For Xeno-canto, enter a personal API key there.
+Select Birdsong as the Background in Instruments to control volume and preview it.
+Disabling the Birdsong source stops playback while preserving the selected background. The key is stored in the local `data/config.json`
+and is omitted from browser responses. The provider searches within 100 km of each of the 19 saved Birdsong locations for
+A/B-quality CC BY-SA recordings, skips missing or restricted coordinates, and
+uses the recording's actual location on the map. These are archived recordings;
+the playback event time is current, while the original date and time remain in
+the event's `recorded_date` and `recorded_time` traits. Catalogs are cached for
+24 hours and audio under `data/media/birdsong/xeno-canto/`; successive rotations
+select further recordings from each country. Downloads are limited to 64 MiB
+and recordings to 10–180 seconds. An unavailable country or provider reports an
+error rather than substituting another source. See the
+[Xeno-canto API documentation](https://xeno-canto.org/explore/api).
 Lightning R2D2 uses a short crack, descending pitch contour, glassy decay, and
 pentatonic flash-by-flash pitch variation at least four semitones above other
 events, paired with a yellow-gold map pulse. Each slot's volume also scales its
@@ -68,7 +112,8 @@ a dashed gold pulse and labels them as delayed; NOAA GLM retains its existing
 near-live solid pulse and independent 20-second field behavior. MTG timelines
 stop quietly when data is missing and never turn cached flashes into new events.
 
-The Forecast locations Settings pane displays both 19-point catalogs on an
+The Sound locations Settings pane displays Ocean Swells, Storm Outlook,
+Birdsong, and Frog Calls as 19-point catalogs on an
 interactive world map. Select a numbered marker and click the map to relocate
 it, or edit its name, latitude, and longitude directly. Catalogs are validated,
 stored with the installation, and can be restored to the Gaia defaults.
@@ -281,3 +326,15 @@ For a minimal server install use `pip install .`; add `[lightning]` for NOAA,
 `[eumetsat]` for MTG, or `[desktop]` for the native window. The supplied headless
 installer includes both satellite extras. Stop pauses continuous playback while
 capture and retention continue; Start resumes it.
+
+Birdsong regions are editable when Xeno-canto is selected in Sound Sources.
+Select a numbered point in Sound locations → Birdsong, then click the map or
+edit its name and coordinates; save settings to apply. Restore defaults resets
+only the selected catalog. Wikimedia Commons shows its curated locations as
+read-only and retains its existing recordings. Xeno-canto keeps the actual
+recording coordinates for playback and attribution, searches within 100 km of
+the selected center, and never substitutes a recording from outside that region.
+If the searched catalog has no suitable recordings, the app reports the region
+and advances to the next saved point on the following rotation. Regional
+catalogs are cached separately by coordinates; moving a point cannot reuse its
+old region's catalog. Each search checks up to five pages per geographic box.

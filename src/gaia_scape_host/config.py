@@ -12,6 +12,8 @@ import tempfile
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
+from .sanctsound import MARINE_KINDS, default_regions, validate_regions
+from .commons_birdsong import BIRDSONG_LOCATIONS
 from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
 
 
@@ -35,7 +37,7 @@ EVENT_VOICE_OPTIONS = (
     "none",
 )
 BACKGROUND_INSTRUMENT_OPTIONS = (
-    "ocean_swell", "storm_potential", "birdsong", "none"
+    "ocean_swell", "storm_potential", "birdsong", "frog_calls", "whale_song", "dolphin_calls", "none"
 )
 EVENT_INSTRUMENT_OPTIONS = {
     "earthquake": ("earthquake", "seismic_bells", "test_tone", "none"),
@@ -44,6 +46,9 @@ EVENT_INSTRUMENT_OPTIONS = {
     "lightning_flash": ("lightning_glass", "natural_thunder", "none"),
     "storm_potential": ("storm_potential", "none"),
     "birdsong": ("birdsong", "none"),
+    "frog_calls": ("frog_calls", "none"),
+    "whale_song": ("whale_song", "none"),
+    "dolphin_calls": ("dolphin_calls", "none"),
 }
 EVENT_KIND_BY_VOICE = {
     "earthquake": "earthquake",
@@ -79,6 +84,39 @@ def default_forecast_locations(locations) -> list[dict]:
     ]
 
 
+def default_birdsong_locations() -> list[dict]:
+    """Return the nineteen editable Birdsong region centers."""
+    return default_forecast_locations(location[:4] for location in BIRDSONG_LOCATIONS)
+
+
+def default_frog_locations() -> list[dict]:
+    """Return nineteen independent region centers for worldwide frog calls."""
+    return [
+        {"name": name, "latitude": latitude, "longitude": longitude}
+        for name, latitude, longitude in (
+            ("Algonquin, Canada", 45.8, -78.4),
+            ("Everglades, United States", 25.3, -80.9),
+            ("Veracruz, Mexico", 19.5, -96.9),
+            ("Sarapiqui, Costa Rica", 10.4, -84.0),
+            ("Mindo, Ecuador", -0.05, -78.77),
+            ("Atlantic Forest, Brazil", -24.0, -47.5),
+            ("Misiones, Argentina", -26.0, -54.5),
+            ("Camargue, France", 43.5, 4.5),
+            ("Norfolk Broads, United Kingdom", 52.7, 1.5),
+            ("Biebrza, Poland", 53.5, 22.8),
+            ("Doñana, Spain", 37.0, -6.4),
+            ("Rif Mountains, Morocco", 35.0, -5.3),
+            ("Kakamega, Kenya", 0.3, 34.9),
+            ("KwaZulu-Natal, South Africa", -28.4, 32.3),
+            ("Andasibe, Madagascar", -18.9, 48.4),
+            ("Western Ghats, India", 11.7, 76.1),
+            ("Sabah, Malaysia", 5.0, 117.7),
+            ("Okinawa, Japan", 26.7, 128.2),
+            ("Wet Tropics, Australia", -17.0, 145.6),
+        )
+    ]
+
+
 @dataclass
 class AppConfig:
     """Validated runtime settings stored alongside application data."""
@@ -109,6 +147,16 @@ class AppConfig:
     lightning_sample_rate: int = 1
     eumetsat_consumer_key: str = ""
     eumetsat_consumer_secret: str = ""
+    whale_song_enabled: bool = False
+    dolphin_calls_enabled: bool = False
+    whale_song_regions: list[str] = field(default_factory=lambda: default_regions("whale_song"))
+    dolphin_calls_regions: list[str] = field(default_factory=lambda: default_regions("dolphin_calls"))
+    frog_calls_enabled: bool = False
+    frog_calls_locations: list[dict] = field(default_factory=default_frog_locations)
+    birdsong_enabled: bool = True
+    birdsong_provider: str = "wikimedia_commons"
+    xeno_canto_api_key: str = field(default="", repr=False)
+    birdsong_locations: list[dict] = field(default_factory=default_birdsong_locations)
     ocean_swell_locations: list[dict] = field(
         default_factory=lambda: default_forecast_locations(SURF_LOCATIONS)
     )
@@ -206,12 +254,31 @@ class AppConfig:
         self.eumetsat_consumer_secret = _credential(
             self.eumetsat_consumer_secret, "EUMETSAT Consumer Secret"
         )
+        for kind in MARINE_KINDS:
+            if not isinstance(getattr(self, f"{kind}_enabled"), bool):
+                raise ValueError(f"{kind} enabled must be a boolean")
+            setattr(self, f"{kind}_regions", validate_regions(getattr(self, f"{kind}_regions"), kind))
+        if not isinstance(self.frog_calls_enabled, bool):
+            raise ValueError("Frog Calls enabled must be a boolean")
+        if not isinstance(self.birdsong_enabled, bool):
+            raise ValueError("Birdsong enabled must be a boolean")
+        self.xeno_canto_api_key = _credential(self.xeno_canto_api_key, "Xeno-canto API key")
+        if self.birdsong_provider not in {"wikimedia_commons", "xeno_canto"}:
+            raise ValueError("Unsupported birdsong provider")
+        if (self.birdsong_provider == "xeno_canto" or self.frog_calls_enabled) and not self.xeno_canto_api_key:
+            raise ValueError("Xeno-canto requires an API key")
         if "eumetsat_mtg_li" in self.enabled_sources and not (
             self.eumetsat_consumer_key and self.eumetsat_consumer_secret
         ):
             raise ValueError(
                 "EUMETSAT MTG Lightning requires a Consumer Key and Consumer Secret"
             )
+        self.frog_calls_locations = validate_forecast_locations(
+            self.frog_calls_locations, "Frog Calls"
+        )
+        self.birdsong_locations = validate_forecast_locations(
+            self.birdsong_locations, "Birdsong"
+        )
         self.ocean_swell_locations = validate_forecast_locations(
             self.ocean_swell_locations, "Ocean Swells"
         )
@@ -251,7 +318,10 @@ class AppConfig:
             "storm_potential": (
                 "storm_potential" if background == "storm_potential" else "none"
             ),
-            "birdsong": "birdsong" if background == "birdsong" else "none",
+            "birdsong": "birdsong" if background == "birdsong" and self.birdsong_enabled else "none",
+            "frog_calls": "frog_calls" if background == "frog_calls" and self.frog_calls_enabled else "none",
+            **{kind: kind if background == kind and getattr(self, f"{kind}_enabled") else "none"
+               for kind in MARINE_KINDS},
         }
 
     def _migrate_legacy_instruments(self) -> None:

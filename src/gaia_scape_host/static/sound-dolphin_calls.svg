@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title id="title">Dolphin Calls</title>
+<defs><radialGradient id="sea" cx="60%" cy="25%" r="90%"><stop stop-color="#83ada0" stop-opacity=".28"/><stop offset="1" stop-color="#0c1b19"/></radialGradient></defs>
+<path fill="#10221f" d="M0 0H512V512H0Z"/><path fill="url(#sea)" d="M0 0H512V512H0Z"/>
+<circle cx="367" cy="113" r="44" fill="#d2c48c" opacity=".72"/>
+<path d="M38 384Q121 360 204 384T370 384T536 384M57 412Q140 390 223 412T389 412" fill="none" stroke="#587e78" stroke-width="5" opacity=".6"/>
+<path d="M112 271Q122 219 182 217Q214 175 251 168Q244 197 255 218C318 224 358 268 394 302L423 302Q430 273 458 272Q451 298 460 309Q481 307 491 325Q455 338 425 322L385 322C315 283 264 293 216 301Q155 312 125 285L83 291Q66 287 78 278Z" fill="#82a4a0"/>
+<path d="M113 279Q172 294 222 274Q304 253 384 313Q305 280 234 298Q164 314 125 285L88 290Z" fill="#c3cbb0"/>
+<path d="M218 273Q254 288 274 339Q228 326 195 291Z" fill="#537e7d"/>
+<path d="M88 283L126 278Q140 283 150 280" fill="none" stroke="#456b68" stroke-width="4" stroke-linecap="round"/>
+<circle cx="143" cy="256" r="5" fill="#112820"/>
+<path d="M69 245Q47 264 56 288M47 224Q12 253 26 301" fill="none" stroke="#abc989" stroke-width="5" stroke-linecap="round"/>
+<circle cx="307" cy="351" r="5" fill="#a1bfb0" opacity=".6"/><circle cx="325" cy="373" r="8" fill="none" stroke="#a1bfb0" stroke-width="3" opacity=".6"/>
+</svg>

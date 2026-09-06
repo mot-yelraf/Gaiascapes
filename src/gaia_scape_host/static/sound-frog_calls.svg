@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title id="title">Frog Calls</title>
+<defs><radialGradient id="pond" cx="55%" cy="30%" r="85%"><stop stop-color="#95b97d" stop-opacity=".24"/><stop offset="1" stop-color="#0c1b19"/></radialGradient></defs>
+<path fill="#10221f" d="M0 0H512V512H0Z"/><path fill="url(#pond)" d="M0 0H512V512H0Z"/>
+<circle cx="365" cy="117" r="45" fill="#d2c48c" opacity=".72"/>
+<path d="M46 390Q256 350 466 390M80 420Q256 385 432 420" fill="none" stroke="#587e78" stroke-width="5" opacity=".6"/>
+<path d="M99 356C83 282 371 272 414 350C412 395 177 412 99 356L250 345Z" fill="#456e49"/>
+<path d="M165 306Q108 281 125 336L199 350M347 306Q404 281 387 336L313 350" fill="#789953" stroke="#a0b770" stroke-width="9" stroke-linejoin="round"/>
+<ellipse cx="256" cy="283" rx="88" ry="64" fill="#89a65c"/>
+<ellipse cx="256" cy="303" rx="49" ry="39" fill="#c6ca91"/>
+<path d="M172 259Q165 184 206 191Q252 214 306 191Q347 185 340 259Q256 300 172 259Z" fill="#a2b976"/>
+<circle cx="201" cy="216" r="21" fill="#d4c697"/><circle cx="311" cy="216" r="21" fill="#d4c697"/>
+<ellipse cx="201" cy="216" rx="13" ry="6" fill="#112820"/><ellipse cx="311" cy="216" rx="13" ry="6" fill="#112820"/>
+<path d="M208 258Q256 283 304 258M203 311L188 359L216 360M309 311L324 359L296 360" fill="none" stroke="#587548" stroke-width="8" stroke-linecap="round"/>
+<path d="M135 220Q109 243 124 270M108 202Q70 240 94 289M377 220Q403 243 388 270M404 202Q442 240 418 289" fill="none" stroke="#abc989" stroke-width="5" stroke-linecap="round"/>
+</svg>

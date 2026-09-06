@@ -222,7 +222,9 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .pane-heading h3 { margin: 0; font: 500 1.28rem Georgia, serif; }
 .pane-heading p { margin: .25rem 0 0; color: var(--muted); font-size: .78rem; line-height: 1.5; }
 /* Source controls share instrument artwork and retain native checkbox access. */
+.source-group-heading { margin: 1rem 0 .5rem; color: var(--ink); font-size: .85rem; }
 .source-tile-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: .75rem; }
+.source-tile-grid--background { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .source-tile { min-width: 0; padding: .65rem; border: 2px solid var(--line); border-radius: 12px; background: #0b1511; }
 .source-tile:has(input[type="checkbox"]:checked) { border-color: var(--moss); }
 .source-tile:has(input[type="checkbox"]:focus-visible) { outline: 2px solid var(--earth); outline-offset: 3px; }
@@ -237,13 +239,17 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .source-credentials { display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; margin-top: .5rem; }
 .source-credentials[hidden] { display: none; }
 .source-credentials label { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: .2rem; color: var(--ink); font-size: .65rem; font-weight: 700; }
-.source-credentials input { width: 100%; min-width: 0; padding: .4rem .45rem; border: 1px solid var(--line); background: #08100d; color: var(--ink); font: inherit; }
+.source-credentials label[hidden] { display: none; }
+.source-credentials input, .source-credentials select { width: 100%; min-width: 0; padding: .4rem .45rem; border: 1px solid var(--line); background: #08100d; color: var(--ink); font: inherit; }
 .settings-dialog:has([data-pane="sources"]:not([hidden])) { height: min(54rem, calc(100vh - 2rem)); }
 .settings-pane[data-pane="sources"] { padding-block: .75rem; }
 .settings-pane[data-pane="sources"] .pane-heading { padding-bottom: .5rem; margin-bottom: .75rem; }
 .settings-pane[data-pane="sources"] .settings-tip { margin-top: .75rem; font-size: .65rem; padding: .6rem; }
+@media (max-width: 900px) {
+  .source-tile-grid--background { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 640px) {
-  .source-tile-grid { grid-template-columns: minmax(0, 1fr); }
+  .source-tile-grid, .source-tile-grid--background { grid-template-columns: minmax(0, 1fr); }
 }
 .future-source { display: grid; gap: .3rem; margin-top: .75rem; padding: 1rem; border: 1px dashed var(--line); color: var(--muted); }
 .future-source strong { color: var(--muted); font-size: .85rem; }
@@ -373,3 +379,6 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
   .background-sound-row, .sound-event-grid { grid-template-columns: minmax(0, 1fr); }
   .sound-tile { width: 100%; max-width: 20rem; justify-self: center; }
 }
+
+.marine-location-selection { display: flex; align-items: center; gap: .4rem; font-size: .75rem; }
+.marine-location-selection input { width: auto; accent-color: var(--moss); }

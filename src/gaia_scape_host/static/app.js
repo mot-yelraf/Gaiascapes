@@ -10,20 +10,26 @@ let pendingLightningEvent = null;
 let lightningIntensityTimer = null;
 let lastLightningIntensityUpdate = 0;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
-let birdsongAudio = null;
-let birdsongFadeTimer = null;
-let birdsongPreviewTimer = null;
-let birdsongPreviewUntil = 0;
-const activeBirdsongAudio = new Set();
+const MARINE_BACKGROUNDS = ["whale_song", "dolphin_calls"];
+const RECORDED_BACKGROUNDS = ["birdsong", "frog_calls", ...MARINE_BACKGROUNDS];
+let recordingKind = null;
+let recordingPlaybackGeneration = 0;
+let recordingAudio = null;
+let recordingFadeTimer = null;
+let recordingPreviewTimer = null;
+let recordingPreviewUntil = 0;
+const activeRecordingAudio = new Set();
 
-function stopBirdsongPlayback(fadeMilliseconds = 700) {
-  if (birdsongFadeTimer) clearInterval(birdsongFadeTimer);
-  if (birdsongPreviewTimer) clearTimeout(birdsongPreviewTimer);
-  birdsongFadeTimer = null;
-  birdsongPreviewTimer = null;
-  birdsongPreviewUntil = 0;
-  const players = Array.from(activeBirdsongAudio);
-  birdsongAudio = null;
+function stopRecordingPlayback(fadeMilliseconds = 700) {
+  recordingPlaybackGeneration += 1;
+  recordingKind = null;
+  if (recordingFadeTimer) clearInterval(recordingFadeTimer);
+  if (recordingPreviewTimer) clearTimeout(recordingPreviewTimer);
+  recordingFadeTimer = null;
+  recordingPreviewTimer = null;
+  recordingPreviewUntil = 0;
+  const players = Array.from(activeRecordingAudio);
+  recordingAudio = null;
   if (!players.length) return;
   const initialVolumes = players.map((audio) => audio.volume);
   const startedAt = performance.now();
@@ -35,16 +41,22 @@ function stopBirdsongPlayback(fadeMilliseconds = 700) {
       players.forEach((audio) => {
         audio.pause();
         audio.removeAttribute("src");
-        activeBirdsongAudio.delete(audio);
+        activeRecordingAudio.delete(audio);
       });
     }
   }, 50);
 }
 
-async function playBirdsongCue(cue) {
+async function playRecordingCue(cue) {
   const mediaUrl = cue.event?.traits?.media_url;
   if (!mediaUrl) return;
-  const previous = birdsongAudio;
+  const generation = ++recordingPlaybackGeneration;
+  recordingKind = cue.event.kind;
+  const cueDuration = Number(cue.duration ?? 0);
+  // Protect a preview from status refreshes while the media is still loading.
+  recordingPreviewUntil = cueDuration > 0 && cueDuration <= 10
+    ? Date.now() + (cueDuration * 1000) : 0;
+  const previous = recordingAudio;
   const next = new Audio(mediaUrl);
   next.loop = true;
   next.preload = "auto";
@@ -52,37 +64,41 @@ async function playBirdsongCue(cue) {
   try {
     await next.play();
   } catch (error) {
-    console.warn("Browser blocked birdsong playback", error);
-    message("Birdsong is ready. Select Start or Preview again to allow audio.", true);
+    console.warn("Browser blocked recording playback", error);
+    message(`${instrumentLabel(cue.event.kind)} is ready. Select Start or Preview again to allow audio.`, true);
     return;
   }
-  birdsongAudio = next;
-  activeBirdsongAudio.add(next);
-  if (birdsongPreviewTimer) clearTimeout(birdsongPreviewTimer);
-  const cueDuration = Number(cue.duration ?? 0);
-  if (cueDuration > 0 && cueDuration <= 10) {
-    birdsongPreviewUntil = Date.now() + (cueDuration * 1000);
-    birdsongPreviewTimer = setTimeout(() => stopBirdsongPlayback(), cueDuration * 1000);
-  } else {
-    birdsongPreviewTimer = null;
-    birdsongPreviewUntil = 0;
+  if (generation !== recordingPlaybackGeneration) {
+    next.pause();
+    next.removeAttribute("src");
+    return;
   }
-  if (birdsongFadeTimer) clearInterval(birdsongFadeTimer);
+  recordingAudio = next;
+  activeRecordingAudio.add(next);
+  if (recordingPreviewTimer) clearTimeout(recordingPreviewTimer);
+  if (cueDuration > 0 && cueDuration <= 10) {
+    recordingPreviewUntil = Date.now() + (cueDuration * 1000);
+    recordingPreviewTimer = setTimeout(() => stopRecordingPlayback(), cueDuration * 1000);
+  } else {
+    recordingPreviewTimer = null;
+    recordingPreviewUntil = 0;
+  }
+  if (recordingFadeTimer) clearInterval(recordingFadeTimer);
   const startedAt = performance.now();
   const fadeMilliseconds = 3000;
   const targetVolume = Math.max(0, Math.min(1, Number(cue.volume ?? 1) * 0.75));
   const previousVolume = previous?.volume || 0;
-  birdsongFadeTimer = setInterval(() => {
+  recordingFadeTimer = setInterval(() => {
     const progress = Math.min(1, (performance.now() - startedAt) / fadeMilliseconds);
     next.volume = targetVolume * progress;
     if (previous) previous.volume = previousVolume * (1 - progress);
     if (progress >= 1) {
-      clearInterval(birdsongFadeTimer);
-      birdsongFadeTimer = null;
+      clearInterval(recordingFadeTimer);
+      recordingFadeTimer = null;
       if (previous) {
         previous.pause();
         previous.removeAttribute("src");
-        activeBirdsongAudio.delete(previous);
+        activeRecordingAudio.delete(previous);
       }
     }
   }, 50);
@@ -314,7 +330,14 @@ async function request(path, options = {}) {
     headers: {"Content-Type": "application/json"},
     ...options,
   });
-  const payload = await response.json();
+  let payload;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new Error(response.ok
+      ? "The server returned an invalid response. Please try again."
+      : `The server could not complete the request (HTTP ${response.status}). Please try again.`);
+  }
   if (!response.ok) throw new Error(payload.detail || `Request failed (${response.status})`);
   return payload;
 }
@@ -452,8 +475,11 @@ function oceanSwellSeverity(heightMeters) {
 }
 
 function backgroundCharacteristics(event) {
-  if (!event) return "Awaiting forecast";
+  if (!event) return "Awaiting background";
   const traits = event.traits || {};
+  if (RECORDED_BACKGROUNDS.includes(event.kind)) {
+    return `${traits.title || "Animal recording"} · ${traits.creator || "Unknown contributor"}`;
+  }
   if (event.kind === "ocean_swell") {
     const measurements = oceanSwellMeasurements(traits);
     const severity = oceanSwellSeverity(measurements.heightMeters);
@@ -508,16 +534,16 @@ function updateBackgroundCharacteristics(event, fallbackText = null) {
       element.setAttribute("aria-label", backgroundCharacteristics(event));
       return;
     }
-    if (event?.kind === "birdsong") {
+    if (RECORDED_BACKGROUNDS.includes(event?.kind)) {
       const traits = event.traits || {};
       const source = document.createElement("a");
-      source.href = traits.source_url || "https://commons.wikimedia.org/";
+      source.href = traits.source_url || (event.provider === "xeno_canto" ? "https://xeno-canto.org/" : "https://commons.wikimedia.org/");
       source.target = "_blank";
       source.rel = "noopener noreferrer";
-      source.textContent = traits.title || "Wikimedia Commons recording";
+      source.textContent = traits.title || "Animal recording";
       const credit = document.createElement("span");
       credit.className = "forecast-characteristics-details";
-      credit.textContent = `${traits.creator || "Unknown contributor"} · ${traits.license || "Commons"}`;
+      credit.textContent = `${traits.creator || "Unknown contributor"} · ${traits.license || "License unavailable"}`;
       element.classList.add("forecast-characteristics");
       element.append(source, credit);
       element.setAttribute("aria-label", `${source.textContent}; ${credit.textContent}`);
@@ -528,12 +554,19 @@ function updateBackgroundCharacteristics(event, fallbackText = null) {
   });
 }
 
-function updateBackgroundStatus(event) {
+function updateBackgroundStatus(event, recordingStatuses = {}) {
   const selection = byId("backgroundInstrument")?.value || "none";
   updateBackgroundSoundsTitle(selection);
   if (selection === "none") {
     updateSoundLocation(null);
     updateBackgroundCharacteristics(null, "No background selected");
+    return;
+  }
+  const recordingStatus = recordingStatuses[selection];
+  if (recordingStatus?.error || recordingStatus?.state === "loading") {
+    updateSoundLocation(null);
+    updateBackgroundCharacteristics(null, recordingStatus.error
+      || `Looking for ${instrumentLabel(selection)} recordings…`);
     return;
   }
   const activeEvent = event?.kind === selection ? event : null;
@@ -553,6 +586,9 @@ function eventKindLabel(kind) {
     ocean_swell: "Ocean Swell",
     storm_potential: "Storm Outlook",
     birdsong: "Birdsong Atlas",
+    frog_calls: "Frog Calls",
+    whale_song: "Whale Song",
+    dolphin_calls: "Dolphin Calls",
   };
   return labels[kind] || instrumentLabel(kind);
 }
@@ -748,6 +784,9 @@ function backgroundSoundLabel(instrument) {
   if (instrument === "ocean_swell") return "Ocean Swells";
   if (instrument === "storm_potential") return "Storm Outlook";
   if (instrument === "birdsong") return "Birdsong Atlas";
+  if (instrument === "frog_calls") return "Frog Calls";
+  if (instrument === "whale_song") return "Whale Song";
+  if (instrument === "dolphin_calls") return "Dolphin Calls";
   return "Background Sounds";
 }
 
@@ -762,6 +801,9 @@ const EVENT_PALETTES = {
   lightning_flash: ["#79500a", "#9d6a10", "#c58a1b", "#e5aa2b", "#ffd15a"],
   storm_potential: ["#3b4568", "#4c5782", "#606b9d", "#7882b5", "#969dcc"],
   birdsong: ["#355c37", "#467847", "#5a965a", "#75b873", "#99d493"],
+  whale_song: ["#204755", "#326579", "#538f9d", "#85b5bb", "#b9d4cc"],
+  dolphin_calls: ["#285360", "#3f7b89", "#64a0aa", "#98c5c5", "#c4ded5"],
+  frog_calls: ["#365331", "#537544", "#73964e", "#96b765", "#bed58b"],
   default: ["#476352", "#567966", "#679079", "#7ca68d", "#96bba1"],
 };
 
@@ -780,7 +822,7 @@ function eventColors(event, instrument = "") {
 
 function cueRole(cue) {
   if (cue.role) return cue.role;
-  return ["ocean_swell", "storm_potential", "birdsong"].includes(cue.event?.kind) ? "background" : "event";
+  return ["ocean_swell", "storm_potential", ...RECORDED_BACKGROUNDS].includes(cue.event?.kind) ? "background" : "event";
 }
 
 function animateCapturedEvent(event, instrument = "", role = "event", cueDuration = 3.6, volume = 1) {
@@ -827,7 +869,7 @@ async function updateStatus() {
     const historySignature = `${status.history.event_count}:${status.history.latest_timestamp ?? ""}`;
     const historyChanged = observedHistorySignature !== null && observedHistorySignature !== historySignature;
     observedHistorySignature = historySignature;
-    updateBackgroundStatus(status.cues.latest_background_event);
+    updateBackgroundStatus(status.cues.latest_background_event, status.sources?.recordings);
     updateLastEventStatus(status.cues.latest_event);
     updateLastEarthquakeStatus(status.cues.latest_earthquake_event);
     syncRecoveryToasts({
@@ -835,10 +877,11 @@ async function updateStatus() {
       ...(status.sources?.health || {}),
     });
     const continuous = status.live.mode === "continuous";
-    const previewingBirdsong = Date.now() < birdsongPreviewUntil;
-    if ((!continuous || !status.live.running
-        || byId("backgroundInstrument")?.value !== "birdsong") && !previewingBirdsong) {
-      stopBirdsongPlayback();
+    const previewingRecording = Date.now() < recordingPreviewUntil;
+    const recordingDisabled = recordingKind && status.sources?.[`${recordingKind}_enabled`] === false;
+    if (recordingDisabled || ((!continuous || !status.live.running
+        || byId("backgroundInstrument")?.value !== recordingKind) && !previewingRecording)) {
+      stopRecordingPlayback();
     }
     byId("liveMode").value = status.live.mode;
     applyLiveMode(status.live.mode);
@@ -861,7 +904,7 @@ async function updateEmittedCues() {
     const query = observedCueSequence === null ? "" : `?after=${observedCueSequence}`;
     const payload = await request(`/api/cues${query}`);
     payload.cues.forEach((cue) => {
-      if (cue.event?.kind === "birdsong") playBirdsongCue(cue);
+      if (RECORDED_BACKGROUNDS.includes(cue.event?.kind)) playRecordingCue(cue);
       animateCapturedEvent(
         cue.event, cue.instrument, cueRole(cue), cue.duration, cue.volume ?? 1
       );
@@ -918,6 +961,9 @@ function instrumentLabel(instrument) {
 
 function eventSummary(event) {
   const traits = event.traits || {};
+  if (RECORDED_BACKGROUNDS.includes(event.kind)) {
+    return {badge: "Recording", detail: traits.title || instrumentLabel(event.kind)};
+  }
   const imperial = byId("displayUnits")?.value === "imperial";
   if (event.kind === "ocean_swell") {
     const heightMeters = Number(traits.swell_height_m ?? traits.wave_height_m ?? 0);
@@ -1115,18 +1161,40 @@ if (settingsDialog && settingsForm) {
     : {current: {}, defaults: {}};
   const cloneCatalog = (catalog) => (catalog || []).map((location) => ({...location}));
   const forecastLocationCatalogs = {
+    birdsong: cloneCatalog(parsedLocationData.current.birdsong),
+    frog_calls: cloneCatalog(parsedLocationData.current.frog_calls),
+    whale_song: cloneCatalog(parsedLocationData.current.whale_song),
+    dolphin_calls: cloneCatalog(parsedLocationData.current.dolphin_calls),
     ocean_swell: cloneCatalog(parsedLocationData.current.ocean_swell),
     storm_outlook: cloneCatalog(parsedLocationData.current.storm_outlook),
   };
   const defaultForecastLocationCatalogs = {
+    birdsong: cloneCatalog(parsedLocationData.defaults.birdsong),
+    frog_calls: cloneCatalog(parsedLocationData.defaults.frog_calls),
+    whale_song: cloneCatalog(parsedLocationData.defaults.whale_song),
+    dolphin_calls: cloneCatalog(parsedLocationData.defaults.dolphin_calls),
     ocean_swell: cloneCatalog(parsedLocationData.defaults.ocean_swell),
     storm_outlook: cloneCatalog(parsedLocationData.defaults.storm_outlook),
   };
   let activeForecastCatalog = "ocean_swell";
   let selectedForecastLocation = 0;
 
+  function birdsongLocationsReadOnly() {
+    return activeForecastCatalog === "birdsong" && byId("birdsongProvider").value !== "xeno_canto";
+  }
+
+  function marineLocationsReadOnly() {
+    return MARINE_BACKGROUNDS.includes(activeForecastCatalog);
+  }
+
+  function selectedLocationCatalog() {
+    return birdsongLocationsReadOnly()
+      ? parsedLocationData.current.commons_birdsong
+      : forecastLocationCatalogs[activeForecastCatalog];
+  }
+
   function forecastCatalogLabel() {
-    return activeForecastCatalog === "ocean_swell" ? "Ocean Swells" : "Storm Outlook";
+    return {ocean_swell: "Ocean Swells", storm_outlook: "Storm Outlook", birdsong: "Birdsong", frog_calls: "Frog Calls", whale_song: "Whale Song", dolphin_calls: "Dolphin Calls"}[activeForecastCatalog];
   }
 
   function movedForecastLocationName(latitude, longitude) {
@@ -1139,7 +1207,7 @@ if (settingsDialog && settingsForm) {
     const layer = byId("forecastLocationMarkerLayer");
     if (!layer) return;
     layer.replaceChildren();
-    forecastLocationCatalogs[activeForecastCatalog].forEach((location, index) => {
+    selectedLocationCatalog().forEach((location, index) => {
       const position = projectCoordinates(location.longitude, location.latitude);
       const marker = createSvgElement("g", {
         class: `forecast-location-marker${index === selectedForecastLocation ? " is-selected" : ""}`,
@@ -1199,7 +1267,7 @@ if (settingsDialog && settingsForm) {
     const list = byId("forecastLocationList");
     if (!list) return;
     list.replaceChildren();
-    const sortedLocations = forecastLocationCatalogs[activeForecastCatalog]
+    const sortedLocations = selectedLocationCatalog()
       .map((location, index) => ({location, index}))
       .sort((left, right) => left.location.name.localeCompare(
         right.location.name, undefined, {sensitivity: "base", numeric: true}
@@ -1245,18 +1313,40 @@ if (settingsDialog && settingsForm) {
       name.addEventListener("change", renderForecastLocationEditor);
       nameField.append(nameLabel, name);
       fields.append(nameField, coordinates);
+      fields.querySelectorAll("input").forEach((input) => { input.readOnly = birdsongLocationsReadOnly() || marineLocationsReadOnly(); });
+      if (marineLocationsReadOnly()) {
+        const includeLabel = document.createElement("label");
+        includeLabel.className = "marine-location-selection";
+        const include = document.createElement("input");
+        include.type = "checkbox";
+        include.checked = location.selected;
+        include.setAttribute("aria-label", `Include ${location.name}`);
+        include.addEventListener("change", () => {
+          location.selected = include.checked;
+          renderForecastLocationEditor();
+        });
+        includeLabel.append(include, document.createTextNode("Include in playback"));
+        fields.prepend(includeLabel);
+      }
       row.append(selector, fields);
       list.append(row);
     });
   }
 
   function renderForecastLocationEditor() {
-    const catalog = forecastLocationCatalogs[activeForecastCatalog];
+    const catalog = selectedLocationCatalog();
     settingsDialog.querySelectorAll("[data-location-catalog]").forEach((button) => {
       button.classList.toggle("is-active", button.dataset.locationCatalog === activeForecastCatalog);
     });
-    byId("forecastLocationCount").textContent = `${catalog.length} / 19 locations`;
-    byId("forecastLocationReadout").textContent = `Location ${selectedForecastLocation + 1} selected. Click the map to move it.`;
+    byId("forecastLocationCount").textContent = marineLocationsReadOnly()
+      ? `${catalog.filter((location) => location.selected).length} / ${catalog.length} sites selected`
+      : `${catalog.length} / 19 locations`;
+    byId("restoreForecastLocations").disabled = birdsongLocationsReadOnly();
+    byId("forecastLocationReadout").textContent = marineLocationsReadOnly()
+      ? "Choose at least one recording site. Map points mark hydrophones; recordings are archived, not live."
+      : birdsongLocationsReadOnly()
+      ? "Commons uses curated locations. Select Xeno-canto in Sound Sources to edit regions."
+      : `Location ${selectedForecastLocation + 1} selected. Click the map to move it.${RECORDED_BACKGROUNDS.includes(activeForecastCatalog) ? ` ${forecastCatalogLabel()} searches within 100 km.` : ""}`;
     renderForecastMarkers();
     renderForecastLocationList();
   }
@@ -1291,13 +1381,14 @@ if (settingsDialog && settingsForm) {
     byId("forecastMapClipPath").setAttribute("d", boundary);
     byId("forecastMapOceanPath").setAttribute("d", boundary);
     forecastLocationMap.addEventListener("click", (event) => {
+      if (birdsongLocationsReadOnly() || marineLocationsReadOnly()) return;
       const point = forecastLocationMap.createSVGPoint();
       point.x = event.clientX;
       point.y = event.clientY;
       const mapPoint = point.matrixTransform(forecastLocationMap.getScreenCTM().inverse());
       if (!mapContainsPoint(mapPoint.x, mapPoint.y)) return;
       const coordinates = inverseProjectCoordinates(mapPoint.x, mapPoint.y);
-      const location = forecastLocationCatalogs[activeForecastCatalog][selectedForecastLocation];
+      const location = selectedLocationCatalog()[selectedForecastLocation];
       location.latitude = Number(coordinates.latitude.toFixed(4));
       location.longitude = Number(coordinates.longitude.toFixed(4));
       location.name = movedForecastLocationName(
@@ -1529,12 +1620,33 @@ if (settingsDialog && settingsForm) {
     });
   });
   byId("backgroundInstrument").addEventListener("change", (event) => {
-    if (event.target.value !== "birdsong") stopBirdsongPlayback();
+    if (event.target.value !== recordingKind) stopRecordingPlayback();
     updateBackgroundStatus(null);
   });
   updateBackgroundSoundsTitle(byId("backgroundInstrument").value);
   byId("displayUnits").addEventListener("change", () => {
     Promise.all([updateStatus(), updateEvents()]);
+  });
+  const updateBirdsongCredentials = () => {
+    byId("birdsongCredentials").hidden = !byId("sourceBirdsong").checked;
+    byId("xenoCantoCredentials").hidden = byId("birdsongProvider").value !== "xeno_canto";
+  };
+  byId("sourceBirdsong").addEventListener("change", updateBirdsongCredentials);
+  byId("birdsongProvider").addEventListener("change", () => {
+    updateBirdsongCredentials();
+    renderForecastLocationEditor();
+  });
+  updateBirdsongCredentials();
+  const updateFrogCallsCredentials = () => {
+    byId("frogCallsCredentials").hidden = !byId("sourceFrogCalls").checked;
+  };
+  byId("sourceFrogCalls").addEventListener("change", updateFrogCallsCredentials);
+  updateFrogCallsCredentials();
+  const sharedXenoCantoKeyInputs = [byId("xenoCantoApiKey"), byId("frogCallsApiKey")];
+  sharedXenoCantoKeyInputs.forEach((input) => {
+    input.addEventListener("input", () => {
+      sharedXenoCantoKeyInputs.forEach((other) => { if (other !== input) other.value = input.value; });
+    });
   });
   settingsForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -1546,6 +1658,10 @@ if (settingsDialog && settingsForm) {
         method: "PUT",
         body: JSON.stringify({
           map_projection: mapProjection,
+          birdsong_locations: forecastLocationCatalogs.birdsong,
+          frog_calls_locations: forecastLocationCatalogs.frog_calls,
+          whale_song_regions: forecastLocationCatalogs.whale_song.filter((location) => location.selected).map((location) => location.id),
+          dolphin_calls_regions: forecastLocationCatalogs.dolphin_calls.filter((location) => location.selected).map((location) => location.id),
           ocean_swell_locations: forecastLocationCatalogs.ocean_swell,
           storm_outlook_locations: forecastLocationCatalogs.storm_outlook,
         }),
@@ -1575,6 +1691,12 @@ if (settingsDialog && settingsForm) {
           lightning_sample_rate: Number(lightningSampleSliders[0].value),
           eumetsat_consumer_key: eumetsatConsumerKey.value,
           eumetsat_consumer_secret: eumetsatConsumerSecret.value,
+          birdsong_enabled: byId("sourceBirdsong").checked,
+          frog_calls_enabled: byId("sourceFrogCalls").checked,
+          whale_song_enabled: byId("sourceWhaleSong").checked,
+          dolphin_calls_enabled: byId("sourceDolphinCalls").checked,
+          birdsong_provider: byId("birdsongProvider").value,
+          xeno_canto_api_key: byId("xenoCantoApiKey").value,
           units: byId("displayUnits").value,
         }),
       });
@@ -1586,6 +1708,13 @@ if (settingsDialog && settingsForm) {
         eumetsatConsumerSecret.placeholder = "Saved — enter only to replace";
         updateMtgLiCredentials();
       }
+      if (audioSettings.xeno_canto_credentials_configured) {
+        sharedXenoCantoKeyInputs.forEach((input) => {
+          input.value = "";
+          input.placeholder = "Saved — enter only to replace";
+        });
+      }
+      if (recordingKind && !audioSettings[`${recordingKind}_enabled`]) stopRecordingPlayback();
       status.textContent = "Settings saved.";
       await updateEvents();
     } catch (error) {

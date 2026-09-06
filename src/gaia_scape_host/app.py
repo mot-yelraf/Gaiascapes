@@ -22,10 +22,13 @@ from .config import (
     BACKGROUND_INSTRUMENT_OPTIONS,
     EVENT_VOICE_OPTIONS,
     default_forecast_locations,
+    default_birdsong_locations,
+    default_frog_locations,
     event_kind_for_voice,
     event_mappings_for_slots,
     resolve_data_dir,
 )
+from .sanctsound import MARINE_KINDS, available_locations
 from .geoip import GeoIpLocationResolver
 from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
 from .service import GaiaScapeService
@@ -48,11 +51,15 @@ def create_app(
     mtg_li_client=None,
     birdsong_client=None,
     geoip_resolver=None,
+    frog_calls_client=None,
+    whale_song_client=None,
+    dolphin_calls_client=None,
 ) -> FastAPI:
     """Create an isolated application, optionally disabling network polling."""
     runtime_data = Path(data_dir) if data_dir is not None else resolve_data_dir()
     runtime_data.mkdir(parents=True, exist_ok=True)
-    (runtime_data / "media" / "birdsong").mkdir(parents=True, exist_ok=True)
+    for kind in ("birdsong", "frog_calls", *MARINE_KINDS):
+        (runtime_data / "media" / kind).mkdir(parents=True, exist_ok=True)
     config_path = runtime_data / "config.json"
     config = AppConfig.load(config_path)
     if not config_path.exists():
@@ -66,6 +73,9 @@ def create_app(
         glm_client=glm_client,
         mtg_li_client=mtg_li_client,
         birdsong_client=birdsong_client,
+        frog_calls_client=frog_calls_client,
+        whale_song_client=whale_song_client,
+        dolphin_calls_client=dolphin_calls_client,
     )
     system_location = geoip_resolver or GeoIpLocationResolver()
 
@@ -93,6 +103,16 @@ def create_app(
         name="birdsong-media",
     )
 
+    app.mount(
+        "/frog-calls-media",
+        StaticFiles(directory=runtime_data / "media" / "frog_calls"),
+        name="frog-calls-media",
+    )
+
+    for kind in MARINE_KINDS:
+        name = f'{kind.replace("_", "-")}-media'
+        app.mount(f"/{name}", StaticFiles(directory=runtime_data / "media" / kind), name=name)
+
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):
         """Render the dashboard with the installation's current settings."""
@@ -110,16 +130,31 @@ def create_app(
             instrument_slots=config.instrument_slots(),
             instrument_volumes=config.volume_slots(),
             lightning_sample_rate=config.lightning_sample_rate,
+            whale_song_enabled=config.whale_song_enabled,
+            dolphin_calls_enabled=config.dolphin_calls_enabled,
+            frog_calls_enabled=config.frog_calls_enabled,
+            birdsong_enabled=config.birdsong_enabled,
+            birdsong_provider=config.birdsong_provider,
+            xeno_canto_credentials_configured=bool(config.xeno_canto_api_key),
             eumetsat_credentials_configured=bool(
                 config.eumetsat_consumer_key and config.eumetsat_consumer_secret
             ),
             event_voice_options=EVENT_VOICE_OPTIONS,
             background_options=BACKGROUND_INSTRUMENT_OPTIONS,
             forecast_location_catalogs={
+                **{kind: [dict(location, selected=location["id"] in getattr(config, f"{kind}_regions"))
+                          for location in available_locations(kind)] for kind in MARINE_KINDS},
+                "frog_calls": config.frog_calls_locations,
+                "birdsong": config.birdsong_locations,
+                "commons_birdsong": default_birdsong_locations(),
                 "ocean_swell": config.ocean_swell_locations,
                 "storm_outlook": config.storm_outlook_locations,
             },
             default_forecast_location_catalogs={
+                **{kind: [dict(location, selected=True) for location in available_locations(kind)]
+                   for kind in MARINE_KINDS},
+                "frog_calls": default_frog_locations(),
+                "birdsong": default_birdsong_locations(),
                 "ocean_swell": default_forecast_locations(SURF_LOCATIONS),
                 "storm_outlook": default_forecast_locations(STORM_LOCATIONS),
             },
@@ -223,6 +258,8 @@ def create_app(
         document = asdict(config)
         document.pop("eumetsat_consumer_key", None)
         document.pop("eumetsat_consumer_secret", None)
+        document.pop("xeno_canto_api_key", None)
+        document["xeno_canto_credentials_configured"] = bool(config.xeno_canto_api_key)
         document["eumetsat_credentials_configured"] = bool(
             config.eumetsat_consumer_key and config.eumetsat_consumer_secret
         )
@@ -250,8 +287,13 @@ def create_app(
                 "units": body.get("units", config.units),
                 "instrument_volumes": body.get("instrument_volumes", config.instrument_volumes),
                 "lightning_sample_rate": body.get("lightning_sample_rate", config.lightning_sample_rate),
+                **{f"{kind}_enabled": body.get(f"{kind}_enabled", getattr(config, f"{kind}_enabled"))
+                   for kind in MARINE_KINDS},
+                "frog_calls_enabled": body.get("frog_calls_enabled", config.frog_calls_enabled),
+                "birdsong_enabled": body.get("birdsong_enabled", config.birdsong_enabled),
+                "birdsong_provider": body.get("birdsong_provider", config.birdsong_provider),
             }
-            for name in ("eumetsat_consumer_key", "eumetsat_consumer_secret"):
+            for name in ("eumetsat_consumer_key", "eumetsat_consumer_secret", "xeno_canto_api_key"):
                 if body.get(name):
                     changes[name] = body[name]
             await service.update_settings(changes, config_path)
@@ -261,6 +303,11 @@ def create_app(
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {
             "enabled_sources": list(config.enabled_sources),
+            **{f"{kind}_enabled": getattr(config, f"{kind}_enabled") for kind in MARINE_KINDS},
+            "frog_calls_enabled": config.frog_calls_enabled,
+            "birdsong_enabled": config.birdsong_enabled,
+            "birdsong_provider": config.birdsong_provider,
+            "xeno_canto_credentials_configured": bool(config.xeno_canto_api_key),
             "units": config.units,
             "instrument_slots": config.instrument_slots(),
             "event_instruments": dict(config.event_instruments),
@@ -273,10 +320,14 @@ def create_app(
 
     @app.put("/api/settings/locations")
     async def update_forecast_locations(request: Request):
-        """Persist forecast sampling locations and the shared map projection."""
+        """Persist sound locations and the shared map projection."""
         body = await _json_body(request)
         try:
             pruned = await service.update_settings({
+                **{f"{kind}_regions": body.get(f"{kind}_regions", getattr(config, f"{kind}_regions"))
+                   for kind in MARINE_KINDS},
+                "frog_calls_locations": body.get("frog_calls_locations", config.frog_calls_locations),
+                "birdsong_locations": body.get("birdsong_locations", config.birdsong_locations),
                 "map_projection": body.get("map_projection", config.map_projection),
                 "ocean_swell_locations": body.get("ocean_swell_locations"),
                 "storm_outlook_locations": body.get("storm_outlook_locations"),
@@ -287,6 +338,9 @@ def create_app(
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {
             "map_projection": config.map_projection,
+            **{f"{kind}_regions": getattr(config, f"{kind}_regions") for kind in MARINE_KINDS},
+            "frog_calls_locations": config.frog_calls_locations,
+            "birdsong_locations": config.birdsong_locations,
             "ocean_swell_locations": config.ocean_swell_locations,
             "storm_outlook_locations": config.storm_outlook_locations,
             "pruned": pruned,
@@ -306,6 +360,8 @@ def create_app(
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         except OSError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 

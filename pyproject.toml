@@ -40,7 +40,7 @@ version = {attr = "gaia_scape.__version__"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-gaia_scape_host = ["templates/*.html", "static/*.css", "static/*.js", "static/*.svg", "static/*.png", "static/*.ico", "static/*.icns"]
+gaia_scape_host = ["sanctsound_catalog.json", "templates/*.html", "static/*.css", "static/*.js", "static/*.svg", "static/*.png", "static/*.ico", "static/*.icns"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

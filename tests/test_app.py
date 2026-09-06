@@ -165,11 +165,11 @@ def test_web_app_captures_and_reports_status(tmp_path):
             "</select>", 1
         )[0]
         expected_event_choices = [
-            "earthquake", "natural_thunder", "seismic_bells", "tidal_bell", "none"
+            "none", "earthquake", "seismic_bells", "natural_thunder", "tidal_bell"
         ]
         assert re.findall(r'<option value="([^"]+)"', event_1_markup) == expected_event_choices
         assert re.findall(r'<option value="([^"]+)"', event_2_markup) == expected_event_choices
-        assert re.findall(r'<option value="([^"]+)"', event_3_markup) == expected_event_choices + ["lightning_glass"]
+        assert re.findall(r'<option value="([^"]+)"', event_3_markup) == expected_event_choices[:2] + ["lightning_glass"] + expected_event_choices[2:]
         assert 'selected data-legacy' in event_3_markup
         assert "Lightning R2D2" not in home.text
         assert home.text.count("Thunder") == 3
@@ -182,7 +182,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
             artwork = client.get(f"/static/units-{unit}.svg")
             assert artwork.status_code == 200
             assert f"{unit.title()} measurements" in artwork.text
-        for sound in ("birdsong", "ocean_swell", "storm_potential", "earthquake",
+        for sound in ("birdsong", "frog_calls", "ocean_swell", "storm_potential", "earthquake",
                       "natural_thunder", "seismic_bells", "tidal_bell", "none"):
             artwork = client.get(f"/static/sound-{sound}.svg")
             assert artwork.status_code == 200
@@ -1004,6 +1004,9 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path):
         "tide_turn": "none",
         "storm_potential": "storm_potential",
         "birdsong": "none",
+        "frog_calls": "none",
+        "whale_song": "none",
+        "dolphin_calls": "none",
     }
     assert app.state.service._voices_for_kind("storm_potential") == (
         ("storm_potential", 0.5),
@@ -1021,6 +1024,68 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path):
     assert '"event_3": 0.35' in (
         tmp_path / "config.json"
     ).read_text(encoding="utf-8")
+
+
+def test_birdsong_source_setup_and_disable_preserve_instrument(tmp_path):
+    from gaia_scape_host.config import AppConfig
+
+    birdsong = FakeBirdsong()
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs(),
+                     birdsong_client=birdsong)
+    with TestClient(app) as client:
+        home = client.get("/").text
+        sources = home.split('data-pane="sources"', 1)[1].split('</section>', 1)[0]
+        instruments = home.split('data-pane="instruments"', 1)[1].split('</section>', 1)[0]
+        for control in ("sourceBirdsong", "birdsongProvider", "xenoCantoApiKey"):
+            assert f'id="{control}"' in sources
+            assert f'id="{control}"' not in instruments
+        assert 'aria-label="Birdsong"' in sources
+        assert '/static/sound-birdsong.svg' in sources
+        assert 'value="birdsong"' in instruments
+        assert app.state.config.birdsong_enabled is True
+        slots = {"event_1": "none", "event_2": "none", "event_3": "none",
+                 "background": "birdsong"}
+        payload = {"enabled_sources": [], "instrument_slots": slots,
+                   "birdsong_enabled": False}
+        result = client.put("/api/settings/audio", json=payload)
+        assert result.status_code == 200
+        assert result.json()["birdsong_enabled"] is False
+        assert result.json()["instrument_slots"]["background"] == "birdsong"
+        assert AppConfig.load(tmp_path / "config.json").birdsong_enabled is False
+        app.state.service.playback.start()
+        assert asyncio.run(app.state.service.play_next_ambient_layers()) == ()
+        with pytest.raises(ValueError, match="Enable Birdsong in Sound Sources"):
+            asyncio.run(app.state.service.preview_instrument("birdsong", "birdsong"))
+        assert birdsong.indices == []
+        payload["birdsong_enabled"] = True
+        assert client.put("/api/settings/audio", json=payload).status_code == 200
+        assert asyncio.run(app.state.service.play_next_ambient_layers()) == ("birdsong",)
+        assert birdsong.indices == [0]
+
+
+def test_xeno_canto_settings_hide_credentials_and_switch_provider(tmp_path):
+    from gaia_scape_host.commons_birdsong import CommonsBirdsongClient
+    from gaia_scape_host.xeno_canto import XenoCantoClient
+
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    with TestClient(app) as client:
+        payload = {"enabled_sources": [], "instrument_slots": app.state.config.instrument_slots(),
+                   "birdsong_provider": "xeno_canto"}
+        assert client.put("/api/settings/audio", json=payload).status_code == 422
+        payload["xeno_canto_api_key"] = "private-xc-key"
+        result = client.put("/api/settings/audio", json=payload)
+        assert result.status_code == 200
+        assert result.json()["xeno_canto_credentials_configured"]
+        assert isinstance(app.state.service.birdsong, XenoCantoClient)
+        public = client.get("/api/config")
+        assert "xeno_canto_api_key" not in public.json()
+        for response in (result, public, client.get("/")):
+            assert "private-xc-key" not in response.text
+        payload.update(birdsong_provider="wikimedia_commons", xeno_canto_api_key="")
+        assert client.put("/api/settings/audio", json=payload).status_code == 200
+        assert isinstance(app.state.service.birdsong, CommonsBirdsongClient)
+        assert app.state.config.xeno_canto_api_key == "private-xc-key"
+    assert "private-xc-key" in (tmp_path / "config.json").read_text()
 
 
 def test_eumetsat_credentials_enable_source_without_api_or_html_disclosure(tmp_path):
@@ -1928,3 +1993,312 @@ def test_map_projection_persists_and_rejects_unknown_models(tmp_path):
         assert app.state.config.map_projection == "eckert_iv"
     restarted = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
     assert restarted.state.config.map_projection == "eckert_iv"
+
+
+def test_birdsong_location_catalog_persists_and_replaces_live_client(tmp_path):
+    from gaia_scape_host.config import AppConfig
+    from gaia_scape_host.xeno_canto import XenoCantoClient
+
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    with TestClient(app) as client:
+        assert client.put("/api/settings/audio", json={
+            "enabled_sources": [], "instrument_slots": app.state.config.instrument_slots(),
+            "birdsong_provider": "xeno_canto", "xeno_canto_api_key": "test-key",
+        }).status_code == 200
+        previous = app.state.service.birdsong
+        birdsong = [dict(location) for location in app.state.config.birdsong_locations]
+        birdsong[0] = {"name": "User woodland", "latitude": 40.0, "longitude": -105.0}
+        payload = {"ocean_swell_locations": app.state.config.ocean_swell_locations,
+                   "storm_outlook_locations": app.state.config.storm_outlook_locations,
+                   "birdsong_locations": birdsong}
+        result = client.put("/api/settings/locations", json=payload)
+        assert result.status_code == 200
+        assert result.json()["birdsong_locations"] == birdsong
+        assert isinstance(app.state.service.birdsong, XenoCantoClient)
+        assert app.state.service.birdsong is not previous
+        assert app.state.service.birdsong.locations[0] == birdsong[0]
+        assert AppConfig.load(tmp_path / "config.json").birdsong_locations == birdsong
+        home = client.get("/").text
+        assert "Forecast locations" not in home
+        assert "Sound locations" in home
+        assert 'data-location-catalog="birdsong"' in home
+        assert "User woodland" in home
+        for invalid in (birdsong[:-1], [birdsong[0]] * 19,
+                        [{"name": "Invalid", "latitude": 91, "longitude": 0}] + birdsong[1:]):
+            assert client.put("/api/settings/locations", json={**payload, "birdsong_locations": invalid}).status_code == 422
+            assert app.state.config.birdsong_locations == birdsong
+        del payload["birdsong_locations"]
+        assert client.put("/api/settings/locations", json=payload).status_code == 200
+        assert app.state.config.birdsong_locations == birdsong
+
+
+def test_empty_birdsong_region_advances_rotation(tmp_path):
+    from gaia_scape_host.xeno_canto import NoBirdsongRecordingsError
+
+    class RegionalBirdsong(FakeBirdsong):
+        def event_at(self, index):
+            if index == 0:
+                raise NoBirdsongRecordingsError("No recordings in first region")
+            return super().event_at(index)
+
+    birdsong = RegionalBirdsong()
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs(), birdsong_client=birdsong)
+    app.state.service.apply_audio_settings([], {
+        "event_1": "none", "event_2": "none", "event_3": "none", "background": "birdsong",
+    })
+    app.state.service.playback.start()
+    with pytest.raises(NoBirdsongRecordingsError):
+        asyncio.run(app.state.service.play_next_ambient_layers())
+    assert asyncio.run(app.state.service.play_next_ambient_layers()) == ("birdsong",)
+    assert birdsong.indices == [1]
+
+
+def test_birdsong_preview_discards_recording_when_region_changes(tmp_path):
+    started = threading.Event()
+    release = threading.Event()
+
+    class WaitingBirdsong(FakeBirdsong):
+        def event_at(self, index):
+            started.set()
+            assert release.wait(timeout=5)
+            return super().event_at(index)
+
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs(),
+                     birdsong_client=WaitingBirdsong())
+
+    async def preview_then_move():
+        preview = asyncio.create_task(app.state.service.preview_instrument("birdsong", "birdsong"))
+        try:
+            assert await asyncio.to_thread(started.wait, 5)
+            locations = [dict(location) for location in app.state.config.birdsong_locations]
+            locations[0] = {"name": "Moved region", "latitude": 40.0, "longitude": -105.0}
+            await app.state.service.update_settings({"birdsong_locations": locations}, tmp_path / "config.json")
+        finally:
+            release.set()
+        with pytest.raises(ValueError, match="settings changed"):
+            await preview
+
+    asyncio.run(preview_then_move())
+    assert not app.state.service._emitted_cues
+
+
+def test_frog_calls_share_key_and_preserve_separate_regions(tmp_path):
+    from gaia_scape_host.config import AppConfig
+
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    with TestClient(app) as client:
+        payload = {"enabled_sources": [], "instrument_slots": app.state.config.instrument_slots(),
+                   "frog_calls_enabled": True}
+        assert client.put("/api/settings/audio", json=payload).status_code == 422
+        payload.update(xeno_canto_api_key="shared-first-key", birdsong_provider="xeno_canto")
+        assert client.put("/api/settings/audio", json=payload).status_code == 200
+        birds = app.state.service.birdsong
+        frogs = app.state.service.frog_calls
+        assert birds._api_key == frogs._api_key == "shared-first-key"
+        assert birds.group == "birds" and frogs.group == "frogs"
+        assert birds.media_dir != frogs.media_dir
+        payload["xeno_canto_api_key"] = ""
+        assert client.put("/api/settings/audio", json=payload).status_code == 200
+        assert app.state.config.xeno_canto_api_key == "shared-first-key"
+        payload["xeno_canto_api_key"] = "shared-replacement-key"
+        response = client.put("/api/settings/audio", json=payload)
+        assert response.status_code == 200
+        assert app.state.service.birdsong is not birds
+        assert app.state.service.frog_calls is not frogs
+        assert app.state.service.birdsong._api_key == app.state.service.frog_calls._api_key == "shared-replacement-key"
+        for result in (response, client.get("/api/config"), client.get("/")):
+            assert "shared-replacement-key" not in result.text
+            assert "shared-first-key" not in result.text
+        home = client.get("/").text
+        sources = home.split('data-pane="sources"', 1)[1].split('</section>', 1)[0]
+        assert 'id="sourceFrogCalls"' in sources
+        assert 'id="frogCallsApiKey"' in sources
+        assert sources.index('aria-label="Frog Calls"') < sources.index('id="eventSourcesHeading"')
+        assert 'value="frog_calls"' in home
+        assert 'data-location-catalog="frog_calls"' in home
+        original_birds = [dict(location) for location in app.state.config.birdsong_locations]
+        locations = [dict(location) for location in app.state.config.frog_calls_locations]
+        assert len(locations) == len({(item["latitude"], item["longitude"]) for item in locations}) == 19
+        assert any(item["latitude"] < 0 for item in locations)
+        locations[0] = {"name": "Selected wetland", "latitude": 40.0, "longitude": -105.0}
+        location_payload = {"frog_calls_locations": locations,
+                            "ocean_swell_locations": app.state.config.ocean_swell_locations,
+                            "storm_outlook_locations": app.state.config.storm_outlook_locations}
+        assert client.put("/api/settings/locations", json=location_payload).status_code == 200
+        assert app.state.service.frog_calls.locations[0] == locations[0]
+        assert app.state.config.birdsong_locations == original_birds
+        assert AppConfig.load(tmp_path / "config.json").frog_calls_locations == locations
+        assert client.put("/api/settings/locations", json={**location_payload, "frog_calls_locations": locations[:-1]}).status_code == 422
+        del location_payload["frog_calls_locations"]
+        assert client.put("/api/settings/locations", json=location_payload).status_code == 200
+        assert app.state.config.frog_calls_locations == locations
+
+
+def test_frog_calls_preview_rotation_history_and_disable_without_osc(tmp_path):
+    from gaia_scape_host.config import AppConfig
+
+    class FakeFrogs(FakeBirdsong):
+        def event_at(self, index):
+            event = super().event_at(index)
+            event.provider = "xeno_canto"
+            event.kind = "frog_calls"
+            event.traits.update(recording_id=str(index), title="Tree frog calls",
+                                media_url="/frog-calls-media/test.wav")
+            return event
+
+    config = AppConfig(frog_calls_enabled=True, xeno_canto_api_key="test-key", enabled_sources=[], osc_enabled=False)
+    config.event_instruments["background"] = "frog_calls"
+    config.save(tmp_path / "config.json")
+    frogs = FakeFrogs()
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs(), frog_calls_client=frogs)
+    app.state.service.renderer.play = lambda *_args, **_kwargs: pytest.fail("Frog Calls must use browser audio")
+    app.state.service.renderer.update_layer = lambda *_args, **_kwargs: pytest.fail("Frog Calls must use browser audio")
+    (tmp_path / "media/frog_calls/test.wav").write_bytes(b"test-media")
+    with TestClient(app) as client:
+        assert client.get("/frog-calls-media/test.wav").content == b"test-media"
+        assert client.post("/api/instruments/preview", json={"kind": "frog_calls", "instrument": "frog_calls", "volume": 0.4}).status_code == 200
+        assert app.state.service._emitted_cues[-1]["volume"] == 0.4
+        app.state.service.playback.start()
+        assert asyncio.run(app.state.service.play_next_ambient_layers()) == ("frog_calls",)
+        cue = app.state.service._emitted_cues[-1]
+        assert cue["role"] == "background"
+        assert cue["event"]["kind"] == "frog_calls"
+        events = asyncio.run(app.state.service.recent_events())
+        assert any(event["kind"] == "frog_calls" for event in events)
+        indices = list(frogs.indices)
+        result = client.put("/api/settings/audio", json={"enabled_sources": [],
+                            "instrument_slots": app.state.config.instrument_slots(), "frog_calls_enabled": False})
+        assert result.status_code == 200
+        assert result.json()["instrument_slots"]["background"] == "frog_calls"
+        assert client.post("/api/instruments/preview", json={"kind": "frog_calls", "instrument": "frog_calls"}).status_code == 422
+        assert asyncio.run(app.state.service.play_next_ambient_layers()) == ()
+        assert frogs.indices == indices
+
+
+@pytest.mark.parametrize("kind", ["whale_song", "dolphin_calls"])
+def test_sanctsound_settings_preview_rotation_and_disable(tmp_path, kind):
+    from gaia_scape_host.config import AppConfig
+    from gaia_scape_host.sanctsound import default_regions
+
+    class FakeMarineRecording(FakeBirdsong):
+        def event_at(self, index):
+            event = super().event_at(index)
+            event.provider = "noaa_sanctsound"
+            event.kind = kind
+            event.traits.update(recording_id=str(index), title="Marine recording",
+                                media_url=f'/{kind.replace("_", "-")}-media/test.wav')
+            return event
+
+    config = AppConfig(enabled_sources=[], osc_enabled=False)
+    config.save(tmp_path / "config.json")
+    recording = FakeMarineRecording()
+    app = create_app(tmp_path, auto_capture=False, **{f"{kind}_client": recording})
+    svc = app.state.service
+    svc.renderer.play = lambda *_a, **_kw: pytest.fail("Recordings must use browser audio")
+    svc.renderer.update_layer = lambda *_a, **_kw: pytest.fail("Recordings must use browser audio")
+    (tmp_path / "media" / kind / "test.wav").write_bytes(b"test-media")
+    preview = {"kind": kind, "instrument": kind, "volume": .4}
+    with TestClient(app) as client:
+        home = client.get("/").text
+        assert f'data-location-catalog="{kind}"' in home
+        assert f'value="{kind}"' in home
+        assert client.post("/api/instruments/preview", json=preview).status_code == 422
+        slots = {**config.instrument_slots(), "background": kind}
+        payload = {"enabled_sources": [], "instrument_slots": slots, f"{kind}_enabled": True}
+        assert client.put("/api/settings/audio", json=payload).status_code == 200
+        assert not app.state.config.xeno_canto_api_key
+        assert client.get(f'/{kind.replace("_", "-")}-media/test.wav').content == b"test-media"
+        assert client.post("/api/instruments/preview", json=preview).status_code == 200
+        assert svc._emitted_cues[-1]["volume"] == .4
+        svc.playback.start()
+        assert asyncio.run(svc.play_next_ambient_layers()) == (kind,)
+        assert svc._emitted_cues[-1]["role"] == "background"
+        assert any(event["kind"] == kind for event in asyncio.run(svc.recent_events()))
+        locations = {"ocean_swell_locations": config.ocean_swell_locations,
+                     "storm_outlook_locations": config.storm_outlook_locations,
+                     f"{kind}_regions": [default_regions(kind)[-1]]}
+        assert client.put("/api/settings/locations", json=locations).status_code == 200
+        assert getattr(svc, kind) is not recording
+        assert getattr(svc, kind).regions == locations[f"{kind}_regions"]
+        assert svc._ambient_cursors[kind] == 0
+        assert not svc._emitted_cues
+        assert client.put("/api/settings/locations", json={**locations, f"{kind}_regions": []}).status_code == 422
+        assert getattr(AppConfig.load(tmp_path / "config.json"), f"{kind}_regions") == locations[f"{kind}_regions"]
+        assert client.put("/api/settings/audio", json={**payload, f"{kind}_enabled": False}).status_code == 200
+        assert client.get("/api/status").json()["sources"][f"{kind}_enabled"] is False
+        assert client.post("/api/instruments/preview", json=preview).status_code == 422
+        assert asyncio.run(svc.play_next_ambient_layers()) == ()
+
+
+@pytest.mark.parametrize("kind", ["frog_calls", "birdsong"])
+@pytest.mark.parametrize("error_message", [
+    "Xeno-canto found no suitable CC BY-SA frogs recordings within 100 km of Algonquin, Canada",
+    "Xeno-canto is temporarily unavailable; retry in a minute",
+])
+def test_recording_preview_provider_errors_return_json(tmp_path, error_message, kind):
+    from gaia_scape_host.config import AppConfig
+    from gaia_scape_host.xeno_canto import NoRecordingsError
+
+    class UnavailableRecordings:
+        def event_at(self, index):
+            raise NoRecordingsError(error_message)
+
+    AppConfig(enabled_sources=[], osc_enabled=False, frog_calls_enabled=True,
+              xeno_canto_api_key="test-only-key").save(tmp_path / "config.json")
+    app = create_app(tmp_path, auto_capture=False, **{f"{kind}_client": UnavailableRecordings()})
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.post("/api/instruments/preview", json={
+            "kind": kind, "instrument": kind, "volume": .4,
+        })
+        assert response.status_code == 503
+        assert response.json() == {"detail": error_message}
+        assert not app.state.service._emitted_cues
+
+
+def test_frog_background_status_reports_loading_empty_region_and_recovery(tmp_path):
+    from gaia_scape_host.config import AppConfig
+    from gaia_scape_host.xeno_canto import NoRecordingsError
+
+    entered = threading.Event()
+    release = threading.Event()
+
+    class RegionalFrogs(FakeBirdsong):
+        def event_at(self, index):
+            if index == 0:
+                entered.set()
+                assert release.wait(5)
+                raise NoRecordingsError("No suitable frogs within 100 km of Test Wetland")
+            event = super().event_at(index)
+            event.kind = "frog_calls"
+            event.provider = "xeno_canto"
+            event.traits["media_url"] = "/frog-calls-media/test.mp3"
+            return event
+
+    config = AppConfig(enabled_sources=[], osc_enabled=False, frog_calls_enabled=True,
+                       xeno_canto_api_key="test-only-key")
+    config.event_instruments["background"] = "frog_calls"
+    config.save(tmp_path / "config.json")
+    app = create_app(tmp_path, auto_capture=False, frog_calls_client=RegionalFrogs())
+    svc = app.state.service
+    svc.playback.start()
+
+    async def scenario():
+        pending = asyncio.create_task(svc.play_next_ambient_layers())
+        try:
+            assert await asyncio.to_thread(entered.wait, 5)
+            assert (await svc.status())["sources"]["recordings"]["frog_calls"]["state"] == "loading"
+        finally:
+            release.set()
+        with pytest.raises(NoRecordingsError):
+            await pending
+        failure = (await svc.status())["sources"]["recordings"]["frog_calls"]
+        assert failure["state"] == "unavailable"
+        assert "Test Wetland" in failure["error"]
+        assert svc._ambient_cursors["frog_calls"] == 1
+        assert await svc.play_next_ambient_layers() == ("frog_calls",)
+        assert (await svc.status())["sources"]["recordings"]["frog_calls"] == {"state": "ready", "error": ""}
+        assert svc._emitted_cues[-1]["event"]["kind"] == "frog_calls"
+        assert (await svc.status())["sources"]["recordings"]["birdsong"]["state"] == "idle"
+        await svc.stop()
+
+    asyncio.run(scenario())

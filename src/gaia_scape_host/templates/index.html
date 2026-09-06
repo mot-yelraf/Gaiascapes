@@ -70,7 +70,7 @@
       </section>
 
       <section class="metrics" aria-label="Application status">
-        <article class="status-card status-card--background"><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% else %}Background Sounds{% endif %}</span><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></article>
+        <article class="status-card status-card--background"><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "whale_song" %}Whale Song{% elif instrument_slots.background == "dolphin_calls" %}Dolphin Calls{% elif instrument_slots.background == "frog_calls" %}Frog Calls{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% else %}Background Sounds{% endif %}</span><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></article>
         <article class="status-card status-card--event"><span>Last Event</span><strong id="lastEventType" data-status-field="last-event-type">—</strong><small id="lastEventTime" data-status-field="last-event-time">Not yet</small></article>
         <article class="status-card status-card--earthquake"><span>Last Earthquake Event</span><strong id="lastEarthquakeLocation" data-status-field="last-earthquake-location">—</strong><small id="lastEarthquakeDetail" data-status-field="last-earthquake-detail">Not yet</small></article>
       </section>
@@ -101,7 +101,7 @@
         <output class="map-coordinate-readout" id="mapCoordinateReadout" aria-live="polite">Move over the map to inspect coordinates</output>
       </div>
       <section class="metrics map-status" aria-label="Map application status">
-        <article class="status-card status-card--background"><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% else %}Background Sounds{% endif %}</span><strong data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></article>
+        <article class="status-card status-card--background"><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "whale_song" %}Whale Song{% elif instrument_slots.background == "dolphin_calls" %}Dolphin Calls{% elif instrument_slots.background == "frog_calls" %}Frog Calls{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% else %}Background Sounds{% endif %}</span><strong data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></article>
         <article class="status-card status-card--event"><span>Last Event</span><strong data-status-field="last-event-type">—</strong><small data-status-field="last-event-time">Not yet</small></article>
         <article class="status-card status-card--earthquake"><span>Last Earthquake Event</span><strong data-status-field="last-earthquake-location">—</strong><small data-status-field="last-earthquake-detail">Not yet</small></article>
       </section>
@@ -120,26 +120,44 @@
       <div class="modal-layout">
         <nav class="settings-menu" aria-label="Settings sections" role="tablist" aria-orientation="vertical">
           <button type="button" class="settings-tab is-active" data-settings-pane="sources">Sound sources</button>
-          <button type="button" class="settings-tab" data-settings-pane="instruments">Instruments</button>
-          <button type="button" class="settings-tab" data-settings-pane="locations">Forecast locations</button>
+          <button type="button" class="settings-tab" data-settings-pane="instruments">Sound Choices</button>
+          <button type="button" class="settings-tab" data-settings-pane="locations">Sound locations</button>
         </nav>
         <div class="settings-content">
           <section class="settings-pane is-active" data-pane="sources">
-            <div class="pane-heading"><span>01</span><div><h3>Captured sound sources</h3><p>Choose which live Earth data feeds can enter the local event history.</p></div></div>
-            <div class="source-tile-grid">
-              <article class="source-tile" aria-label="USGS earthquakes">
+            <div class="pane-heading"><span>01</span><div><h3>Captured sound sources</h3><p>Choose live Earth data feeds and archived animal recordings.</p></div></div>
+            {% macro marine_source_tile(kind, label, control, enabled) %}
+              <article class="source-tile" aria-label="{{ label }}">
                 <div class="source-title">
-                  <label for="sourceUsgs"><input id="sourceUsgs" type="checkbox" aria-describedby="sourceUsgsHint" {% if "usgs" in enabled_sources %}checked{% endif %}><strong>USGS earthquakes</strong></label>
-                  <small class="source-hint" id="sourceUsgsHint" role="tooltip">Observed earthquakes from the current USGS daily feed.</small>
+                  <label for="{{ control }}"><input id="{{ control }}" type="checkbox" aria-describedby="{{ control }}Hint" {% if enabled %}checked{% endif %}><strong>{{ label }}</strong></label>
+                  <small class="source-hint" id="{{ control }}Hint" role="tooltip">NOAA NCEI / SanctSound recordings. No API key required. Choose recording sites in Sound locations.</small>
                 </div>
-                <label class="source-art" for="sourceUsgs" aria-label="Toggle USGS earthquakes"><img src="/static/sound-earthquake.svg" width="512" height="512" alt=""></label>
+                <label class="source-art" for="{{ control }}" aria-label="Toggle {{ label }}"><img src="/static/sound-{{ kind }}.svg" width="512" height="512" alt=""></label>
               </article>
-              <article class="source-tile" aria-label="Open-Meteo surf & tides">
+            {% endmacro %}
+            <h4 class="source-group-heading" id="backgroundSourcesHeading">Background</h4>
+            <div class="source-tile-grid source-tile-grid--background" role="group" aria-labelledby="backgroundSourcesHeading">
+              <article class="source-tile" aria-label="Birdsong">
                 <div class="source-title">
-                  <label for="sourceMarine"><input id="sourceMarine" type="checkbox" aria-describedby="sourceMarineHint" {% if "open_meteo_marine" in enabled_sources %}checked{% endif %}><strong>Open-Meteo surf & tides</strong></label>
-                  <small class="source-hint" id="sourceMarineHint" role="tooltip">Modeled swell and tide turns at 19 global coastal locations.</small>
+                  <label for="sourceBirdsong"><input id="sourceBirdsong" type="checkbox" aria-describedby="sourceBirdsongHint" {% if birdsong_enabled %}checked{% endif %}><strong>Birdsong</strong></label>
+                  <small class="source-hint" id="sourceBirdsongHint" role="tooltip">Archived bird recordings for the Birdsong background.</small>
                 </div>
-                <label class="source-art" for="sourceMarine" aria-label="Toggle Open-Meteo surf & tides"><img src="/static/sound-ocean_swell.svg" width="512" height="512" alt=""></label>
+                <label class="source-art" for="sourceBirdsong" aria-label="Toggle Birdsong"><img src="/static/sound-birdsong.svg" width="512" height="512" alt=""></label>
+                <div class="source-credentials" id="birdsongCredentials"{% if not birdsong_enabled %} hidden{% endif %}>
+                  <label for="birdsongProvider"><span>Birdsong source</span><select id="birdsongProvider"><option value="wikimedia_commons"{% if birdsong_provider == "wikimedia_commons" %} selected{% endif %}>Wikimedia Commons</option><option value="xeno_canto"{% if birdsong_provider == "xeno_canto" %} selected{% endif %}>Xeno-canto</option></select></label>
+                  <label for="xenoCantoApiKey" id="xenoCantoCredentials"{% if birdsong_provider != "xeno_canto" %} hidden{% endif %}><span>Xeno-canto API key (shared)</span><input id="xenoCantoApiKey" type="password" autocomplete="new-password" placeholder="{% if xeno_canto_credentials_configured %}Saved — enter only to replace{% else %}Enter your Xeno-canto API key{% endif %}"></label>
+                </div>
+              </article>
+              {{ marine_source_tile("dolphin_calls", "Dolphin Calls", "sourceDolphinCalls", dolphin_calls_enabled) }}
+              <article class="source-tile" aria-label="Frog Calls">
+                <div class="source-title">
+                  <label for="sourceFrogCalls"><input id="sourceFrogCalls" type="checkbox" aria-describedby="sourceFrogCallsHint" {% if frog_calls_enabled %}checked{% endif %}><strong>Frog Calls</strong></label>
+                  <small class="source-hint" id="sourceFrogCallsHint" role="tooltip">Archived Xeno-canto frog and toad recordings from your selected regions.</small>
+                </div>
+                <label class="source-art" for="sourceFrogCalls" aria-label="Toggle Frog Calls"><img src="/static/sound-frog_calls.svg" width="512" height="512" alt=""></label>
+                <div class="source-credentials" id="frogCallsCredentials"{% if not frog_calls_enabled %} hidden{% endif %}>
+                  <label for="frogCallsApiKey"><span>Xeno-canto API key (shared)</span><input id="frogCallsApiKey" type="password" autocomplete="new-password" placeholder="{% if xeno_canto_credentials_configured %}Saved — enter only to replace{% else %}Enter your Xeno-canto API key{% endif %}"></label>
+                </div>
               </article>
               <article class="source-tile" aria-label="Open-Meteo Storm Outlook">
                 <div class="source-title">
@@ -148,13 +166,17 @@
                 </div>
                 <label class="source-art" for="sourceStorm" aria-label="Toggle Open-Meteo Storm Outlook"><img src="/static/sound-storm_potential.svg" width="512" height="512" alt=""></label>
               </article>
-              <article class="source-tile" aria-label="NOAA GOES GLM lightning">
+              <article class="source-tile" aria-label="Open-Meteo surf & tides">
                 <div class="source-title">
-                  <label for="sourceGlm"><input id="sourceGlm" type="checkbox" aria-describedby="sourceGlmHint" {% if "noaa_glm" in enabled_sources %}checked{% endif %}><strong>NOAA GOES GLM lightning</strong></label>
-                  <small class="source-hint" id="sourceGlmHint" role="tooltip">Observed total-lightning flashes from GOES-East and GOES-West every 20 seconds.</small>
+                  <label for="sourceMarine"><input id="sourceMarine" type="checkbox" aria-describedby="sourceMarineHint" {% if "open_meteo_marine" in enabled_sources %}checked{% endif %}><strong>Open-Meteo surf & tides</strong></label>
+                  <small class="source-hint" id="sourceMarineHint" role="tooltip">Modeled swell and tide turns at 19 global coastal locations.</small>
                 </div>
-                <label class="source-art" for="sourceGlm" aria-label="Toggle NOAA GOES GLM lightning"><img src="/static/sound-natural_thunder.svg" width="512" height="512" alt=""></label>
+                <label class="source-art" for="sourceMarine" aria-label="Toggle Open-Meteo surf & tides"><img src="/static/sound-ocean_swell.svg" width="512" height="512" alt=""></label>
               </article>
+              {{ marine_source_tile("whale_song", "Whale Song", "sourceWhaleSong", whale_song_enabled) }}
+            </div>
+            <h4 class="source-group-heading" id="eventSourcesHeading">Event sound sources</h4>
+            <div class="source-tile-grid" role="group" aria-labelledby="eventSourcesHeading">
               <article class="source-tile" aria-label="EUMETSAT MTG Lightning Imager">
                 <div class="source-title">
                   <label for="sourceMtgLi"><input id="sourceMtgLi" type="checkbox" data-credentials-configured="{{ 'true' if eumetsat_credentials_configured else 'false' }}" aria-describedby="sourceMtgLiHint" {% if "eumetsat_mtg_li" in enabled_sources %}checked{% endif %}><strong>EUMETSAT MTG Lightning Imager</strong></label>
@@ -166,16 +188,32 @@
                   <label for="eumetsatConsumerSecret"><span>Consumer Secret</span><input id="eumetsatConsumerSecret" type="password" autocomplete="new-password" placeholder="{% if eumetsat_credentials_configured %}Saved — enter only to replace{% else %}EUMETSAT Consumer Secret{% endif %}"></label>
                 </div>
               </article>
+              <article class="source-tile" aria-label="NOAA GOES GLM lightning">
+                <div class="source-title">
+                  <label for="sourceGlm"><input id="sourceGlm" type="checkbox" aria-describedby="sourceGlmHint" {% if "noaa_glm" in enabled_sources %}checked{% endif %}><strong>NOAA GOES GLM lightning</strong></label>
+                  <small class="source-hint" id="sourceGlmHint" role="tooltip">Observed total-lightning flashes from GOES-East and GOES-West every 20 seconds.</small>
+                </div>
+                <label class="source-art" for="sourceGlm" aria-label="Toggle NOAA GOES GLM lightning"><img src="/static/sound-natural_thunder.svg" width="512" height="512" alt=""></label>
+              </article>
+              <article class="source-tile" aria-label="USGS earthquakes">
+                <div class="source-title">
+                  <label for="sourceUsgs"><input id="sourceUsgs" type="checkbox" aria-describedby="sourceUsgsHint" {% if "usgs" in enabled_sources %}checked{% endif %}><strong>USGS earthquakes</strong></label>
+                  <small class="source-hint" id="sourceUsgsHint" role="tooltip">Observed earthquakes from the current USGS daily feed.</small>
+                </div>
+                <label class="source-art" for="sourceUsgs" aria-label="Toggle USGS earthquakes"><img src="/static/sound-earthquake.svg" width="512" height="512" alt=""></label>
+              </article>
             </div>
           </section>
           <section class="settings-pane" data-pane="instruments" hidden>
-            <div class="pane-heading"><span>02</span><div><h3>Instrument layers</h3><p>Choose a continuous background and three event voices. Each voice follows its own source.</p></div></div>
+            <div class="pane-heading"><span>02</span><div><h3>Sound Choices</h3><p>Choose a continuous background and three event voices. Each voice follows its own source.</p></div></div>
             {% macro sound_tile(label, prefix, slot, options, kind) %}
             <article class="sound-tile" aria-label="{{ label }} sound">
               <h4>{{ label }}</h4>
               <select id="{{ prefix }}Instrument" hidden aria-label="{{ label }} sound">
-                {% for instrument, name in options %}<option value="{{ instrument }}" {% if instrument == instrument_slots[slot] %}selected{% endif %}>{{ name }}</option>{% endfor %}
-                {% if instrument_slots[slot] not in options | map(attribute=0) | list %}<option value="{{ instrument_slots[slot] }}" selected data-legacy>Retired sound</option>{% endif %}
+                {% set legacy = instrument_slots[slot] not in options | map(attribute=0) | list %}
+                {% set choices = options + [(instrument_slots[slot], "Retired sound")] if legacy else options %}
+                <option value="none" {% if instrument_slots[slot] == "none" %}selected{% endif %}>None</option>
+                {% for instrument, name in choices | sort(attribute=1) if instrument != "none" %}<option value="{{ instrument }}" {% if instrument == instrument_slots[slot] %}selected{% if legacy %} data-legacy{% endif %}{% endif %}>{{ name }}</option>{% endfor %}
               </select>
               <div class="sound-picker" data-sound-picker data-select="{{ prefix }}Instrument" aria-label="{{ label }} choices">
                 <div class="sound-track" role="radiogroup" aria-label="{{ label }} sound choices"></div>
@@ -196,7 +234,7 @@
                 </div>
                 <p class="units-note">Distance · temperature · speed</p>
               </article>
-              {{ sound_tile("Background", "background", "background", [("birdsong", "Birdsong"), ("ocean_swell", "Ocean Swells"), ("storm_potential", "Storm Outlook"), ("none", "None")], "background") }}
+              {{ sound_tile("Background", "background", "background", [("birdsong", "Birdsong"), ("frog_calls", "Frog Calls"), ("whale_song", "Whale Song"), ("dolphin_calls", "Dolphin Calls"), ("ocean_swell", "Ocean Swells"), ("storm_potential", "Storm Outlook"), ("none", "None")], "background") }}
             </div>
             <div class="event-mapping-grid sound-event-grid">
               {% for number in range(1, 4) %}
@@ -205,10 +243,14 @@
             </div>
           </section>
           <section class="settings-pane location-settings-pane" data-pane="locations" hidden>
-            <div class="pane-heading"><span>03</span><div><h3>Forecast locations</h3></div></div>
-            <div class="location-editor-tabs" role="group" aria-label="Forecast catalog">
-              <button type="button" class="is-active" title="Select a numbered location, then click the map to move it. Edit its name or coordinates in the list. Each forecast uses exactly 19 locations." data-location-catalog="ocean_swell">Ocean Swells</button>
-              <button type="button" title="Select a numbered location, then click the map to move it. Edit its name or coordinates in the list. Each forecast uses exactly 19 locations." data-location-catalog="storm_outlook">Storm Outlook</button>
+            <div class="pane-heading"><span>03</span><div><h3>Sound locations</h3></div></div>
+            <div class="location-editor-tabs" role="group" aria-label="Sound catalog">
+              <button type="button" title="Choose Xeno-canto in Sound Sources to edit Birdsong regions. Recordings come from within 100 km of each point." data-location-catalog="birdsong">Birdsong</button>
+              <button type="button" title="Choose verified SanctSound recording sites." data-location-catalog="dolphin_calls">Dolphin Calls</button>
+              <button type="button" title="Edit Frog Calls regions. Recordings come from within 100 km of each point." data-location-catalog="frog_calls">Frog Calls</button>
+              <button type="button" class="is-active" title="Select a numbered location, then click the map to move it. Edit its name or coordinates in the list. Each sound uses exactly 19 locations." data-location-catalog="ocean_swell">Ocean Swells</button>
+              <button type="button" title="Select a numbered location, then click the map to move it. Edit its name or coordinates in the list. Each sound uses exactly 19 locations." data-location-catalog="storm_outlook">Storm Outlook</button>
+              <button type="button" title="Choose verified SanctSound recording sites." data-location-catalog="whale_song">Whale Song</button>
             </div>
             <div class="location-editor-toolbar">
               <strong id="forecastLocationCount">19 / 19 locations</strong>
@@ -217,7 +259,7 @@
             <div class="location-editor-layout">
               <div class="forecast-map-stage">
                 <svg id="forecastLocationMap" viewBox="0 170 1024 684" role="img" aria-labelledby="forecastLocationMapTitle forecastLocationMapDescription">
-                  <title id="forecastLocationMapTitle">Editable forecast location map</title>
+                  <title id="forecastLocationMapTitle">Editable sound location map</title>
                   <desc id="forecastLocationMapDescription">Select a numbered marker and click another map coordinate to relocate it.</desc>
                   <defs>
                     <radialGradient id="forecastMapOcean" cx="50%" cy="44%" r="68%"><stop offset="0" stop-color="#173e48"/><stop offset=".62" stop-color="#0d2f39"/><stop offset="1" stop-color="#09232b"/></radialGradient>
@@ -229,7 +271,7 @@
                 </svg>
                 <output id="forecastLocationReadout" aria-live="polite">Location 1 selected. Click the map to move it.</output>
               </div>
-              <div class="forecast-location-list" id="forecastLocationList" aria-label="Editable forecast locations"></div>
+              <div class="forecast-location-list" id="forecastLocationList" aria-label="Editable sound locations"></div>
             </div>
             <label class="settings-field" for="mapProjection"><span>Projection Model</span><select id="mapProjection">
               <option value="robinson" {% if map_projection == "robinson" %}selected{% endif %}>Robinson</option>
