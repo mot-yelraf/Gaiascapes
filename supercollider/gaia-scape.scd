@@ -1,4 +1,4 @@
-// Gaia Scape SuperCollider receiver.
+// Gaiascapes SuperCollider receiver.
 // Python sends /gaia/cue to UDP 57130 by default.
 (
 var oscPort = 57130;
@@ -14,7 +14,7 @@ if(audioDevice.notNil and: { audioDevice.size > 0 }, {
     // input buses, which forces Bluetooth headsets into their 16 kHz call mode.
     s.options.inDevice = audioDevice;
     s.options.outDevice = audioDevice;
-    ("Gaia Scape selected audio output: " ++ audioDevice).postln;
+    ("Gaiascapes selected audio output: " ++ audioDevice).postln;
 });
 
 s.waitForBoot({
@@ -377,6 +377,6 @@ SynthDef(\stormRainLayer, {
         ("Gaia layer " ++ key ++ " released").postln;
     }, '/gaia/layer/stop', recvPort: oscPort);
 
-    ("Gaia Scape listening for OSC on UDP " ++ oscPort).postln;
+    ("Gaiascapes listening for OSC on UDP " ++ oscPort).postln;
 });
 )

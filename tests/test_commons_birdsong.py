@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from gaia_scape_host.commons_birdsong import (
+from gaiascapes_host.commons_birdsong import (
     BIRDSONG_LOCATIONS,
     CommonsBirdsongClient,
 )

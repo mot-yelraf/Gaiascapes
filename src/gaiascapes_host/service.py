@@ -16,8 +16,8 @@ from collections import deque
 from dataclasses import dataclass, fields
 from pathlib import Path
 
-from gaia_scape.events import GaiaEvent
-from gaia_scape.score import ScoreCue, build_score, event_duration
+from gaiascapes.events import GaiaEvent
+from gaiascapes.score import ScoreCue, build_score, event_duration
 
 from .capture import EventStore
 from .contracts import EventProvider
@@ -83,7 +83,7 @@ class _SourceRecovery:
     notify: bool = False
 
 
-class GaiaScapeService:
+class GaiascapesService:
     """Coordinate provider polling without coupling it to HTTP routes."""
 
     def __init__(
@@ -395,10 +395,10 @@ class GaiaScapeService:
         )
         messages = {
             "online": "All enabled environmental data sources are online.",
-            "degraded": "Gaia Scape is degraded. At least one enabled data source is using fallback data or recovering.",
+            "degraded": "Gaiascapes is degraded. At least one enabled data source is using fallback data or recovering.",
             "offline": "All enabled environmental data sources are offline. Automatic recovery will continue.",
-            "recovering": "Gaia Scape is attempting to recover its environmental data sources.",
-            "waiting": "Gaia Scape is waiting for its first environmental data update.",
+            "recovering": "Gaiascapes is attempting to recover its environmental data sources.",
+            "waiting": "Gaiascapes is waiting for its first environmental data update.",
             "disabled": "No environmental data sources are enabled.",
         }
         severities = {
@@ -446,7 +446,7 @@ class GaiaScapeService:
             if self._continuous_task is None or self._continuous_task.done():
                 self._last_continuous_cycle_at = time.time()
                 self._continuous_task = self.playback.schedule(
-                    self._continuous_loop(), name="gaia-scape-continuous"
+                    self._continuous_loop(), name="gaiascapes-continuous"
                 )
                 await self._restore_mtg_schedule()
 
@@ -1033,7 +1033,7 @@ class GaiaScapeService:
             self._glm_sonification_task.cancel()
         self._glm_sonification_task = self.playback.schedule(
             self._run_glm_sonification(tuple(events)),
-            name="gaia-scape-glm-sonification",
+            name="gaiascapes-glm-sonification",
         )
 
     def _replay_last_glm_sonification(self) -> bool:
@@ -1111,7 +1111,7 @@ class GaiaScapeService:
         self.last_mtg_scheduled_count = len(scheduled_events)
         task = self.playback.schedule(
             self._run_mtg_sonification(scheduled_events),
-            name="gaia-scape-mtg-li-sonification",
+            name="gaiascapes-mtg-li-sonification",
         )
         self._mtg_sonification_tasks.add(task)
         task.add_done_callback(self._finish_mtg_sonification)

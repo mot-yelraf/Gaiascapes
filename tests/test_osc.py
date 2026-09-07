@@ -7,9 +7,9 @@ and lifecycle messages for persistent background layers.
 import socket
 import struct
 
-from gaia_scape.events import GaiaEvent
-from gaia_scape.score import ScoreCue
-from gaia_scape_host.osc import (
+from gaiascapes.events import GaiaEvent
+from gaiascapes.score import ScoreCue
+from gaiascapes_host.osc import (
     CUE_ADDRESS,
     LAYER_ADDRESS,
     LAYER_STOP_ADDRESS,

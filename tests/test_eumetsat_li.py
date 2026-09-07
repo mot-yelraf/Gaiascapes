@@ -9,8 +9,8 @@ import zipfile
 
 from netCDF4 import Dataset
 
-from gaia_scape.events import GaiaEvent
-from gaia_scape_host.eumetsat_li import (
+from gaiascapes.events import GaiaEvent
+from gaiascapes_host.eumetsat_li import (
     MAX_FLASHES_PER_PRODUCT,
     _select_geographically_distributed,
     parse_li_product,

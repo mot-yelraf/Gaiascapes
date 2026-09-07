@@ -9,7 +9,7 @@ from pathlib import Path
 
 def test_installer_uses_dedicated_ports_and_chosen_runtime():
     installer = Path("install.sh").read_text(encoding="utf-8")
-    launcher = Path("run_gaia_scape.sh").read_text(encoding="utf-8")
+    launcher = Path("run_gaiascapes.sh").read_text(encoding="utf-8")
 
     assert "GAIA_SCAPE_INSTALL_DIR" in installer
     assert 'GAIA_SCAPE_AUDIO_DEVICE' in installer
@@ -45,7 +45,7 @@ def test_uninstaller_preserves_data_by_default_and_rejects_broad_targets():
 
 
 def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
-    gui = Path("run_gaia_scape_gui.sh").read_text(encoding="utf-8")
+    gui = Path("run_gaiascapes_gui.sh").read_text(encoding="utf-8")
     audio = Path("run_supercollider.sh").read_text(encoding="utf-8")
     synth = Path("supercollider/gaia-scape.scd").read_text(encoding="utf-8")
 
@@ -116,3 +116,50 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     assert "    crack = Mix(BPF.ar" not in natural_thunder
     assert "rainDensity = 10 + (smoothStrength * 110)" in synth
     assert "Dust2.ar(rainDensity" in synth
+
+
+def test_install_location_resolution_preserves_existing_choices():
+    import subprocess
+
+    installer = Path('install.sh').read_text(encoding='utf-8')
+    assert 'DEFAULT_INSTALL_DIR="${HOME}/Gaiascapes"' in installer
+    resolver = installer.split('resolve_install_dir() {', 1)[1].split('\n}\n', 1)[0]
+    for selected, remembered, expected in (
+        ('/tmp/new parent', '/tmp/default', '/tmp/new parent/Gaiascapes'),
+        ('/tmp/Gaiascapes/', '/tmp/default', '/tmp/Gaiascapes'),
+        ('/tmp/custom runtime', '/tmp/custom runtime', '/tmp/custom runtime'),
+    ):
+        result = subprocess.run(
+            ['bash', '-c', 'remembered="$2"\nresolve_install_dir() {' + resolver
+             + '\n}\nresolve_install_dir "$1"', 'test', selected, remembered],
+            check=True, capture_output=True, text=True,
+        )
+        assert result.stdout.strip() == expected
+
+
+def test_headless_launcher_uses_selected_runtime(tmp_path):
+    import json
+    import os
+    import shutil
+    import subprocess
+    import sys
+
+    runtime = tmp_path / 'custom runtime'
+    python = runtime / '.venv/bin/python'
+    python.parent.mkdir(parents=True)
+    python.write_text(
+        f'#!{sys.executable}\nimport json, os, sys\n'
+        'print(json.dumps([os.getcwd(), os.environ["GAIA_SCAPE_DATA_DIR"], sys.argv[1:]]))\n'
+    )
+    python.chmod(0o755)
+    for name in ('run_gaiascapes.sh',):
+        shutil.copy2(name, runtime / name)
+        result = subprocess.run(
+            ['bash', str(runtime / name), '--port', '18868'],
+            cwd=tmp_path, env={**os.environ, 'GAIA_SCAPE_DATA_DIR': str(runtime / 'data')},
+            check=True, capture_output=True, text=True,
+        )
+        assert json.loads(result.stdout) == [
+            str(runtime), str(runtime / 'data'),
+            ['-m', 'gaiascapes_host', '--port', '18868'],
+        ]

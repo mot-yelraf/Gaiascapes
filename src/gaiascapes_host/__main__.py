@@ -1,4 +1,4 @@
-"""Command-line entrypoint for the Gaia Scape web server.
+"""Command-line entrypoint for the Gaiascapes web server.
 
 Command-line options select the HTTP bind address and delegate application
 serving to Uvicorn without enabling noisy access logs.
@@ -32,7 +32,7 @@ def _watch_desktop_owner(
 def main(argv=None) -> None:
     """Run the installed web application."""
     defaults = AppConfig.load(resolve_data_dir() / "config.json")
-    parser = argparse.ArgumentParser(description="Run Gaia Scape")
+    parser = argparse.ArgumentParser(description="Run Gaiascapes")
     parser.add_argument("--host", default=defaults.http_host)
     parser.add_argument("--port", default=defaults.http_port, type=int)
     parser.add_argument("--no-capture", action="store_true")
@@ -41,7 +41,7 @@ def main(argv=None) -> None:
     from .app import create_app
 
     app = create_app(auto_capture=not args.no_capture)
-    print(f"Gaia Scape is listening on http://127.0.0.1:{args.port}")
+    print(f"Gaiascapes is listening on http://127.0.0.1:{args.port}")
     if args.host not in {"127.0.0.1", "localhost", "::1"}:
         print(f"LAN access: http://<this-computer-ip>:{args.port}")
     owner_stop = threading.Event()
@@ -59,7 +59,7 @@ def main(argv=None) -> None:
             owner_thread = threading.Thread(
                 target=_watch_desktop_owner,
                 args=(owner_pid, owner_stop),
-                name="gaia-scape-desktop-owner",
+                name="gaiascapes-desktop-owner",
                 daemon=True,
             )
             owner_thread.start()

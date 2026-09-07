@@ -15,7 +15,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from gaia_scape import __version__
+from gaiascapes import __version__
 
 from .config import (
     AppConfig,
@@ -31,7 +31,7 @@ from .config import (
 from .sanctsound import MARINE_KINDS, available_locations
 from .geoip import GeoIpLocationResolver
 from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
-from .service import GaiaScapeService
+from .service import GaiascapesService
 
 
 PACKAGE_DIR = Path(__file__).resolve().parent
@@ -64,7 +64,7 @@ def create_app(
     config = AppConfig.load(config_path)
     if not config_path.exists():
         config.save(config_path)
-    service = GaiaScapeService(
+    service = GaiascapesService(
         config,
         runtime_data,
         usgs_client=usgs_client,
@@ -91,7 +91,7 @@ def create_app(
         finally:
             await service.stop()
 
-    app = FastAPI(title="Gaia Scape", version=_version(), lifespan=lifespan)
+    app = FastAPI(title="Gaiascapes", version=_version(), lifespan=lifespan)
     app.state.config = config
     app.state.config_path = config_path
     app.state.service = service

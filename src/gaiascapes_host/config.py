@@ -376,7 +376,7 @@ class AppConfig:
 def resolve_data_dir() -> Path:
     """Resolve writable state without depending on the source checkout."""
     override = os.environ.get("GAIA_SCAPE_DATA_DIR")
-    return Path(override).expanduser().resolve() if override else Path.cwd() / "data"
+    return Path(override).expanduser().resolve() if override else Path.home() / "Gaiascapes" / "data"
 
 
 def _credential(value: object, label: str) -> str:

@@ -21,11 +21,11 @@ def main() -> None:
         assert importlib.util.find_spec(dependency) is None, dependency
 
     from fastapi.testclient import TestClient
-    from gaia_scape import __version__
-    from gaia_scape_host.app import create_app
-    from gaia_scape_host.config import AppConfig
+    from gaiascapes import __version__
+    from gaiascapes_host.app import create_app
+    from gaiascapes_host.config import AppConfig
 
-    assert version('gaia-scape') == __version__.removeprefix('v')
+    assert version('gaiascapes') == __version__.removeprefix('v')
     AppConfig(enabled_sources=[], osc_enabled=False).save(data_dir / 'config.json')
     with TestClient(create_app(auto_capture=False)) as client:
         assert client.get('/healthz').json()['version'] == __version__
@@ -33,7 +33,7 @@ def main() -> None:
         assert client.get('/static/app.js').status_code == 200
         assert client.get('/api/events').json() == {'events': []}
         assert client.post('/api/capture').json()['disabled'] is True
-    launcher = Path(sys.executable).parent / 'gaia-scape-server'
+    launcher = Path(sys.executable).parent / 'gaiascapes-server'
     subprocess.run([str(launcher), '--help'], cwd=data_dir, check=True, capture_output=True)
     print(f'Headless wheel {__version__}: assets, entry point, and offline APIs passed')
 

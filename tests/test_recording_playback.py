@@ -16,7 +16,7 @@ def test_recording_preview_is_protected_and_cancellable_while_loading(kind):
     node = shutil.which("node")
     if node is None:
         pytest.skip("Node.js is needed to exercise the browser player")
-    source = Path(__file__).parents[1] / "src/gaia_scape_host/static/app.js"
+    source = Path(__file__).parents[1] / "src/gaiascapes_host/static/app.js"
     script = r'''
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -63,7 +63,7 @@ def test_request_reports_server_failures_without_json_parse_errors():
     node = shutil.which("node")
     if node is None:
         pytest.skip("Node.js is needed to exercise browser requests")
-    source = Path(__file__).parents[1] / "src/gaia_scape_host/static/app.js"
+    source = Path(__file__).parents[1] / "src/gaiascapes_host/static/app.js"
     script = r'''
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -90,7 +90,7 @@ def test_background_strip_shows_recording_lookup_failure_and_loading():
     node = shutil.which("node")
     if node is None:
         pytest.skip("Node.js is needed to exercise the status strip")
-    source = Path(__file__).parents[1] / "src/gaia_scape_host/static/app.js"
+    source = Path(__file__).parents[1] / "src/gaiascapes_host/static/app.js"
     script = r'''
 const assert = require("node:assert/strict");
 const fs = require("node:fs");

@@ -6,7 +6,7 @@ and never contacts an external geolocation service.
 
 import json
 
-from gaia_scape_host.geoip import GeoIpLocationResolver
+from gaiascapes_host.geoip import GeoIpLocationResolver
 
 
 class FakeResponse:

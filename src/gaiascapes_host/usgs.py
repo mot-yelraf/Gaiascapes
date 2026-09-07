@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import urllib.request
 
-from gaia_scape.events import GaiaEvent
+from gaiascapes.events import GaiaEvent
 
 
 MAX_DOCUMENT_BYTES = 4 * 1024 * 1024
@@ -88,7 +88,7 @@ class UsgsClient:
         """Fetch and normalize the configured feed once."""
         request = urllib.request.Request(
             self.url,
-            headers={"User-Agent": "Gaia-Scape/0.1 (+local environmental music app)"},
+            headers={"User-Agent": "Gaiascapes/0.1 (+local environmental music app)"},
         )
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
             content_length = response.headers.get("Content-Length")

@@ -16,7 +16,7 @@ destination.write_text(
     "\n".join(
         (
             "[Unit]",
-            "Description=Gaia Scape terrestrial sonification",
+            "Description=Gaiascapes terrestrial sonification",
             "After=network-online.target",
             "Wants=network-online.target",
             "",

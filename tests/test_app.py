@@ -1,4 +1,4 @@
-"""Integration tests for the Gaia Scape web application.
+"""Integration tests for the Gaiascapes web application.
 
 These tests exercise HTTP routes and service coordination with deterministic
 provider doubles while verifying rendered controls and persisted settings.
@@ -12,10 +12,10 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from gaia_scape.events import GaiaEvent
-from gaia_scape.score import ScoreCue
-from gaia_scape_host import service
-from gaia_scape_host.app import create_app
+from gaiascapes.events import GaiaEvent
+from gaiascapes.score import ScoreCue
+from gaiascapes_host import service
+from gaiascapes_host.app import create_app
 
 
 class FakeUsgs:
@@ -107,7 +107,7 @@ class RecoveringMarine:
         self.calls += 1
         if self.calls == 1:
             raise RuntimeError(
-                "Open-Meteo is temporarily limiting requests; Gaia Scape will retry automatically."
+                "Open-Meteo is temporarily limiting requests; Gaiascapes will retry automatically."
             )
         return (
             GaiaEvent(
@@ -1027,7 +1027,7 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path):
 
 
 def test_birdsong_source_setup_and_disable_preserve_instrument(tmp_path):
-    from gaia_scape_host.config import AppConfig
+    from gaiascapes_host.config import AppConfig
 
     birdsong = FakeBirdsong()
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs(),
@@ -1064,8 +1064,8 @@ def test_birdsong_source_setup_and_disable_preserve_instrument(tmp_path):
 
 
 def test_xeno_canto_settings_hide_credentials_and_switch_provider(tmp_path):
-    from gaia_scape_host.commons_birdsong import CommonsBirdsongClient
-    from gaia_scape_host.xeno_canto import XenoCantoClient
+    from gaiascapes_host.commons_birdsong import CommonsBirdsongClient
+    from gaiascapes_host.xeno_canto import XenoCantoClient
 
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
     with TestClient(app) as client:
@@ -1996,8 +1996,8 @@ def test_map_projection_persists_and_rejects_unknown_models(tmp_path):
 
 
 def test_birdsong_location_catalog_persists_and_replaces_live_client(tmp_path):
-    from gaia_scape_host.config import AppConfig
-    from gaia_scape_host.xeno_canto import XenoCantoClient
+    from gaiascapes_host.config import AppConfig
+    from gaiascapes_host.xeno_canto import XenoCantoClient
 
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
     with TestClient(app) as client:
@@ -2033,7 +2033,7 @@ def test_birdsong_location_catalog_persists_and_replaces_live_client(tmp_path):
 
 
 def test_empty_birdsong_region_advances_rotation(tmp_path):
-    from gaia_scape_host.xeno_canto import NoBirdsongRecordingsError
+    from gaiascapes_host.xeno_canto import NoBirdsongRecordingsError
 
     class RegionalBirdsong(FakeBirdsong):
         def event_at(self, index):
@@ -2083,7 +2083,7 @@ def test_birdsong_preview_discards_recording_when_region_changes(tmp_path):
 
 
 def test_frog_calls_share_key_and_preserve_separate_regions(tmp_path):
-    from gaia_scape_host.config import AppConfig
+    from gaiascapes_host.config import AppConfig
 
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
     with TestClient(app) as client:
@@ -2135,7 +2135,7 @@ def test_frog_calls_share_key_and_preserve_separate_regions(tmp_path):
 
 
 def test_frog_calls_preview_rotation_history_and_disable_without_osc(tmp_path):
-    from gaia_scape_host.config import AppConfig
+    from gaiascapes_host.config import AppConfig
 
     class FakeFrogs(FakeBirdsong):
         def event_at(self, index):
@@ -2177,8 +2177,8 @@ def test_frog_calls_preview_rotation_history_and_disable_without_osc(tmp_path):
 
 @pytest.mark.parametrize("kind", ["whale_song", "dolphin_calls"])
 def test_sanctsound_settings_preview_rotation_and_disable(tmp_path, kind):
-    from gaia_scape_host.config import AppConfig
-    from gaia_scape_host.sanctsound import default_regions
+    from gaiascapes_host.config import AppConfig
+    from gaiascapes_host.sanctsound import default_regions
 
     class FakeMarineRecording(FakeBirdsong):
         def event_at(self, index):
@@ -2236,8 +2236,8 @@ def test_sanctsound_settings_preview_rotation_and_disable(tmp_path, kind):
     "Xeno-canto is temporarily unavailable; retry in a minute",
 ])
 def test_recording_preview_provider_errors_return_json(tmp_path, error_message, kind):
-    from gaia_scape_host.config import AppConfig
-    from gaia_scape_host.xeno_canto import NoRecordingsError
+    from gaiascapes_host.config import AppConfig
+    from gaiascapes_host.xeno_canto import NoRecordingsError
 
     class UnavailableRecordings:
         def event_at(self, index):
@@ -2256,8 +2256,8 @@ def test_recording_preview_provider_errors_return_json(tmp_path, error_message, 
 
 
 def test_frog_background_status_reports_loading_empty_region_and_recovery(tmp_path):
-    from gaia_scape_host.config import AppConfig
-    from gaia_scape_host.xeno_canto import NoRecordingsError
+    from gaiascapes_host.config import AppConfig
+    from gaiascapes_host.xeno_canto import NoRecordingsError
 
     entered = threading.Event()
     release = threading.Event()

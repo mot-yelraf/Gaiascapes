@@ -18,7 +18,7 @@ from pathlib import PurePosixPath
 
 from .netcdf_worker import netcdf_decoder
 
-from gaia_scape.events import GaiaEvent
+from gaiascapes.events import GaiaEvent
 
 
 COLLECTION_ID = "EO:EUM:DAT:0691"

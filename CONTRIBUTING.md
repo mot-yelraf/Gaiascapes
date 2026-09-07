@@ -1,8 +1,8 @@
-# Contributing to Gaia Scape
+# Contributing to Gaiascapes
 
-Thank you for helping improve Gaia Scape.
+Thank you for helping improve Gaiascapes.
 
-Gaia Scape is a host-first Python application that captures terrestrial events
+Gaiascapes is a host-first Python application that captures terrestrial events
 and turns their timing, location, and intensity into generative music. It runs
 on macOS, Linux, and Raspberry Pi OS. SuperCollider is the preferred audio
 renderer, but event capture, history, and the web interface must remain useful
@@ -36,7 +36,7 @@ and settings do not enter the checkout:
 
 ```sh
 GAIA_SCAPE_DATA_DIR=/tmp/gaia-scape-dev \
-  .venv/bin/python Gaia_Scape.py
+  .venv/bin/python Gaiascapes.py
 ```
 
 The default HTTP port is `8768`. Do not change the project default to `8000`,
@@ -53,24 +53,24 @@ port `57130`.
 - macOS, Linux, and Raspberry Pi installation and launcher improvements
 - Documentation and automated test coverage
 
-ESP32 support may be added later as a companion device. Gaia Scape remains a
+ESP32 support may be added later as a companion device. Gaiascapes remains a
 host-first application.
 
 ## Architecture boundaries
 
 Keep these boundaries intact:
 
-- `src/gaia_scape/` contains provider-independent normalized events and score
+- `src/gaiascapes/` contains provider-independent normalized events and score
   construction.
-- `src/gaia_scape_host/usgs.py`, `open_meteo.py`, and `noaa_glm.py` retrieve
+- `src/gaiascapes_host/usgs.py`, `open_meteo.py`, and `noaa_glm.py` retrieve
   and normalize provider data.
-- `src/gaia_scape_host/capture.py` owns SQLite persistence.
-- `src/gaia_scape_host/service.py` coordinates capture, history, continuous
+- `src/gaiascapes_host/capture.py` owns SQLite persistence.
+- `src/gaiascapes_host/service.py` coordinates capture, history, continuous
   playback, and renderer calls.
-- `src/gaia_scape_host/osc.py` implements the renderer interface used by the
+- `src/gaiascapes_host/osc.py` implements the renderer interface used by the
   host service.
 - `supercollider/gaia-scape.scd` implements the preferred audio renderer.
-- `src/gaia_scape_host/templates/` and `static/` implement the web interface.
+- `src/gaiascapes_host/templates/` and `static/` implement the web interface.
 
 Normalized events, score construction, and renderer interfaces must remain
 provider-independent. Do not make core scoring or persistence depend on a
@@ -134,7 +134,7 @@ tied to the application version.
 
 ## Dependency policy
 
-Gaia Scape intentionally keeps its dependency set small.
+Gaiascapes intentionally keeps its dependency set small.
 
 - Prefer the Python standard library and existing utilities where practical.
 - Explain why a new dependency is necessary.
@@ -162,7 +162,7 @@ the pull request.
 
 ## Versioning
 
-Runtime changes update `__version__` in `src/gaia_scape/__init__.py`;
+Runtime changes update `__version__` in `src/gaiascapes/__init__.py`;
 `pyproject.toml` reads it dynamically. Use:
 
 ```text
@@ -184,7 +184,7 @@ A pull request should include:
 - Documentation and attribution updates required by the change
 - Any behavior that remains unverified
 
-Gaia Scape is a pre-1.0 project under active development. Internal structure
+Gaiascapes is a pre-1.0 project under active development. Internal structure
 may evolve, but normalized event contracts, persisted user state, and existing
 installations should remain compatible whenever practical.
 

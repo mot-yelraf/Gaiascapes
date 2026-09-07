@@ -16,7 +16,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from gaia_scape.events import GaiaEvent
+from gaiascapes.events import GaiaEvent
 
 
 MARINE_KINDS = ("whale_song", "dolphin_calls")
@@ -102,7 +102,7 @@ class SanctSoundClient:
         with tempfile.NamedTemporaryFile(dir=self.media_dir, suffix=".part", delete=False) as pending:
             temporary = Path(pending.name)
         request = urllib.request.Request(ARCHIVE_URL + clip["object"], headers={
-            "User-Agent": "Gaia-Scape (https://github.com/mot-yelraf/Gaia_Scape)"
+            "User-Agent": "Gaiascapes (https://github.com/mot-yelraf/Gaiascapes)"
         })
         try:
             with self._opener(request, timeout=60) as response, temporary.open("wb") as output:

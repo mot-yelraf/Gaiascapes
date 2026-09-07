@@ -16,12 +16,12 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from gaia_scape.events import GaiaEvent
+from gaiascapes.events import GaiaEvent
 
 
 COMMONS_API_URL = "https://commons.wikimedia.org/w/api.php"
 COMMONS_USER_AGENT = (
-    "Gaia-Scape/1.0 (https://github.com/mot-yelraf/Gaia_Scape)"
+    "Gaiascapes/1.0 (https://github.com/mot-yelraf/Gaiascapes)"
 )
 MAX_AUDIO_BYTES = 64 * 1024 * 1024
 SUPPORTED_LICENSES = frozenset(

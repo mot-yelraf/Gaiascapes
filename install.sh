@@ -9,11 +9,11 @@ case "$INSTALL_MODE" in
   headless) PACKAGE_EXTRAS="lightning,eumetsat" ;;
   *) printf 'GAIA_SCAPE_INSTALL_MODE must be desktop or headless.\n' >&2; exit 1 ;;
 esac
-DEFAULT_INSTALL_DIR="${HOME}/Gaia_Scape"
+DEFAULT_INSTALL_DIR="${HOME}/Gaiascapes"
 STATE_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/gaia-scape"
 STATE_FILE="$STATE_DIR/install-location"
 
-fail() { printf 'Gaia Scape installation failed: %s\n' "$1" >&2; exit 1; }
+fail() { printf 'Gaiascapes installation failed: %s\n' "$1" >&2; exit 1; }
 
 command -v "$PYTHON_BIN" >/dev/null 2>&1 || fail "Python 3.10 or newer was not found."
 "$PYTHON_BIN" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' || fail "Python 3.10 or newer is required."
@@ -28,16 +28,16 @@ choose_location() {
     Darwin)
       osascript - "$initial" <<'APPLESCRIPT'
 on run argv
-  set chosenFolder to choose folder with prompt "Choose the Gaia Scape folder or a parent folder." default location POSIX file (item 1 of argv)
+  set chosenFolder to choose folder with prompt "Choose the Gaiascapes folder or a parent folder." default location POSIX file (item 1 of argv)
   return POSIX path of chosenFolder
 end run
 APPLESCRIPT
       ;;
     Linux)
       if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && command -v zenity >/dev/null 2>&1; then
-        zenity --file-selection --directory --title="Choose the Gaia Scape folder or its parent" --filename="${initial}/"
+        zenity --file-selection --directory --title="Choose the Gaiascapes folder or its parent" --filename="${initial}/"
       elif [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && command -v kdialog >/dev/null 2>&1; then
-        kdialog --getexistingdirectory "$initial" --title "Choose the Gaia Scape folder or its parent"
+        kdialog --getexistingdirectory "$initial" --title "Choose the Gaiascapes folder or its parent"
       else
         return 2
       fi
@@ -48,7 +48,16 @@ APPLESCRIPT
 
 resolve_install_dir() {
   local selected="${1%/}"
-  [[ "$(basename -- "$selected")" == "Gaia_Scape" ]] && printf '%s\n' "$selected" || printf '%s/Gaia_Scape\n' "$selected"
+  case "$(basename -- "$selected")" in
+    Gaiascapes) printf '%s\n' "$selected" ;;
+    *)
+      if [[ "$selected" == "$remembered" ]]; then
+        printf '%s\n' "$selected"
+      else
+        printf '%s/Gaiascapes\n' "$selected"
+      fi
+      ;;
+  esac
 }
 
 if [[ -n "${GAIA_SCAPE_INSTALL_DIR:-}" ]]; then
@@ -64,8 +73,8 @@ else
   elif [[ $selection_status -eq 0 && -n "$selected" ]]; then
     INSTALL_DIR="$(resolve_install_dir "$selected")"
   elif [[ -t 0 ]]; then
-    read -r -p "Choose the Gaia Scape folder or its parent [$initial] " selected
-    INSTALL_DIR="$(resolve_install_dir "${selected:-$initial}")"
+    read -r -p "Choose the Gaiascapes folder or its parent [$remembered] " selected
+    INSTALL_DIR="$(resolve_install_dir "${selected:-$remembered}")"
   else
     INSTALL_DIR="$remembered"
     printf 'No graphical folder chooser is available; using %s\n' "$INSTALL_DIR"
@@ -81,7 +90,7 @@ fi
 LOG_FILE="$INSTALL_DIR/install.log"
 : > "$LOG_FILE"
 {
-  printf 'Installing Gaia Scape from %s\n' "$SOURCE_DIR"
+  printf 'Installing Gaiascapes from %s\n' "$SOURCE_DIR"
   printf 'Installation directory: %s\n' "$INSTALL_DIR"
   printf 'Python: %s\n' "$("$PYTHON_BIN" --version 2>&1)"
 } | tee -a "$LOG_FILE"
@@ -108,8 +117,8 @@ fi
 if [[ "$SOURCE_DIR" != "$INSTALL_DIR" ]]; then
   install -m 755 "$SOURCE_DIR/install.sh" "$INSTALL_DIR/install.sh"
   install -m 755 "$SOURCE_DIR/uninstall.sh" "$INSTALL_DIR/uninstall.sh"
-  install -m 755 "$SOURCE_DIR/run_gaia_scape.sh" "$INSTALL_DIR/run_gaia_scape.sh"
-  install -m 755 "$SOURCE_DIR/run_gaia_scape_gui.sh" "$INSTALL_DIR/run_gaia_scape_gui.sh"
+  install -m 755 "$SOURCE_DIR/run_gaiascapes.sh" "$INSTALL_DIR/run_gaiascapes.sh"
+  install -m 755 "$SOURCE_DIR/run_gaiascapes_gui.sh" "$INSTALL_DIR/run_gaiascapes_gui.sh"
   install -m 755 "$SOURCE_DIR/run_supercollider.sh" "$INSTALL_DIR/run_supercollider.sh"
   install -m 755 "$SOURCE_DIR/scripts/resolve_macos_audio.py" "$INSTALL_DIR/scripts/resolve_macos_audio.py"
   install -m 644 "$SOURCE_DIR/supercollider/gaia-scape.scd" "$INSTALL_DIR/supercollider/gaia-scape.scd"
@@ -127,7 +136,7 @@ mv "$state_temp" "$STATE_FILE"
 
 enable_autostart="${GAIA_SCAPE_AUTO_START:-}"
 if [[ -z "$enable_autostart" && -t 0 ]]; then
-  read -r -p "Enable Gaia Scape auto-start for this user? [y/N] " answer
+  read -r -p "Enable Gaiascapes auto-start for this user? [y/N] " answer
   [[ "$answer" =~ ^[Yy] ]] && enable_autostart=yes || enable_autostart=no
 fi
 
@@ -135,13 +144,13 @@ if [[ "$enable_autostart" == yes ]]; then
   if [[ "$(uname -s)" == Linux ]] && command -v systemctl >/dev/null 2>&1; then
     service_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
     mkdir -p "$service_dir"
-    "$PYTHON_BIN" "$SOURCE_DIR/scripts/write_systemd_service.py" "$service_dir/gaia-scape.service" "$INSTALL_DIR/run_gaia_scape.sh"
+    "$PYTHON_BIN" "$SOURCE_DIR/scripts/write_systemd_service.py" "$service_dir/gaia-scape.service" "$INSTALL_DIR/run_gaiascapes.sh"
     systemctl --user daemon-reload
     systemctl --user enable --now gaia-scape.service
   elif [[ "$(uname -s)" == Darwin ]]; then
     plist="$HOME/Library/LaunchAgents/local.gaia-scape.plist"
     mkdir -p "$(dirname -- "$plist")"
-    "$PYTHON_BIN" "$SOURCE_DIR/scripts/write_launch_agent.py" "$plist" "$INSTALL_DIR/run_gaia_scape.sh" "$INSTALL_DIR/data"
+    "$PYTHON_BIN" "$SOURCE_DIR/scripts/write_launch_agent.py" "$plist" "$INSTALL_DIR/run_gaiascapes.sh" "$INSTALL_DIR/data"
     launchctl unload "$plist" >/dev/null 2>&1 || true
     launchctl load "$plist"
   fi
@@ -153,10 +162,10 @@ else
   printf 'SuperCollider was not detected; capture and the web UI will still work.\n'
 fi
 
-printf '\nGaia Scape was installed in %s\n' "$INSTALL_DIR"
+printf '\nGaiascapes was installed in %s\n' "$INSTALL_DIR"
 printf 'Start audio: %s/run_supercollider.sh\n' "$INSTALL_DIR"
-printf 'Start the desktop app: %s/run_gaia_scape_gui.sh\n' "$INSTALL_DIR"
-printf 'Start headless: %s/run_gaia_scape.sh\n' "$INSTALL_DIR"
+printf 'Start the desktop app: %s/run_gaiascapes_gui.sh\n' "$INSTALL_DIR"
+printf 'Start headless: %s/run_gaiascapes.sh\n' "$INSTALL_DIR"
 printf 'Open locally: http://127.0.0.1:8768\n'
 printf 'Open on LAN: http://<gaia-host-ip>:8768\n'
 printf 'Application data: %s/data\n' "$INSTALL_DIR"

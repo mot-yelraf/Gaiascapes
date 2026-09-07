@@ -17,8 +17,8 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 
-from gaia_scape_host import __main__ as cli
-from gaia_scape_host import desktop
+from gaiascapes_host import __main__ as cli
+from gaiascapes_host import desktop
 
 
 def test_cli_disables_uvicorn_access_log(tmp_path, monkeypatch):
@@ -110,7 +110,7 @@ def test_macos_identity_bundle_contains_plist_icon_and_python_link(
         document = plistlib.load(source)
 
     assert document == {
-        "CFBundleDisplayName": "Gaia Scape",
+        "CFBundleDisplayName": "Gaiascapes",
         "CFBundleName": "Gaia Scape",
         "CFBundleExecutable": "Gaia Scape",
         "CFBundleIdentifier": "earth.gaiascape.GaiaScape",
@@ -156,7 +156,7 @@ def test_macos_identity_relaunch_uses_module_arguments_and_recursion_guard(
     assert arguments == [
         str(executable),
         "-m",
-        "gaia_scape_host.desktop",
+        "gaiascapes_host.desktop",
         "--example",
     ]
     assert environment[desktop.MACOS_RELAUNCH_MARKER] == "1"
@@ -252,7 +252,7 @@ print(json.dumps({
     )
     identity = json.loads(completed.stdout.strip())
 
-    assert identity["name"] == desktop.MACOS_APP_NAME
+    assert identity["name"] == "Gaiascapes"
     assert identity["identifier"] == desktop.MACOS_BUNDLE_IDENTIFIER
     assert identity["bundle"] == str(tmp_path / "Gaia Scape.app")
     assert identity["executable"] == str(executable)
@@ -272,7 +272,7 @@ def test_macos_symlinked_executable_imports_installed_desktop_module(
         [
             str(executable),
             "-c",
-            "from gaia_scape_host import desktop; print(desktop.MACOS_APP_NAME)",
+            "from gaiascapes_host import desktop; print(desktop.MACOS_APP_NAME)",
         ],
         check=True,
         capture_output=True,
@@ -303,7 +303,7 @@ def test_desktop_starts_native_window_and_stops_owned_server(tmp_path, monkeypat
     assert process.terminated is True
     assert calls[0][0] == "create"
     assert calls[0][1][:2] == (
-        "Gaia Scape · Living Earth",
+        "Gaiascapes · Living Earth",
         "http://127.0.0.1:8768/",
     )
     assert calls[0][2]["width"] == 1500
@@ -401,7 +401,7 @@ def test_linux_identity_installs_matching_icon(tmp_path: Path, monkeypatch):
 
     desktop_path = desktop.configure_linux_app_identity()
 
-    assert calls == [("id", desktop.LINUX_APP_ID), ("name", "Gaia Scape")]
+    assert calls == [("id", desktop.LINUX_APP_ID), ("name", "Gaiascapes")]
     assert desktop_path == tmp_path / "applications" / f"{desktop.LINUX_APP_ID}.desktop"
     text = desktop_path.read_text(encoding="utf-8")
     assert f"Icon={desktop.LINUX_APP_ID}\n" in text

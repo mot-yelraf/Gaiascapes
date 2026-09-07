@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gaia-scape"
+name = "gaiascapes"
 dynamic = ["version"]
 description = "Turn live terrestrial events into generative musical performances."
 readme = "README.md"
@@ -26,21 +26,21 @@ dev = [
 ]
 
 [project.scripts]
-gaia-scape-server = "gaia_scape_host.__main__:main"
-gaia-scape-gui = "gaia_scape_host.desktop:main"
+gaiascapes-server = "gaiascapes_host.__main__:main"
+gaiascapes-gui = "gaiascapes_host.desktop:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 include-package-data = true
 
 [tool.setuptools.dynamic]
-version = {attr = "gaia_scape.__version__"}
+version = {attr = "gaiascapes.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-gaia_scape_host = ["sanctsound_catalog.json", "templates/*.html", "static/*.css", "static/*.js", "static/*.svg", "static/*.png", "static/*.ico", "static/*.icns"]
+gaiascapes_host = ["sanctsound_catalog.json", "templates/*.html", "static/*.css", "static/*.js", "static/*.svg", "static/*.png", "static/*.ico", "static/*.icns"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

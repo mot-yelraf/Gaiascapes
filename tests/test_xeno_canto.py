@@ -10,7 +10,7 @@ import urllib.error
 
 import pytest
 
-from gaia_scape_host.xeno_canto import COUNTRIES, XenoCantoClient, _record
+from gaiascapes_host.xeno_canto import COUNTRIES, XenoCantoClient, _record
 
 
 def recording(**changes):
@@ -122,7 +122,7 @@ def test_selected_region_filters_recordings_and_separates_moved_cache(tmp_path):
 
 
 def test_region_search_checks_later_pages_and_reports_empty_region(tmp_path):
-    from gaia_scape_host.xeno_canto import NoBirdsongRecordingsError
+    from gaiascapes_host.xeno_canto import NoBirdsongRecordingsError
 
     responses = [
         Response(json.dumps({"numPages": 2, "recordings": [recording(lat="0", lon="0")]}).encode()),
@@ -139,7 +139,7 @@ def test_region_search_checks_later_pages_and_reports_empty_region(tmp_path):
 
 
 def test_region_bounds_cover_date_line_and_poles():
-    from gaia_scape_host.xeno_canto import _region_boxes, _within_region
+    from gaiascapes_host.xeno_canto import _region_boxes, _within_region
 
     for longitude in (-179.8, 179.8):
         location = {"latitude": 0, "longitude": longitude}
@@ -189,7 +189,7 @@ def test_frog_queries_filter_group_and_use_separate_cache(tmp_path):
 
 
 def test_empty_frog_region_never_falls_back_to_birds(tmp_path):
-    from gaia_scape_host.xeno_canto import NoRecordingsError
+    from gaiascapes_host.xeno_canto import NoRecordingsError
 
     document = {"recordings": [recording()]}
     client = XenoCantoClient(tmp_path, "test", lambda request, timeout: Response(json.dumps(document).encode()),

@@ -5,7 +5,7 @@ RUNTIME_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 PYTHON_BIN="$RUNTIME_DIR/.venv/bin/python"
 
 if [[ ! -x "$PYTHON_BIN" ]]; then
-  printf 'Gaia Scape virtual environment is missing. Run %s/install.sh again.\n' "$RUNTIME_DIR" >&2
+  printf 'Gaiascapes virtual environment is missing. Run %s/install.sh again.\n' "$RUNTIME_DIR" >&2
   exit 1
 fi
 
@@ -21,7 +21,7 @@ if ! pgrep -f "$RUNTIME_DIR/supercollider/gaia-scape.scd" >/dev/null 2>&1; then
   sleep 2
   if ! kill -0 "$supercollider_pid" >/dev/null 2>&1; then
     wait "$supercollider_pid" || true
-    printf 'SuperCollider did not remain running; Gaia Scape will start without audio.\n' >&2
+    printf 'SuperCollider did not remain running; Gaiascapes will start without audio.\n' >&2
     supercollider_pid=""
   fi
 fi
@@ -46,7 +46,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-"$PYTHON_BIN" -m gaia_scape_host.desktop "$@" &
+"$PYTHON_BIN" -m gaiascapes_host.desktop "$@" &
 desktop_pid=$!
 wait "$desktop_pid"
 desktop_status=$?

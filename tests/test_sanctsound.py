@@ -11,8 +11,8 @@ import wave
 
 import pytest
 
-from gaia_scape_host import sanctsound
-from gaia_scape_host.config import AppConfig
+from gaiascapes_host import sanctsound
+from gaiascapes_host.config import AppConfig
 
 
 @pytest.fixture

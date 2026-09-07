@@ -1,6 +1,6 @@
 # System requirements
 
-Gaia Scape supports macOS, Linux, and Raspberry Pi OS.
+Gaiascapes supports macOS, Linux, and Raspberry Pi OS.
 
 ## Required
 

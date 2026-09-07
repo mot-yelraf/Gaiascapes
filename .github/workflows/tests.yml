@@ -28,7 +28,7 @@ jobs:
           export GAIA_SCAPE_DATA_DIR="$(mktemp -d)"
           python -m pytest -q
           python -m compileall -q src tests
-          bash -n install.sh run_gaia_scape.sh run_gaia_scape_gui.sh run_supercollider.sh
+          bash -n install.sh run_gaiascapes.sh run_gaiascapes_gui.sh run_supercollider.sh
       - name: Build and smoke-test a clean headless installation
         shell: bash
         run: |

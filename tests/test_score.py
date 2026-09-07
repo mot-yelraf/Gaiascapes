@@ -4,8 +4,8 @@ The cases protect event timing, geographic mapping, bounded dynamics, and the
 distinct octave and pitch variation assigned to lightning flashes.
 """
 
-from gaia_scape.events import GaiaEvent
-from gaia_scape.score import build_score, longitude_to_pan
+from gaiascapes.events import GaiaEvent
+from gaiascapes.score import build_score, longitude_to_pan
 
 
 def test_score_preserves_relative_time_and_maps_geography():

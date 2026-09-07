@@ -1,10 +1,9 @@
-# Gaia_Scape agent guidance
+# Gaiascapes agent guidance
 
-- The project checkout path is `~/Projects/Gaia_Scape` (that is,
-  `/Users/twfarley/Projects/Gaia_Scape`). Never rename, move, or temporarily
-  relocate this directory, and never use `Gaia_Rhythms` or `Earth_Rhythms` as
-  the project folder name.
-- Gaia_Scape is a host-first Python application for macOS, Linux, and
+- The project checkout path is `~/Projects/Gaiascapes` (that is,
+  `/Users/twfarley/Projects/Gaiascapes`). Never rename, move, or temporarily
+  relocate this directory.
+- Gaiascapes is a host-first Python application for macOS, Linux, and
   Raspberry Pi. ESP32 support may be added later as a companion device.
 - The default HTTP port is 8768. Ports 8000, 8765, and 8767 belong to sibling
   projects and must not become defaults here.
@@ -16,7 +15,7 @@
   capture, history, or the web UI to operate.
 - Run `python -m pytest -q` and `python -m compileall -q src tests` after code
   changes.
-- Version runtime changes through `src/gaia_scape/__init__.py`; `pyproject.toml` reads that canonical version.
+- Version runtime changes through `src/gaiascapes/__init__.py`; `pyproject.toml` reads that canonical version.
 
 ## Code Generation Rules
 
@@ -47,7 +46,7 @@
 - Treat test-only HTTP, OSC, host, audio-device, and other environment
   overrides as process-local values. Never save, copy, migrate, or otherwise
   materialize them into the installed `config.json` or other runtime state.
-- Do not use the installed Gaia Scape process for UI tests that can persist
+- Do not use the installed Gaiascapes process for UI tests that can persist
   settings. After any test involving runtime overrides, verify that the
   installed configuration still uses the intended production parameters,
   including HTTP port `8768` and OSC port `57130`, before installation or
@@ -59,7 +58,7 @@
 ## Versioning Rule
 
 When you make a code content change, update the canonical `__version__` in
-`src/gaia_scape/__init__.py` using:
+`src/gaiascapes/__init__.py` using:
 
 ```text
 v0.<year>.<doy>.<x>

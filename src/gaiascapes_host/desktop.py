@@ -1,4 +1,4 @@
-"""Launch Gaia Scape in a native pywebview desktop window.
+"""Launch Gaiascapes in a native pywebview desktop window.
 
 Desktop startup reuses or supervises the local web server and applies
 platform-specific application identity and icon behavior where available.
@@ -19,7 +19,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from gaia_scape import __version__
+from gaiascapes import __version__
 
 from .config import AppConfig, resolve_data_dir
 
@@ -29,6 +29,7 @@ DESKTOP_ICON_PATH = STATIC_DIR / "gaia-scape-desktop-icon.png"
 WINDOWS_ICON_PATH = STATIC_DIR / "gaia-scape-desktop-icon.ico"
 MACOS_ICON_PATH = STATIC_DIR / "gaia-scape-desktop-icon.icns"
 LINUX_APP_ID = "earth.gaia_scape.GaiaScape"
+# Preserve the existing bundle path and executable during the staged rename.
 MACOS_APP_NAME = "Gaia Scape"
 MACOS_BUNDLE_IDENTIFIER = "earth.gaiascape.GaiaScape"
 MACOS_RELAUNCH_MARKER = "GAIA_SCAPE_MACOS_APP_RELAUNCHED"
@@ -107,7 +108,7 @@ def _ensure_macos_app_bundle() -> Path:
 
     bundle_version = _macos_bundle_version()
     document = {
-        "CFBundleDisplayName": MACOS_APP_NAME,
+        "CFBundleDisplayName": "Gaiascapes",
         "CFBundleName": MACOS_APP_NAME,
         "CFBundleExecutable": MACOS_APP_NAME,
         "CFBundleIdentifier": MACOS_BUNDLE_IDENTIFIER,
@@ -148,20 +149,20 @@ def _register_macos_app_bundle(bundle_path: Path) -> None:
         )
     except OSError as exc:
         print(
-            f"Gaia Scape could not register its macOS application bundle: {exc}",
+            f"Gaiascapes could not register its macOS application bundle: {exc}",
             file=sys.stderr,
         )
         return
     if completed.returncode != 0:
         detail = completed.stderr.strip() or f"exit status {completed.returncode}"
         print(
-            f"Gaia Scape could not refresh its macOS application icon: {detail}",
+            f"Gaiascapes could not refresh its macOS application icon: {detail}",
             file=sys.stderr,
         )
 
 
 def relaunch_for_macos_app_identity() -> bool:
-    """Replace this process with one launched through the Gaia Scape bundle."""
+    """Replace this process with one launched through the Gaiascapes bundle."""
     if not _should_relaunch_for_macos_identity():
         return False
     try:
@@ -181,13 +182,13 @@ def relaunch_for_macos_app_identity() -> bool:
         arguments = [
             str(executable_path),
             "-m",
-            "gaia_scape_host.desktop",
+            "gaiascapes_host.desktop",
             *sys.argv[1:],
         ]
         os.execve(str(executable_path), arguments, environment)
     except OSError as exc:
         print(
-            f"Gaia Scape could not establish its macOS application identity: {exc}",
+            f"Gaiascapes could not establish its macOS application identity: {exc}",
             file=sys.stderr,
         )
         return False
@@ -299,7 +300,7 @@ def _start_server() -> subprocess.Popen[Any]:
     environment = os.environ.copy()
     environment[DESKTOP_OWNER_PID_ENV] = str(os.getpid())
     return subprocess.Popen(
-        [sys.executable, "-m", "gaia_scape_host"],
+        [sys.executable, "-m", "gaiascapes_host"],
         cwd=resolve_data_dir().parent,
         env=environment,
     )
@@ -329,9 +330,9 @@ def configure_linux_app_identity() -> Path | None:
         from gi.repository import GLib
 
         GLib.set_prgname(LINUX_APP_ID)
-        GLib.set_application_name("Gaia Scape")
+        GLib.set_application_name("Gaiascapes")
     except Exception as exc:
-        print(f"Gaia Scape could not set its Linux application ID: {exc}", file=sys.stderr)
+        print(f"Gaiascapes could not set its Linux application ID: {exc}", file=sys.stderr)
 
     data_root = Path(
         os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")
@@ -341,13 +342,13 @@ def configure_linux_app_identity() -> Path | None:
     desktop_path = applications_dir / f"{LINUX_APP_ID}.desktop"
     themed_icon_path = icons_dir / f"{LINUX_APP_ID}.png"
     runtime_dir = resolve_data_dir().parent
-    launcher_path = runtime_dir / "run_gaia_scape_gui.sh"
+    launcher_path = runtime_dir / "run_gaiascapes_gui.sh"
     desktop_text = "\n".join(
         (
             "[Desktop Entry]",
             "Type=Application",
-            "Name=Gaia Scape",
-            "Comment=Open the Gaia Scape living Earth soundscape",
+            "Name=Gaiascapes",
+            "Comment=Open the Gaiascapes living Earth soundscape",
             f"Exec={_desktop_exec_arg(str(launcher_path))}",
             f"Path={runtime_dir}",
             f"Icon={LINUX_APP_ID}",
@@ -372,7 +373,7 @@ def configure_linux_app_identity() -> Path | None:
             temporary_desktop.write_text(desktop_text, encoding="utf-8")
             temporary_desktop.replace(desktop_path)
     except OSError as exc:
-        print(f"Gaia Scape could not install its Linux desktop entry: {exc}", file=sys.stderr)
+        print(f"Gaiascapes could not install its Linux desktop entry: {exc}", file=sys.stderr)
         return None
     return desktop_path
 
@@ -393,7 +394,7 @@ def set_macos_app_icon() -> None:
 
         AppHelper.callAfter(apply_icon)
     except Exception as exc:
-        print(f"Gaia Scape could not set its macOS app icon: {exc}", file=sys.stderr)
+        print(f"Gaiascapes could not set its macOS app icon: {exc}", file=sys.stderr)
 
 
 def set_windows_app_icon(window: Any) -> None:
@@ -407,11 +408,11 @@ def set_windows_app_icon(window: Any) -> None:
         _windows_icon = Icon(str(WINDOWS_ICON_PATH))
         window.native.Icon = _windows_icon
     except Exception as exc:
-        print(f"Gaia Scape could not set its Windows app icon: {exc}", file=sys.stderr)
+        print(f"Gaiascapes could not set its Windows app icon: {exc}", file=sys.stderr)
 
 
 def main() -> int:
-    """Start or attach to Gaia Scape and display its native desktop window."""
+    """Start or attach to Gaiascapes and display its native desktop window."""
     if relaunch_for_macos_app_identity():
         return 0
     base_url = _base_url()
@@ -431,7 +432,7 @@ def main() -> int:
         os.environ.setdefault("GDK_BACKEND", "wayland,x11")
         if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
             print(
-                "Gaia Scape GUI not started: no DISPLAY or WAYLAND_DISPLAY is set.",
+                "Gaiascapes GUI not started: no DISPLAY or WAYLAND_DISPLAY is set.",
                 file=sys.stderr,
             )
             return 1
@@ -441,7 +442,7 @@ def main() -> int:
         import webview
     except Exception as exc:
         print(
-            f"Gaia Scape GUI not started: pywebview import failed: {exc}",
+            f"Gaiascapes GUI not started: pywebview import failed: {exc}",
             file=sys.stderr,
         )
         return 1
@@ -449,20 +450,20 @@ def main() -> int:
     if not _is_healthy(base_url):
         if os.environ.get("GAIA_SCAPE_GUI_URL"):
             print(
-                f"Gaia Scape GUI not started: {base_url.rstrip('/')} is not ready.",
+                f"Gaiascapes GUI not started: {base_url.rstrip('/')} is not ready.",
                 file=sys.stderr,
             )
             return 1
         try:
             owned_server = _start_server()
         except OSError as exc:
-            print(f"Gaia Scape GUI could not start its server: {exc}", file=sys.stderr)
+            print(f"Gaiascapes GUI could not start its server: {exc}", file=sys.stderr)
             return 1
 
     if not _wait_for_health(base_url, owned_server):
         stop_owned_server()
         print(
-            f"Gaia Scape GUI not started: {base_url.rstrip('/')} did not become ready.",
+            f"Gaiascapes GUI not started: {base_url.rstrip('/')} did not become ready.",
             file=sys.stderr,
         )
         return 1
@@ -470,7 +471,7 @@ def main() -> int:
     try:
         geometry = _window_geometry()
         window = webview.create_window(
-            "Gaia Scape · Living Earth",
+            "Gaiascapes · Living Earth",
             base_url,
             width=geometry["width"],
             height=geometry["height"],

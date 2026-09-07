@@ -8,9 +8,9 @@ from datetime import datetime, timezone
 
 from netCDF4 import Dataset
 
-from gaia_scape.events import GaiaEvent
-from gaia_scape_host import noaa_glm
-from gaia_scape_host.noaa_glm import (
+from gaiascapes.events import GaiaEvent
+from gaiascapes_host import noaa_glm
+from gaiascapes_host.noaa_glm import (
     NoaaGlmClient,
     count_glm_flashes,
     parse_glm_document,

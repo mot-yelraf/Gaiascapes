@@ -1,6 +1,6 @@
-# Gaia Scape user guide
+# Gaiascapes user guide
 
-This guide explains the controls in Gaia Scape **v0.26.249.22**. Installation and system setup are covered separately in the [README](README.md).
+This guide explains the controls in Gaiascapes **v0.26.250.3**. Installation and system setup are covered separately in the [README](README.md).
 
 The screenshots below were captured from the application in an isolated demonstration session. Example earthquakes are illustrative, not live observations. Credential fields are blank, and enabled switches in a screenshot demonstrate the controls rather than confirm access to a provider.
 
@@ -81,7 +81,7 @@ Open **Settings → Sound sources**. Background sources appear above event sourc
 | **Open-Meteo surf & tides** | Modeled ocean swells and tide turns. | No key. Uses the 19 Ocean Swells locations. Supplies both the Ocean Swells background and events for Tidal Tone. |
 | **Whale Song** | NOAA NCEI / SanctSound humpback-song recordings from selected hydrophone sites. | No key. Select included sites in Sound locations. |
 
-NOAA marine recordings come from the [NCEI passive acoustic archive](https://www.ncei.noaa.gov/products/passive-acoustic-data). Gaia Scape caches selected recordings locally and retains their source attribution. A first use can require a download; subsequent uses can reuse the cache.
+NOAA marine recordings come from the [NCEI passive acoustic archive](https://www.ncei.noaa.gov/products/passive-acoustic-data). Gaiascapes caches selected recordings locally and retains their source attribution. A first use can require a download; subsequent uses can reuse the cache.
 
 ### Event sound sources
 
@@ -99,7 +99,7 @@ Credentials are required only for **Birdsong using Xeno-canto**, **Frog Calls**,
 
 1. Open [Xeno-canto](https://xeno-canto.org/) in your browser and sign in, or register an account. Complete any email-verification step requested by the site.
 2. Open [Your account](https://xeno-canto.org/account) and locate your API key. The [official API page](https://xeno-canto.org/explore/api) provides the provider’s current API guidance. These pages may require sign-in or a browser verification check.
-3. In Gaia Scape, open **Settings → Sound sources**.
+3. In Gaiascapes, open **Settings → Sound sources**.
 4. Either enable **Birdsong**, choose **Xeno-canto** in **Birdsong source**, and enter the key; or enable **Frog Calls** and enter it in that tile’s **Xeno-canto API key (shared)** field.
 5. Click **Save settings**. One saved key serves both sources. Replacing it in either field changes the shared key.
 
@@ -117,11 +117,11 @@ Scroll down in Sound sources if the credential fields are below the visible area
 2. Open the [EUMETSAT Data Store](https://data.eumetsat.int/).
 3. Open the menu under your username and select **API Key**. You can also open [API key management](https://api.eumetsat.int/api-key/) directly after signing in.
 4. Under **User Credentials**, reveal and copy the **Consumer Key** and **Consumer Secret**. Use these two values, rather than the temporary access token.
-5. In Gaia Scape, enable **Settings → Sound sources → EUMETSAT MTG Lightning Imager**, paste the two values into the matching fields, and click **Save settings**.
+5. In Gaiascapes, enable **Settings → Sound sources → EUMETSAT MTG Lightning Imager**, paste the two values into the matching fields, and click **Save settings**.
 
 EUMETSAT illustrates these steps in its [Introductory Data Store user guide](https://user.eumetsat.int/resources/user-guides/introductory-data-store-user-guide). If access is denied after authentication, check the account’s applicable data licences using the [registration and licensing guide](https://user.eumetsat.int/resources/user-guides/data-registration-and-licensing).
 
-Blank credential fields preserve their saved values. The **Saved — enter only to replace** placeholder indicates that credentials are stored. Gaia Scape handles token acquisition; you do not need to paste a generated token into the app.
+Blank credential fields preserve their saved values. The **Saved — enter only to replace** placeholder indicates that credentials are stored. Gaiascapes handles token acquisition; you do not need to paste a generated token into the app.
 
 ## Sound Choices
 
@@ -203,7 +203,7 @@ For **Frog Calls** and **Xeno-canto Birdsong**, each point is a search center wi
 
 ![Birdsong’s curated Commons locations with read-only coordinates](docs/images/user-guide/11-commons-locations.png)
 
-Commons uses a fixed catalog of **19 curated locations**. Names and coordinates are read-only, and Restore defaults is disabled for this view. To use editable Birdsong regions, choose **Xeno-canto** in the Birdsong source tile and provide the shared key. Gaia Scape retains the separate Xeno-canto location catalog when you switch providers.
+Commons uses a fixed catalog of **19 curated locations**. Names and coordinates are read-only, and Restore defaults is disabled for this view. To use editable Birdsong regions, choose **Xeno-canto** in the Birdsong source tile and provide the shared key. Gaiascapes retains the separate Xeno-canto location catalog when you switch providers.
 
 ### Whale Song and Dolphin Calls
 

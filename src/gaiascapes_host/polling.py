@@ -50,7 +50,7 @@ class PollingCoordinator:
                     pass
                 await asyncio.sleep(max(1.0, interval() - (time.monotonic() - started)))
 
-        self.tasks[source] = asyncio.create_task(poll(), name=f"gaia-scape-poll-{source}")
+        self.tasks[source] = asyncio.create_task(poll(), name=f"gaiascapes-poll-{source}")
 
     def running(self, source=None) -> bool:
         """Report whether one source, or any source, is polling."""

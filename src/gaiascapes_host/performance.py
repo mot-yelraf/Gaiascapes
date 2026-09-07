@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import time
 
-from gaia_scape.score import ScoreCue
+from gaiascapes.score import ScoreCue
 
 from .contracts import Renderer
 from .playback import render_call
@@ -61,7 +61,7 @@ class PerformancePlayer:
             self.cue_count = sum(len(self._voices(cue)) for cue in score)
             self.played_count = 0
             self.last_error = ""
-            self._task = asyncio.create_task(self._run(score), name="gaia-scape-performance")
+            self._task = asyncio.create_task(self._run(score), name="gaiascapes-performance")
 
     async def stop(self) -> None:
         """Stop current playback promptly."""

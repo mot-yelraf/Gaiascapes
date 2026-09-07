@@ -10,8 +10,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from gaia_scape_host import open_meteo
-from gaia_scape_host.open_meteo import (
+from gaiascapes_host import open_meteo
+from gaiascapes_host.open_meteo import (
     OpenMeteoMarineClient,
     STORM_LOCATIONS,
     SURF_LOCATIONS,

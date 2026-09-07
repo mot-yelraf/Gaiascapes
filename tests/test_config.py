@@ -8,7 +8,7 @@ import json
 
 import pytest
 
-from gaia_scape_host.config import (
+from gaiascapes_host.config import (
     AppConfig,
     event_mappings_for_slots,
     validate_forecast_locations,
@@ -305,3 +305,15 @@ def test_lightning_sample_rate_defaults_to_one_and_is_bounded():
     config.lightning_sample_rate = 99
     config.validate()
     assert config.lightning_sample_rate == 11
+
+
+def test_default_data_directory_is_independent_of_working_directory(monkeypatch, tmp_path):
+    from pathlib import Path
+    from gaiascapes_host.config import resolve_data_dir
+
+    monkeypatch.delenv('GAIA_SCAPE_DATA_DIR', raising=False)
+    monkeypatch.setattr(Path, 'home', lambda: tmp_path)
+    monkeypatch.chdir(tmp_path)
+    assert resolve_data_dir() == tmp_path / 'Gaiascapes' / 'data'
+    monkeypatch.setenv('GAIA_SCAPE_DATA_DIR', str(tmp_path / 'custom' / 'data'))
+    assert resolve_data_dir() == tmp_path / 'custom' / 'data'

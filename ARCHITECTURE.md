@@ -1,13 +1,13 @@
 # Architecture and compatibility contracts
 
-Gaia Scape is a single host process with optional desktop and audio components.
+Gaiascapes is a single host process with optional desktop and audio components.
 The domain package does not import providers, HTTP, SQLite, or SuperCollider.
 
 ## Responsibilities
 
 | Module | Responsibility |
 | --- | --- |
-| `gaia_scape.events`, `gaia_scape.score` | Normalized observations and deterministic score mapping |
+| `gaiascapes.events`, `gaiascapes.score` | Normalized observations and deterministic score mapping |
 | `contracts` | Structural provider and renderer interfaces |
 | `polling` | Independent source cadence, timeout dispatch, overlap protection |
 | `netcdf_worker` | One process-wide thread for all native NetCDF decoding |
@@ -89,7 +89,7 @@ return value `False` suppresses cue journaling; `None` permits visual-only cues
 when OSC is disabled. Successful UDP transmission does not prove audible output.
 Birdsong uses the browser cue stream and local media cache.
 
-`src/gaia_scape/__init__.py::__version__` is the canonical version. Setuptools,
+`src/gaiascapes/__init__.py::__version__` is the canonical version. Setuptools,
 the web UI, and the desktop bundle derive their versions from it. Dependency
 ranges live only in `pyproject.toml`; `requirements.txt` delegates to its extras.
 Core installation requires neither desktop libraries nor satellite decoders.

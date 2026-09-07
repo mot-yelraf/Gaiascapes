@@ -40,7 +40,7 @@ class GeoIpLocationResolver:
                 return dict(self._cached_location)
             for provider, url in GEOIP_PROVIDERS:
                 try:
-                    request = Request(url, headers={"User-Agent": "Gaia-Scape"})
+                    request = Request(url, headers={"User-Agent": "Gaiascapes"})
                     with self.opener(request, timeout=self.timeout_seconds) as response:
                         payload = json.loads(response.read().decode("utf-8"))
                     location = _normalize_location(payload, provider)

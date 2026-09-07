@@ -12,7 +12,7 @@ import time
 from contextlib import closing
 from pathlib import Path
 
-from gaia_scape.events import GaiaEvent
+from gaiascapes.events import GaiaEvent
 
 
 class EventStore:

@@ -15,7 +15,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
-from gaia_scape.events import GaiaEvent
+from gaiascapes.events import GaiaEvent
 
 
 MAX_DOCUMENT_BYTES = 4 * 1024 * 1024
@@ -270,7 +270,7 @@ class _OpenMeteoClient:
             return self._cached_events
         if now < self._retry_not_before:
             raise RuntimeError(
-                "Open-Meteo is temporarily limiting requests; Gaia Scape will retry automatically."
+                "Open-Meteo is temporarily limiting requests; Gaiascapes will retry automatically."
             )
         parameters = urllib.parse.urlencode(
             {
@@ -285,7 +285,7 @@ class _OpenMeteoClient:
         )
         request = urllib.request.Request(
             f"{self.url}?{parameters}",
-            headers={"User-Agent": "Gaia-Scape/0.1 (+local environmental music app)"},
+            headers={"User-Agent": "Gaiascapes/0.1 (+local environmental music app)"},
         )
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
@@ -303,7 +303,7 @@ class _OpenMeteoClient:
                 self.last_fetch_used_fallback = True
                 return self._cached_events
             raise RuntimeError(
-                "Open-Meteo is temporarily limiting requests; Gaia Scape will retry automatically."
+                "Open-Meteo is temporarily limiting requests; Gaiascapes will retry automatically."
             ) from exc
         except (OSError, urllib.error.URLError) as exc:
             if self._has_cache and now - self._cache_updated_at <= STALE_CACHE_SECONDS:

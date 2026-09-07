@@ -1,13 +1,13 @@
 # Third-Party and Data Notices
 
-Gaia Scape source code is distributed under the BSD 2-Clause License in
+Gaiascapes source code is distributed under the BSD 2-Clause License in
 `LICENSE`. Third-party software, platform components, services, and data remain
-subject to their own licenses and terms. The Gaia Scape license does not replace
+subject to their own licenses and terms. The Gaiascapes license does not replace
 those terms.
 
 ## Python dependencies
 
-Gaia Scape declares its direct runtime dependencies in `pyproject.toml` and
+Gaiascapes declares its direct runtime dependencies in `pyproject.toml` and
 mirrors them in `requirements.txt`:
 
 | Package | Purpose | License |
@@ -31,13 +31,13 @@ authoritative notice for that version.
 
 ## SuperCollider
 
-Gaia Scape can send OSC cues to SuperCollider for audio synthesis. SuperCollider
+Gaiascapes can send OSC cues to SuperCollider for audio synthesis. SuperCollider
 is optional, is not bundled in this repository, and is licensed separately under
 GPL-3.0-or-later. See:
 
 <https://github.com/supercollider/supercollider>
 
-The Gaia Scape service, event history, and web UI continue to operate without
+The Gaiascapes service, event history, and web UI continue to operate without
 SuperCollider. A system package, application bundle, or other redistributed
 SuperCollider binary must retain the notices and corresponding source offer
 required by its distributor and license.
@@ -46,13 +46,13 @@ required by its distributor and license.
 
 pywebview uses web-view components supplied by the host platform. On Linux and
 Raspberry Pi OS these commonly include GTK 3, WebKitGTK, and PyGObject; macOS
-uses the operating system's web-view framework. Gaia Scape does not relicense
+uses the operating system's web-view framework. Gaiascapes does not relicense
 these components. System packages and operating-system frameworks remain under
 their respective distribution terms.
 
 ## USGS earthquake data
 
-Gaia Scape retrieves the U.S. Geological Survey Earthquake Hazards Program's
+Gaiascapes retrieves the U.S. Geological Survey Earthquake Hazards Program's
 GeoJSON summary feed and adapts selected event fields into normalized Gaia
 events. USGS earthquake data and products are public-domain U.S. government
 material unless a particular item says otherwise.
@@ -62,11 +62,11 @@ material unless a particular item says otherwise.
   <https://www.usgs.gov/media/files/anss-data-and-products-policy>
 
 Credit: U.S. Geological Survey, Earthquake Hazards Program. Use of USGS names
-or data does not imply USGS endorsement of Gaia Scape.
+or data does not imply USGS endorsement of Gaiascapes.
 
 ## NOAA GOES GLM lightning data
 
-Gaia Scape retrieves NOAA GOES-East and GOES-West Geostationary Lightning
+Gaiascapes retrieves NOAA GOES-East and GOES-West Geostationary Lightning
 Mapper Level 2 LCFA products from NOAA's public object-storage buckets. It
 normalizes quality-accepted flashes and may store or sonify a sampled subset.
 
@@ -77,13 +77,13 @@ implies endorsement or presents modified material as an official NOAA product.
 - GOES data access: <https://www.noaa.gov/information-technology/open-data-dissemination>
 - NOAA copyright guidance: <https://sos.noaa.gov/copyright/>
 
-Credit: NOAA/NESDIS GOES-R Series Geostationary Lightning Mapper. Gaia Scape's
+Credit: NOAA/NESDIS GOES-R Series Geostationary Lightning Mapper. Gaiascapes's
 normalization, filtering, sampling, visualization, and sonification are not
 official NOAA products.
 
 ## EUMETSAT MTG Lightning Imager data
 
-Gaia Scape can retrieve the EUMETSAT Meteosat Third Generation Lightning
+Gaiascapes can retrieve the EUMETSAT Meteosat Third Generation Lightning
 Imager Level 2 Lightning Flashes collection through the user-authenticated Data
 Store. The source normalizes and samples the observations for local display,
 storage, and sonification.
@@ -96,12 +96,12 @@ Attribution 4.0 (CC BY 4.0):
 - CC BY 4.0: <https://creativecommons.org/licenses/by/4.0/>
 
 Credit: Contains modified EUMETSAT Meteosat Third Generation Lightning Imager
-data. Gaia Scape is not an official EUMETSAT product and is not endorsed by
+data. Gaiascapes is not an official EUMETSAT product and is not endorsed by
 EUMETSAT.
 
 ## Open-Meteo forecast and marine data
 
-Gaia Scape retrieves modeled weather and marine data from the Open-Meteo
+Gaiascapes retrieves modeled weather and marine data from the Open-Meteo
 Forecast and Marine APIs. Open-Meteo API data are offered under the Creative
 Commons Attribution 4.0 International license (CC BY 4.0):
 
@@ -109,7 +109,7 @@ Commons Attribution 4.0 International license (CC BY 4.0):
 - CC BY 4.0: <https://creativecommons.org/licenses/by/4.0/>
 
 Attribution: Contains adapted data from Open-Meteo and its contributing
-national weather services. Gaia Scape selects locations and variables, derives
+national weather services. Gaiascapes selects locations and variables, derives
 normalized swell, tide-turn, and storm-potential events, and transforms those
 events into visual and musical output. These adaptations are not endorsed by
 Open-Meteo or its contributing model providers.
@@ -121,10 +121,10 @@ or source terms that remain applicable.
 
 ## Wikimedia Commons birdsong
 
-Gaia Scape can resolve and locally cache birdsong recordings from Wikimedia
+Gaiascapes can resolve and locally cache birdsong recordings from Wikimedia
 Commons through its keyless public API. The recordings are downloaded at runtime
-and are not bundled with Gaia Scape. Each recording remains under the license shown
-on its Commons file page; Gaia Scape accepts only public-domain, CC0, CC BY, and
+and are not bundled with Gaiascapes. Each recording remains under the license shown
+on its Commons file page; Gaiascapes accepts only public-domain, CC0, CC BY, and
 CC BY-SA files and displays the creator, license, and source link in the interface.
 
 Redistributors remain responsible for preserving each recording's attribution and
@@ -136,33 +136,33 @@ recording itself.
 
 ## Approximate system location
 
-Gaia Scape requests an approximate location for the host's public IP from
+Gaiascapes requests an approximate location for the host's public IP from
 `ipapi.co`, with `ipwho.is` as an HTTPS fallback. The normalized city,
-coordinates, and timezone are held only in process memory; Gaia Scape does not
+coordinates, and timezone are held only in process memory; Gaiascapes does not
 store the IP address returned by either provider. Their respective terms and
 privacy policies apply to these requests.
 
 ## Natural Earth map data
 
 The world coastline geometry embedded in `assets/gaia-scape-icon.svg` and
-`src/gaia_scape_host/static/gaia-scape-icon.svg` is adapted from Natural Earth
+`src/gaiascapes_host/static/gaia-scape-icon.svg` is adapted from Natural Earth
 1:110m vector data and projected to Robinson coordinates. Natural Earth states
 that all of its raster and vector map data are in the public domain:
 
 <https://www.naturalearthdata.com/about/terms-of-use/>
 
 Credit: Made with Natural Earth. The geometry has been transformed and styled
-for Gaia Scape; Natural Earth does not warrant its accuracy or endorse this
+for Gaiascapes; Natural Earth does not warrant its accuracy or endorse this
 project.
 
-## Gaia Scape visual and audio assets
+## Gaiascapes visual and audio assets
 
-Except for the Natural Earth geometry identified above, Gaia Scape's icons,
+Except for the Natural Earth geometry identified above, Gaiascapes's icons,
 styles, templates, and SuperCollider synth definitions are project assets
 distributed under the repository's `LICENSE`. The PNG and ICO desktop icons are
-derived from the Gaia Scape SVG artwork.
+derived from the Gaiascapes SVG artwork.
 
 No remote data provider, dependency author, model contributor, or platform
-vendor endorses Gaia Scape. Provider data can be delayed, incomplete, revised,
+vendor endorses Gaiascapes. Provider data can be delayed, incomplete, revised,
 or unavailable and should not be relied upon for emergency response, safety,
 marine navigation, or other high-stakes decisions.

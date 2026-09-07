@@ -6,8 +6,8 @@ providers or renderers to inherit from framework-specific base classes.
 
 from typing import Protocol
 
-from gaia_scape.events import GaiaEvent
-from gaia_scape.score import ScoreCue
+from gaiascapes.events import GaiaEvent
+from gaiascapes.score import ScoreCue
 
 
 class EventProvider(Protocol):

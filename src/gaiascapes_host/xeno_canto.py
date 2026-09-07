@@ -18,7 +18,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from gaia_scape.events import GaiaEvent
+from gaiascapes.events import GaiaEvent
 
 
 API_URL = "https://xeno-canto.org/api/3/recordings"
@@ -32,7 +32,7 @@ MAX_AUDIO_BYTES = 64 * 1024 * 1024
 CATALOG_TTL = 24 * 60 * 60
 REGION_RADIUS_KM = 100.0
 EARTH_RADIUS_KM = 6371.0
-USER_AGENT = "Gaia-Scape (https://github.com/mot-yelraf/Gaia_Scape)"
+USER_AGENT = "Gaiascapes (https://github.com/mot-yelraf/Gaiascapes)"
 
 
 class NoRecordingsError(RuntimeError):

@@ -1,6 +1,6 @@
-# Gaia Scape
+# Gaiascapes
 
-Gaia Scape captures live terrestrial events and turns their time, location,
+Gaiascapes captures live terrestrial events and turns their time, location,
 and intensity into generative soundscapes. The primary runtime is
 Python on macOS, Linux, or Raspberry Pi. SuperCollider is the preferred audio
 engine; capture, history, and the web interface continue to work when it is not
@@ -31,7 +31,7 @@ cues play at 75% of their mapped level so full-level earthquake cues remain dist
 The global Background Sounds location rotates every 23 seconds. Background cues span 24.5
 seconds, retaining a 1.5-second overlap while the next location fades in.
 Birdsong Atlas cycles through 19 regions on six continents using freely licensed
-Wikimedia Commons recordings. Gaia Scape resolves files through the keyless Commons
+Wikimedia Commons recordings. Gaiascapes resolves files through the keyless Commons
 API, accepts only public-domain, CC0, CC BY, or CC BY-SA audio, and caches each selected
 recording under `data/media/birdsong/`. The interface displays the recording's creator,
 license, and Commons source page; no Wikimedia account or API key is required.
@@ -103,7 +103,7 @@ sources, enable **EUMETSAT MTG Lightning Imager** and enter the Consumer Key and
 Consumer Secret issued by the EUMETSAT Data Store. The credentials are saved only
 in the selected installation's local `data/config.json`, whose permissions are
 restricted to the current user; they are masked in the interface and omitted from
-Gaia Scape API responses. Leave both fields blank on later saves to retain the
+Gaiascapes API responses. Leave both fields blank on later saves to retain the
 stored pair.
 
 Each MTG product is presented once on a fixed 12-minute-delayed timeline. The
@@ -149,7 +149,7 @@ documented 15:00–19:00 UTC false-alarm window, active since July 17, 2026.
 
 ### Network recovery
 
-Gaia Scape keeps capture, history, the web interface, and available audio layers
+Gaiascapes keeps capture, history, the web interface, and available audio layers
 running when an environmental provider becomes unavailable. Each source reports
 an online, degraded, offline, or recovering state through `/api/status`. Failed
 sources retry independently with bounded exponential backoff and jitter, so one
@@ -194,7 +194,7 @@ The map uses an approximate public-IP location from `ipapi.co`, with `ipwho.is`
 as an HTTPS fallback, to mark the host system with a small green circle. The
 result is held only in process memory. System and SuperCollider prerequisites
 are listed in `SYSTEM_REQUIREMENTS.md`. SuperCollider may be installed before
-or after Gaia Scape.
+or after Gaiascapes.
 
 On macOS:
 
@@ -209,20 +209,25 @@ sudo apt install python3 python3-venv python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4
 ./scripts/install_linux.sh
 ```
 
-The installer presents a folder selector, remembers the chosen location,
+The default installation and launch directory is `~/Gaiascapes`. The installer
+presents a folder selector, remembers the chosen location,
 creates a private `.venv`, installs a self-contained Python application, and
 preserves the selected installation's `data/` directory during updates.
+Run the shell launchers from the selected installation directory (by default,
+`cd ~/Gaiascapes`). Direct Python and console launches default to
+`~/Gaiascapes/data`; set `GAIA_SCAPE_DATA_DIR` for a custom runtime.
+
 For a headless installation without pywebview or GTK/WebKit:
 
 ```sh
-GAIA_SCAPE_INSTALL_MODE=headless GAIA_SCAPE_INSTALL_DIR=/absolute/path/Gaia_Scape ./install.sh
+GAIA_SCAPE_INSTALL_MODE=headless GAIA_SCAPE_INSTALL_DIR="$HOME/Gaiascapes" ./install.sh
 ```
 
 For an
 unattended desktop installation:
 
 ```sh
-GAIA_SCAPE_INSTALL_DIR=/absolute/path/Gaia_Scape ./install.sh
+GAIA_SCAPE_INSTALL_DIR="$HOME/Gaiascapes" ./install.sh
 ```
 
 Set `GAIA_SCAPE_AUTO_START=yes` to install a user-level systemd service on
@@ -236,13 +241,13 @@ GAIA_SCAPE_REMOVE_DATA=yes ./uninstall.sh
 ```
 
 The GUI launcher starts and supervises SuperCollider automatically, starts the
-local web service when needed, and opens Gaia Scape in a native pywebview window:
+local web service when needed, and opens Gaiascapes in a native pywebview window:
 
 ```sh
-./run_gaia_scape_gui.sh
+./run_gaiascapes_gui.sh
 ```
 
-Closing the window stops the web service started by that window. If a Gaia Scape
+Closing the window stops the web service started by that window. If a Gaiascapes
 service is already listening on the configured port, the desktop app attaches to
 it and leaves it running. Window size and position can be overridden with
 `GAIA_SCAPE_GUI_WIDTH`, `GAIA_SCAPE_GUI_HEIGHT`, `GAIA_SCAPE_GUI_X`, and
@@ -250,11 +255,12 @@ it and leaves it running. Window size and position can be overridden with
 
 On macOS, the GUI creates a lightweight identity bundle at
 `~/Library/Application Support/Gaia Scape/Gaia Scape.app` and relaunches through
-it so system interfaces identify the process as Gaia Scape instead of Python.
+it with the display name Gaiascapes. The bundle path and executable retain their
+legacy names during this stage of the rename.
 Set `GAIA_SCAPE_HEADLESS=1` to suppress this GUI-only relaunch when embedding the
 desktop module in an unattended process.
 
-By default, Gaia Scape follows the sound output selected in the operating
+By default, Gaiascapes follows the sound output selected in the operating
 system each time it starts. To pin a particular audio output instead, write
 its exact SuperCollider device name to `data/audio-device`. For example:
 
@@ -268,17 +274,17 @@ device names. This supports output-only Bluetooth aggregate devices without
 pinning other system outputs.
 
 For separate-process operation, run `./run_supercollider.sh` in one terminal
-and `./run_gaia_scape_gui.sh` in another. You can override the remembered
+and `./run_gaiascapes_gui.sh` in another. You can override the remembered
 device for one launch with `GAIA_SCAPE_AUDIO_DEVICE` or `--audio-device`.
 Passing `GAIA_SCAPE_AUDIO_DEVICE` to the installer saves that selection in
 the installed data directory.
 
-For unattended operation, use `./run_gaia_scape.sh`. Open
+For unattended operation, use `./run_gaiascapes.sh`. Open
 `http://127.0.0.1:8768` locally or `http://<computer-ip>:8768` on the same LAN.
 
 ## OSC cue contract
 
-Gaia Scape sends immediate UDP messages to `/gaia/cue` with these ordered
+Gaiascapes sends immediate UDP messages to `/gaia/cue` with these ordered
 arguments:
 
 ```text
@@ -290,7 +296,7 @@ Continuous ocean or storm state uses the same arguments at `/gaia/layer`; repeat
 messages smoothly update one persistent synth instead of replacing it. Storm
 forecast strength controls rainfall density and intensity. `/gaia/layer/stop`
 releases the synth when continuous mode stops or the background selection changes.
-Birdsong uses the renderer-neutral emitted-cue stream and is played from Gaia Scape's
+Birdsong uses the renderer-neutral emitted-cue stream and is played from Gaiascapes's
 local media cache by the web view, so it does not require a SuperCollider sampler.
 
 The included `supercollider/gaia-scape.scd` listens on UDP 57130 and provides
@@ -300,7 +306,7 @@ Settings menu selects capture sources, three independent event voices, and one c
 background, including Birdsong Atlas. Each musical role can also be set to None. The persisted Units setting
 displays swell and tide heights in meters or feet and earthquake depth in kilometers
 or miles. The Dashboard or Map selection is also stored with the installation and
-restored when Gaia Scape starts. Both views show a three-column status strip with the
+restored when Gaiascapes starts. Both views show a three-column status strip with the
 selected background's location and forecast characteristics, the latest event's type
 with its coordinates and event time, and a separately retained latest earthquake area
 followed by its magnitude, coordinates, and event time.
@@ -317,7 +323,7 @@ SuperCollider script when selecting another receive port.
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev,lightning,eumetsat]'
 GAIA_SCAPE_DATA_DIR=$(mktemp -d) .venv/bin/python -m pytest -q
-GAIA_SCAPE_DATA_DIR=/tmp/gaia-scape-dev .venv/bin/python Gaia_Scape.py
+GAIA_SCAPE_DATA_DIR=/tmp/gaia-scape-dev .venv/bin/python Gaiascapes.py
 ```
 
 Runtime state consists of `config.json` and `gaia_scape.sqlite3` under the
@@ -341,3 +347,20 @@ If the searched catalog has no suitable recordings, the app reports the region
 and advances to the next saved point on the following rotation. Regional
 catalogs are cached separately by coordinates; moving a point cannot reuse its
 old region's catalog. Each search checks up to five pages per geographic box.
+
+## Naming transition
+
+The Python distribution is now `gaiascapes`, with domain code in `gaiascapes`
+and host code in `gaiascapes_host`. Use `gaiascapes-server`, `gaiascapes-gui`,
+`python -m gaiascapes_host`, or the source launcher `Gaiascapes.py`. Python
+imports using `gaia_scape` or `gaia_scape_host` must be updated.
+
+The shell launchers are `run_gaiascapes.sh` and `run_gaiascapes_gui.sh`;
+the source launcher is `Gaiascapes.py`. The source checkout remains at
+`~/Projects/Gaiascapes`, and the default installation is `~/Gaiascapes`.
+The repository is [mot-yelraf/Gaiascapes](https://github.com/mot-yelraf/Gaiascapes).
+
+The transition preserves `GAIA_SCAPE_*` environment variables,
+`gaia_scape.sqlite3`, browser storage keys, asset filenames, OS integration
+identifiers. HTTP remains on 8768 and OSC on 57130.
+Installed runtime state is not migrated by these source changes.

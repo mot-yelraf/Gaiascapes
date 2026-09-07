@@ -4,7 +4,7 @@ Representative GeoJSON features verify validation, ordering, strength bounds,
 and preservation of provider magnitude and location metadata.
 """
 
-from gaia_scape_host.usgs import normalized_strength, parse_document
+from gaiascapes_host.usgs import normalized_strength, parse_document
 
 
 def test_parse_document_normalizes_valid_features_and_sorts():

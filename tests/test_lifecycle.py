@@ -13,10 +13,10 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from gaia_scape.events import GaiaEvent
-from gaia_scape_host.app import create_app
-from gaia_scape_host.config import AppConfig
-from gaia_scape_host.open_meteo import OpenMeteoMarineClient
+from gaiascapes.events import GaiaEvent
+from gaiascapes_host.app import create_app
+from gaiascapes_host.config import AppConfig
+from gaiascapes_host.open_meteo import OpenMeteoMarineClient
 
 
 class Provider:

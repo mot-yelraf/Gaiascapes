@@ -4,9 +4,9 @@ The focused coverage ensures per-slot gain changes renderer amplitude without
 altering the musical identity or timing of a score cue.
 """
 
-from gaia_scape.events import GaiaEvent
-from gaia_scape.score import ScoreCue
-from gaia_scape_host.performance import cue_with_gain
+from gaiascapes.events import GaiaEvent
+from gaiascapes.score import ScoreCue
+from gaiascapes_host.performance import cue_with_gain
 
 
 def test_cue_gain_scales_renderer_amplitude_without_changing_music():

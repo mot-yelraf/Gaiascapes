@@ -12,7 +12,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from gaia_scape_host import eumetsat_li, noaa_glm
+from gaiascapes_host import eumetsat_li, noaa_glm
 
 
 def test_all_native_entry_points_use_one_worker(monkeypatch):

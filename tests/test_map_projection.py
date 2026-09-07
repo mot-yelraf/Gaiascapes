@@ -16,7 +16,7 @@ def test_projection_round_trips_boundaries_and_equal_area():
     node = shutil.which("node")
     if node is None:
         pytest.skip("Node.js is needed to check browser projection geometry")
-    source = Path(__file__).parents[1] / "src/gaia_scape_host/static/app.js"
+    source = Path(__file__).parents[1] / "src/gaiascapes_host/static/app.js"
     script = r'''
 const fs = require("fs");
 const vm = require("vm");
