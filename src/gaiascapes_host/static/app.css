@@ -221,6 +221,8 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .pane-heading > span { color: var(--earth); font: 500 1.25rem Georgia, serif; }
 .pane-heading h3 { margin: 0; font: 500 1.28rem Georgia, serif; }
 .pane-heading p { margin: .25rem 0 0; color: var(--muted); font-size: .78rem; line-height: 1.5; }
+.sound-location-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem 1rem; }
+#soundLocationCoordinates { color: var(--muted); font-size: .85rem; }
 /* Source controls share instrument artwork and retain native checkbox access. */
 .source-group-heading { margin: 1rem 0 .5rem; color: var(--ink); font-size: .85rem; }
 .source-tile-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: .75rem; }

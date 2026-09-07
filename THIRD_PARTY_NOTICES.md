@@ -127,6 +127,13 @@ and are not bundled with Gaiascapes. Each recording remains under the license sh
 on its Commons file page; Gaiascapes accepts only public-domain, CC0, CC BY, and
 CC BY-SA files and displays the creator, license, and source link in the interface.
 
+Xeno-canto Birdsong and Frog Calls accept CC BY, CC BY-SA, and CC BY-NC-SA
+recordings. Each recording retains its creator credit, license link, and
+Xeno-canto source link in the existing attribution display. CC BY-NC-SA audio
+is for noncommercial use; shared adaptations must meet its ShareAlike terms.
+These recording licenses are separate from the application's BSD-2-Clause license.
+See <https://creativecommons.org/licenses/by-nc-sa/4.0/>.
+
 Redistributors remain responsible for preserving each recording's attribution and
 license information and for satisfying any share-alike terms that apply to the
 recording itself.

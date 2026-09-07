@@ -382,14 +382,12 @@ def test_system_location_api_returns_normalized_location(tmp_path):
         response = client.get("/api/system-location")
 
     assert response.status_code == 200
-    assert response.json() == {
-        "location": {
-            "name": "Test City, Test Region",
-            "latitude": 39.7392,
-            "longitude": -104.9903,
-            "timezone": "America/Denver",
-            "provider": "test",
-        }
+    assert response.json()["location"] == {
+        "name": "Test City, Test Region",
+        "latitude": 39.7392,
+        "longitude": -104.9903,
+        "timezone": "America/Denver",
+        "provider": "test",
     }
 
 

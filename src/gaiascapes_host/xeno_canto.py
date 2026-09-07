@@ -30,7 +30,9 @@ COUNTRIES = (
 )
 MAX_AUDIO_BYTES = 64 * 1024 * 1024
 CATALOG_TTL = 24 * 60 * 60
+CATALOG_POLICY_VERSION = 2
 REGION_RADIUS_KM = 100.0
+NEW_MEXICO_ROADRUNNER_ID = "254791"
 EARTH_RADIUS_KM = 6371.0
 USER_AGENT = "Gaiascapes (https://github.com/mot-yelraf/Gaiascapes)"
 
@@ -92,7 +94,10 @@ class XenoCantoClient:
                     "location_kind": "recording", "quality": record["quality"],
                     "scientific_name": record["scientific_name"],
                     **({"region_name": place, "region_latitude": location["latitude"],
-                        "region_longitude": location["longitude"], "region_radius_km": REGION_RADIUS_KM}
+                        "region_longitude": location["longitude"],
+                        **({"recording_selection": "New Mexico state bird"}
+                           if self.group == "birds" and _new_mexico_region(location)
+                           else {"region_radius_km": REGION_RADIUS_KM})}
                        if location else {}),
                 },
             )
@@ -115,7 +120,14 @@ class XenoCantoClient:
             raise RuntimeError(message) from None
 
     def _catalog(self, place, location=None):
-        if location:
+        featured_id = (
+            NEW_MEXICO_ROADRUNNER_ID
+            if self.group == "birds" and _new_mexico_region(location) else None
+        )
+        if featured_id:
+            query_regions = [f"nr:{featured_id}"]
+            cache_name = f"recording-{featured_id}"
+        elif location:
             boxes = _region_boxes(location)
             query_regions = [f"box:{south:.6f},{west:.6f},{north:.6f},{east:.6f}"
                              for south, west, north, east in boxes]
@@ -127,11 +139,16 @@ class XenoCantoClient:
         path = self.media_dir / f"{cache_name}.json"
         try:
             cached = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(cached, dict) and cached.get("records") and (
-                time.time() - float(cached.get("fetched_at", 0)) < CATALOG_TTL
+            if (
+                isinstance(cached, dict)
+                and cached.get("policy_version") == CATALOG_POLICY_VERSION
+                and cached.get("records")
+                and time.time() - float(cached.get("fetched_at", 0)) < CATALOG_TTL
             ):
                 records = cached["records"]
-                if location:
+                if featured_id:
+                    records = [record for record in records if record["id"] == featured_id]
+                elif location:
                     records = [record for record in records if _within_region(record, location)]
                 if records:
                     return records
@@ -143,8 +160,8 @@ class XenoCantoClient:
                 # Bound catalog work while looking beyond unusable first-page entries.
                 for page in range(1, 6):
                     # Frogs may be ungraded or have brief calls. Filter supported
-                    # reuse licenses locally so CC BY records are also eligible.
-                    filters = ' q:">C" lic:BY-SA' if self.group == "birds" else ""
+                    # reuse licenses locally, including noncommercial ShareAlike.
+                    filters = ' q:">C"' if self.group == "birds" else ""
                     parameters = urllib.parse.urlencode({
                         "query": f"grp:{self.group} {region}{filters}",
                         "key": self._api_key, "per_page": 50, "page": page,
@@ -153,18 +170,26 @@ class XenoCantoClient:
                         document = json.load(response)
                     records.extend(record for item in document.get("recordings", [])
                                    if (record := _record(item, self.group)) is not None
-                                   and (location is None or _within_region(record, location)))
+                                   and (record["id"] == featured_id if featured_id else
+                                        location is None or _within_region(record, location)))
                     if records or page >= int(document.get("numPages", 1)):
                         break
         except (OSError, ValueError, AttributeError, TypeError):
             raise RuntimeError("Xeno-canto returned an invalid catalog response") from None
         records = list({record["id"]: record for record in records}.values())
         if not records:
+            if featured_id:
+                raise NoRecordingsError(
+                    f"New Mexico's Greater Roadrunner song (XC{featured_id}) is unavailable or unsuitable"
+                )
             region_description = f"within {REGION_RADIUS_KM:g} km of {place}" if location else f"for {place}"
-            licenses = "CC BY-SA" if self.group == "birds" else "CC BY/CC BY-SA"
+            licenses = "CC BY/CC BY-SA/CC BY-NC-SA"
             raise NoRecordingsError(f"Xeno-canto found no suitable {licenses} {self.group} recordings {region_description}")
         temporary = path.with_suffix(".json.part")
-        temporary.write_text(json.dumps({"fetched_at": time.time(), "records": records}), encoding="utf-8")
+        temporary.write_text(json.dumps({
+            "policy_version": CATALOG_POLICY_VERSION,
+            "fetched_at": time.time(), "records": records,
+        }), encoding="utf-8")
         temporary.replace(path)
         return records
 
@@ -189,6 +214,11 @@ class XenoCantoClient:
             raise RuntimeError("Unable to download or cache the Xeno-canto recording") from None
         finally:
             temporary.unlink(missing_ok=True)
+
+
+def _new_mexico_region(location):
+    """Recognize New Mexico in GeoIP or user-supplied sound location names."""
+    return bool(location and re.search(r"\b(?:new mexico|nm)\b", location["name"], re.IGNORECASE))
 
 
 def _region_boxes(location):
@@ -226,13 +256,15 @@ def _record(item, group="birds"):
     try:
         if item.get("grp") != group or item.get("status", "identified") != "identified":
             return None
+        if group == "birds" and item.get("q") not in {"A", "B"}:
+            return None
         latitude, longitude = float(item["lat"]), float(item["lon"])
         if not (math.isfinite(latitude) and math.isfinite(longitude)
                 and -90 <= latitude <= 90 and -180 <= longitude <= 180):
             return None
         license_url = item["lic"]
         license_match = re.fullmatch(
-            r"https?://creativecommons\.org/licenses/(by|by-sa)/(2\.0|2\.5|3\.0|4\.0)/?", license_url
+            r"https?://creativecommons\.org/licenses/(by|by-sa|by-nc-sa)/(2\.0|2\.5|3\.0|4\.0)/?", license_url
         )
         recording_id = str(item["id"])
         extension = Path(item["file-name"]).suffix.lower()
