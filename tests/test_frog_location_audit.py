@@ -18,7 +18,7 @@ ROOT = Path(__file__).parents[1]
 
 
 def test_default_frog_regions_have_downloaded_samples_in_the_audit_report():
-    report = json.loads((ROOT / 'docs/frog-locations-audit.json').read_text())
+    report = json.loads((ROOT / 'docs/frog-locations-audit.json').read_text(encoding='utf-8'))
     assert [row['location'] for row in report['locations']] == default_frog_locations()
     for row in report['locations']:
         assert row['status'] == 'verified'
