@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-desktop = ["pywebview>=5.4,<6.0"]
+desktop = ["pywebview>=5.4,<7.0"]
 lightning = ["netCDF4>=1.7,<2.0"]
 eumetsat = ["netCDF4>=1.7,<2.0", "eumdac>=3.0,<4.0"]
 dev = [
