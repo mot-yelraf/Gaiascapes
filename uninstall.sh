@@ -29,6 +29,8 @@ elif [[ "$(uname -s)" == Darwin ]]; then
 fi
 
 rm -rf "$INSTALL_DIR/.venv" "$INSTALL_DIR/supercollider"
+rm -f "$INSTALL_DIR/scripts/run_gaiascapes.sh" "$INSTALL_DIR/scripts/run_gaiascapes_gui.sh" \
+  "$INSTALL_DIR/scripts/run_supercollider.sh"
 rm -f "$INSTALL_DIR/run_gaiascapes.sh" "$INSTALL_DIR/run_gaiascapes_gui.sh" \
   "$INSTALL_DIR/run_supercollider.sh" "$INSTALL_DIR/README.md" "$INSTALL_DIR/install.sh" \
   "$INSTALL_DIR/LICENSE" "$INSTALL_DIR/THIRD_PARTY_NOTICES.md" \

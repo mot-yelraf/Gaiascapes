@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-RUNTIME_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+RUNTIME_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PYTHON_BIN="$RUNTIME_DIR/.venv/bin/python"
 
 if [[ ! -x "$PYTHON_BIN" ]]; then

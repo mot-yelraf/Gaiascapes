@@ -40,7 +40,7 @@ def main() -> None:
         assert client.get('/static/app.js').status_code == 200
         assert client.get('/api/events').json() == {'events': []}
         assert client.post('/api/capture').json()['disabled'] is True
-    launcher = Path(sys.executable).parent / 'gaiascapes-server'
+    launcher = Path(sys.executable).parent / ('gaiascapes-server.exe' if os.name == 'nt' else 'gaiascapes-server')
     subprocess.run([str(launcher), '--help'], cwd=data_dir, check=True, capture_output=True)
     print(f'Headless wheel {__version__}: assets, entry point, and offline APIs passed')
 

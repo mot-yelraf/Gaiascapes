@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-RUNTIME_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+RUNTIME_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PYTHON_BIN="$RUNTIME_DIR/.venv/bin/python"
 
 if [[ ! -x "$PYTHON_BIN" ]]; then
@@ -16,7 +16,7 @@ cd "$RUNTIME_DIR"
 supercollider_pid=""
 desktop_pid=""
 if ! pgrep -f "$RUNTIME_DIR/supercollider/gaia-scape.scd" >/dev/null 2>&1; then
-  "$RUNTIME_DIR/run_supercollider.sh" &
+  "$RUNTIME_DIR/scripts/run_supercollider.sh" &
   supercollider_pid=$!
   sleep 2
   if ! kill -0 "$supercollider_pid" >/dev/null 2>&1; then

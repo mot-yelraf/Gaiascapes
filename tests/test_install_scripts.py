@@ -5,11 +5,14 @@ ports, data preservation, and optional SuperCollider configuration.
 """
 
 from pathlib import Path
+import os
+
+import pytest
 
 
 def test_installer_uses_dedicated_ports_and_chosen_runtime():
     installer = Path("install.sh").read_text(encoding="utf-8")
-    launcher = Path("run_gaiascapes.sh").read_text(encoding="utf-8")
+    launcher = Path("scripts/run_gaiascapes.sh").read_text(encoding="utf-8")
 
     assert "GAIA_SCAPE_INSTALL_DIR" in installer
     assert 'GAIA_SCAPE_AUDIO_DEVICE' in installer
@@ -45,11 +48,11 @@ def test_uninstaller_preserves_data_by_default_and_rejects_broad_targets():
 
 
 def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
-    gui = Path("run_gaiascapes_gui.sh").read_text(encoding="utf-8")
-    audio = Path("run_supercollider.sh").read_text(encoding="utf-8")
+    gui = Path("scripts/run_gaiascapes_gui.sh").read_text(encoding="utf-8")
+    audio = Path("scripts/run_supercollider.sh").read_text(encoding="utf-8")
     synth = Path("supercollider/gaia-scape.scd").read_text(encoding="utf-8")
 
-    assert '"$RUNTIME_DIR/run_supercollider.sh" &' in gui
+    assert '"$RUNTIME_DIR/scripts/run_supercollider.sh" &' in gui
     assert 'desktop_pid=$!' in gui
     assert 'kill -TERM "$desktop_pid"' in gui
     assert 'pgrep -P "$supercollider_pid"' in gui
@@ -118,6 +121,7 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     assert "Dust2.ar(rainDensity" in synth
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='POSIX shell installer')
 def test_install_location_resolution_preserves_existing_choices():
     import subprocess
 
@@ -137,6 +141,7 @@ def test_install_location_resolution_preserves_existing_choices():
         assert result.stdout.strip() == expected
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='POSIX shell launcher')
 def test_headless_launcher_uses_selected_runtime(tmp_path):
     import json
     import os
@@ -152,7 +157,8 @@ def test_headless_launcher_uses_selected_runtime(tmp_path):
         'print(json.dumps([os.getcwd(), os.environ["GAIA_SCAPE_DATA_DIR"], sys.argv[1:]]))\n'
     )
     python.chmod(0o755)
-    for name in ('run_gaiascapes.sh',):
+    (runtime / 'scripts').mkdir()
+    for name in ('scripts/run_gaiascapes.sh',):
         shutil.copy2(name, runtime / name)
         result = subprocess.run(
             ['bash', str(runtime / name), '--port', '18868'],
@@ -165,6 +171,7 @@ def test_headless_launcher_uses_selected_runtime(tmp_path):
         ]
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='POSIX shell installer')
 def test_installed_repair_delegates_to_recorded_checkout(tmp_path):
     import os
     import shutil

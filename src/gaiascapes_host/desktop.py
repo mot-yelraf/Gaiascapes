@@ -342,7 +342,7 @@ def configure_linux_app_identity() -> Path | None:
     desktop_path = applications_dir / f"{LINUX_APP_ID}.desktop"
     themed_icon_path = icons_dir / f"{LINUX_APP_ID}.png"
     runtime_dir = resolve_data_dir().parent
-    launcher_path = runtime_dir / "run_gaiascapes_gui.sh"
+    launcher_path = runtime_dir / "scripts" / "run_gaiascapes_gui.sh"
     desktop_text = "\n".join(
         (
             "[Desktop Entry]",
