@@ -106,14 +106,14 @@ def test_macos_identity_bundle_contains_plist_icon_and_python_link(
     monkeypatch.setattr(desktop, "_macos_bundle_version", lambda: "26.237.15")
 
     executable = desktop._ensure_macos_app_bundle()
-    bundle_path = tmp_path / "Gaia Scape.app"
+    bundle_path = tmp_path / "Gaiascapes.app"
     with (bundle_path / "Contents" / "Info.plist").open("rb") as source:
         document = plistlib.load(source)
 
     assert document == {
         "CFBundleDisplayName": "Gaiascapes",
-        "CFBundleName": "Gaia Scape",
-        "CFBundleExecutable": "Gaia Scape",
+        "CFBundleName": "Gaiascapes",
+        "CFBundleExecutable": "Gaiascapes",
         "CFBundleIdentifier": "earth.gaiascape.GaiaScape",
         "CFBundleIconFile": "gaia-scape-desktop-icon",
         "CFBundleInfoDictionaryVersion": "6.0",
@@ -255,7 +255,7 @@ print(json.dumps({
 
     assert identity["name"] == "Gaiascapes"
     assert identity["identifier"] == desktop.MACOS_BUNDLE_IDENTIFIER
-    assert identity["bundle"] == str(tmp_path / "Gaia Scape.app")
+    assert identity["bundle"] == str(tmp_path / "Gaiascapes.app")
     assert identity["executable"] == str(executable)
 
 

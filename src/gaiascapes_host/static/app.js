@@ -20,6 +20,25 @@ let recordingPreviewTimer = null;
 let recordingPreviewUntil = 0;
 const activeRecordingAudio = new Set();
 
+function updateRecordingCountdown() {
+  document.querySelectorAll(".recording-countdown").forEach((countdown) => {
+    const audio = recordingAudio;
+    const visible = audio?.fullRecording && !audio.ended
+      && audio.recordingMediaUrl === countdown.dataset.mediaUrl
+      && Number.isFinite(audio.duration) && audio.duration > 0;
+    countdown.hidden = !visible;
+    if (!visible) {
+      countdown.textContent = "";
+      return;
+    }
+    const remaining = Math.max(0, Math.ceil(audio.duration - audio.currentTime));
+    const time = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`;
+    countdown.textContent = `−${time}`;
+    countdown.setAttribute("aria-label", `${time} remaining`);
+    countdown.title = `${time} remaining`;
+  });
+}
+
 async function advanceRecording(sequence) {
   return request("/api/recordings/advance", {
     method: "POST", body: JSON.stringify({sequence}),
@@ -64,6 +83,8 @@ async function playRecordingCue(cue) {
     ? Date.now() + (cueDuration * 1000) : 0;
   const previous = recordingAudio;
   const next = new Audio(mediaUrl);
+  next.recordingMediaUrl = mediaUrl;
+  next.fullRecording = !(cueDuration > 0 && cueDuration <= 10);
   next.rotationSequence = cue.recording_rotation ? cue.sequence : previous?.rotationSequence;
   // Play once per location visit; the next rotation selects the next recording.
   next.loop = false;
@@ -83,6 +104,9 @@ async function playRecordingCue(cue) {
   }
   recordingAudio = next;
   activeRecordingAudio.add(next);
+  if (byId("mapPulseLayer")) {
+    animateMapEvent(cue.event, cue.instrument, cueRole(cue), cueDuration, next);
+  }
   if (cue.recording_rotation) {
     let advancing = false;
     const advanceAtEnd = async () => {
@@ -345,7 +369,7 @@ function renderMapHistory(events) {
   });
 }
 
-function animateMapEvent(event, instrument, role, animationDuration) {
+function animateMapEvent(event, instrument, role, animationDuration, audio = null) {
   const layer = byId("mapPulseLayer");
   if (!layer) return;
   const colors = eventColors(event, instrument);
@@ -361,7 +385,26 @@ function animateMapEvent(event, instrument, role, animationDuration) {
   group.append(title, pulse, core);
   layer.append(group);
   if (role === "background") updateMapBackgroundLocation({name: event.traits?.place || "", latitude: event.latitude, longitude: event.longitude}, colors.primary);
-  setTimeout(() => group.remove(), (animationDuration * 1000) + 400);
+  if (audio) {
+    pulse.style.animationPlayState = "paused";
+    const syncPlayback = () => {
+      if (!activeRecordingAudio.has(audio) || audio.ended) {
+        group.remove();
+        return;
+      }
+      const duration = audio.fullRecording ? audio.duration : Math.min(audio.duration, animationDuration);
+      const knownDuration = Number.isFinite(duration) && duration > 0;
+      pulse.style.visibility = knownDuration ? "" : "hidden";
+      if (knownDuration) {
+        pulse.style.setProperty("--map-pulse-duration", `${duration}s`);
+        pulse.style.animationDelay = `-${Math.min(audio.currentTime, duration)}s`;
+      }
+      requestAnimationFrame(syncPlayback);
+    };
+    syncPlayback();
+  } else {
+    setTimeout(() => group.remove(), (animationDuration * 1000) + 400);
+  }
 }
 
 function applyLiveMode(mode) {
@@ -587,17 +630,35 @@ function updateBackgroundCharacteristics(event, fallbackText = null) {
       source.target = "_blank";
       source.rel = "noopener noreferrer";
       source.textContent = traits.title || "Animal recording";
+      const description = document.createElement("span");
+      description.className = "recording-description";
+      const countdown = document.createElement("span");
+      countdown.className = "recording-countdown";
+      countdown.dataset.mediaUrl = traits.media_url || "";
+      countdown.hidden = true;
+      description.append(source, countdown);
       const credit = document.createElement("span");
-      credit.className = "forecast-characteristics-details";
-      credit.textContent = `${traits.creator || "Unknown contributor"} · ${traits.license || "License unavailable"}`;
+      credit.className = "forecast-characteristics-details recording-attribution";
+      const creator = traits.creator || "Unknown contributor";
+      credit.textContent = event.provider === "noaa_sanctsound"
+        ? creator.replace(/ · NOAA\/Navy SanctSound$/, "") : creator;
+      const provenance = document.createElement("span");
+      provenance.className = "forecast-characteristics-details recording-attribution";
+      const sourceName = {
+        noaa_sanctsound: "NOAA/Navy SanctSound",
+        xeno_canto: "Xeno-canto",
+        wikimedia_commons: "Wikimedia Commons",
+      }[event.provider] || event.provider || "Unknown source";
+      provenance.textContent = `${sourceName} · ${traits.license || "License unavailable"}`;
       element.classList.add("forecast-characteristics");
-      element.append(source, credit);
-      element.setAttribute("aria-label", `${source.textContent}; ${credit.textContent}`);
+      element.append(description, credit, provenance);
+      element.setAttribute("aria-label", `${source.textContent}; ${credit.textContent}; ${provenance.textContent}`);
       return;
     }
     element.removeAttribute("aria-label");
     element.textContent = fallbackText ?? backgroundCharacteristics(event);
   });
+  updateRecordingCountdown();
 }
 
 function updateBackgroundStatus(event, recordingStatuses = {}) {
@@ -875,7 +936,9 @@ function animateCapturedEvent(event, instrument = "", role = "event", cueDuratio
   const animationDuration = role === "background"
     ? Math.max(3.6, Number(cueDuration) || 3.6)
     : 3.6;
-  animateMapEvent(event, instrument, role, animationDuration);
+  if (!RECORDED_BACKGROUNDS.includes(event?.kind) || !event.traits?.media_url) {
+    animateMapEvent(event, instrument, role, animationDuration);
+  }
   if (!byId("mapView")?.hidden) return;
   const layer = byId("eventPulseLayer");
   if (!layer) return;
@@ -1227,7 +1290,7 @@ if (settingsDialog && settingsForm) {
 
   window.addEventListener("systemlocationchange", ({detail}) => {
     if (!detail.sound_locations) return;
-    for (const kind of ["birdsong", "frog_calls", "storm_outlook"]) {
+    for (const kind of ["birdsong", "storm_outlook"]) {
       forecastLocationCatalogs[kind] = cloneCatalog(detail.sound_locations[kind]);
       defaultForecastLocationCatalogs[kind] = cloneCatalog(detail.default_sound_locations[kind]);
     }
@@ -1781,5 +1844,14 @@ if (settingsDialog && settingsForm) {
   });
 }
 
+document.querySelectorAll(".status-card").forEach((card) => {
+  card.addEventListener("mouseover", () => {
+    card.title = Array.from(card.querySelectorAll("[data-status-field]"), (field) =>
+      field.getAttribute("aria-label") || field.textContent.trim()
+    ).join("\n");
+  });
+});
+
 Promise.all([updateStatus(), updateEvents(), updateEmittedCues(), updateSystemLocation()]);
 setInterval(updateStatus, 3000);
+setInterval(updateRecordingCountdown, 250);

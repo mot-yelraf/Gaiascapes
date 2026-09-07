@@ -46,6 +46,7 @@ def test_local_catalog_preserves_count_and_swaps_duplicate_coordinates():
 def test_startup_initializes_clients_and_persisted_lists_before_polling(tmp_path, monkeypatch):
     config = AppConfig(enabled_sources=[], osc_enabled=False, birdsong_provider='xeno_canto',
                        xeno_canto_api_key='test-key')
+    config.frog_calls_locations[0] = {'name': 'My wetland', 'latitude': 40.1, 'longitude': -75.2}
     config.save(tmp_path / 'config.json')
     original = deepcopy(config)
     location = {'name': 'Denver, Colorado', 'latitude': 39.7392, 'longitude': -104.9903}
@@ -65,12 +66,14 @@ def test_startup_initializes_clients_and_persisted_lists_before_polling(tmp_path
         payload = client.get('/api/system-location').json()
         client.get('/api/system-location')
         assert resolver.calls == 1
-        for kind in ('birdsong', 'frog_calls', 'storm_outlook'):
+        for kind in ('birdsong', 'storm_outlook'):
             catalog = payload['sound_locations'][kind]
             assert catalog == [expected, *getattr(original, f'{kind}_locations')[1:]]
             assert payload['default_sound_locations'][kind][0] == expected
         assert app.state.service.birdsong.locations[0] == expected
-        assert app.state.service.frog_calls.locations[0] == expected
+        assert list(app.state.service.frog_calls.locations) == original.frog_calls_locations
+        assert payload['sound_locations']['frog_calls'] == original.frog_calls_locations
+        assert payload['default_sound_locations']['frog_calls'] == AppConfig().frog_calls_locations
         assert app.state.service.storm.locations[0][1:] == (
             expected['name'], expected['latitude'], expected['longitude'])
         assert app.state.config.ocean_swell_locations == original.ocean_swell_locations
@@ -82,6 +85,7 @@ def test_startup_initializes_clients_and_persisted_lists_before_polling(tmp_path
     saved = json.loads((tmp_path / 'config.json').read_text())
     assert saved['http_port'] == 8768 and saved['osc_port'] == 57130
     assert saved['birdsong_locations'][0] == expected
+    assert saved['frog_calls_locations'] == original.frog_calls_locations
 
 
 @pytest.mark.parametrize('enabled,expected_calls', [(False, 0), (True, 1)])
