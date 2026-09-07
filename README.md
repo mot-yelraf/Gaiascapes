@@ -9,6 +9,15 @@ installed.
 For illustrated operating instructions, settings, and credential setup, see the
 [User Guide](USER_GUIDE.md). Installation instructions remain in this README.
 
+Gaiascapes is intended for personal, educational, and other noncommercial use.
+Birdsong and Frog Calls can include Xeno-canto recordings licensed
+[CC BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/). Use those
+recordings noncommercially, retain attribution and license links, identify
+modifications, and apply the required ShareAlike license when sharing adaptations.
+The existing recording attribution shows each recording's license and source.
+The application code remains BSD-2-Clause licensed; third-party recordings retain
+their own licenses. This statement of intended use does not change either license.
+
 ## Who this is for
 
 - Makers and students who want a real-world python example.
@@ -43,7 +52,7 @@ and attribution. Birdsong and Frog Calls share one Xeno-canto API key: enter or
 replace it in either source tile. Blank fields preserve the saved key. Frog Calls
 is disabled by default and caches its media under `data/media/frog_calls/`.
 Frog searches include ungraded recordings and calls of 1–180 seconds, accepting
-CC BY and CC BY-SA licenses. The background status strip reports loading and
+CC BY, CC BY-SA, and CC BY-NC-SA licenses. The background status strip reports loading and
 lookup failures, including regions without suitable recordings.
 
 Whale Song and Dolphin Calls use NOAA NCEI / SanctSound recordings without an
@@ -70,7 +79,7 @@ Wikimedia Commons or Xeno-canto. For Xeno-canto, enter a personal API key there.
 Select Birdsong as the Background in Instruments to control volume and preview it.
 Disabling the Birdsong source stops playback while preserving the selected background. The key is stored in the local `data/config.json`
 and is omitted from browser responses. The provider searches within 100 km of each of the 19 saved Birdsong locations for
-A/B-quality CC BY-SA recordings, skips missing or restricted coordinates, and
+A/B-quality CC BY, CC BY-SA, and CC BY-NC-SA recordings, skips missing or restricted coordinates, and
 uses the recording's actual location on the map. These are archived recordings;
 the playback event time is current, while the original date and time remain in
 the event's `recorded_date` and `recorded_time` traits. Catalogs are cached for
@@ -79,6 +88,15 @@ select further recordings from each country. Downloads are limited to 64 MiB
 and recordings to 10–180 seconds. An unavailable country or provider reports an
 error rather than substituting another source. See the
 [Xeno-canto API documentation](https://xeno-canto.org/explore/api).
+
+For Xeno-canto Birdsong locations whose names include **New Mexico** or **NM**,
+including GeoIP's **My location** entry, Gaiascapes selects the state bird:
+Richard E. Webster's [Greater Roadrunner song, XC254791](https://xeno-canto.org/254791),
+recorded in Rodeo, Hidalgo County (1:14, quality B, CC BY-NC-SA 4.0).
+This state-specific selection can be outside the usual 100 km search radius.
+Playback retains the recording's actual coordinates and attribution. If the
+recording becomes unavailable, the app reports that explicitly. Frog Calls and
+other Birdsong regions continue to use their regional catalogs.
 Lightning R2D2 uses a short crack, descending pitch contour, glassy decay, and
 pentatonic flash-by-flash pitch variation at least four semitones above other
 events, paired with a yellow-gold map pulse. Each slot's volume also scales its
@@ -192,7 +210,14 @@ Dependency versions are declared in `pyproject.toml`; `requirements.txt` delegat
 to its desktop and satellite extras.
 The map uses an approximate public-IP location from `ipapi.co`, with `ipwho.is`
 as an HTTPS fallback, to mark the host system with a small green circle. The
-result is held only in process memory. To disable these lookups, clear **Show
+result is cached in process memory. At startup it also replaces location 1 of
+the 19 Sound locations for Xeno-canto Birdsong, Frog Calls, and Storm Outlook,
+and those sampling centers are saved in `data/config.json`. The other 18 slots
+remain unchanged unless one matches the host; that slot swaps with the previous
+first entry to retain 19 distinct locations. Restore defaults also puts the
+detected host first. Commons Birdsong retains its curated recording locations.
+If GeoIP is unavailable, saved locations remain in use. To disable lookups and
+automatic location updates, clear **Show
 this host’s approximate location on the map** in **Settings → Sound Choices**. System and SuperCollider prerequisites
 are listed in `SYSTEM_REQUIREMENTS.md`. SuperCollider may be installed before
 or after Gaiascapes.

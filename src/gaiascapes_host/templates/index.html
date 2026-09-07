@@ -242,10 +242,10 @@
               {% endfor %}
             </div>
             <label class="location-privacy-option"><input type="checkbox" aria-describedby="systemLocationHint" id="systemLocationEnabled" {% if system_location_enabled %}checked{% endif %}> Show this host’s approximate location on the map</label>
-            <p class="units-note" id="systemLocationHint">Uses IP location services (ipapi.co, with ipwho.is as a fallback). Turn off to stop location lookups.</p>
+            <p class="units-note" id="systemLocationHint">Uses IP location services (ipapi.co, with ipwho.is as a fallback). Also sets location 1 for Xeno-canto Birdsong, Frog Calls, and Storm Outlook at startup. Turn off to stop location lookups.</p>
           </section>
           <section class="settings-pane location-settings-pane" data-pane="locations" hidden>
-            <div class="pane-heading"><span>03</span><div><h3>Sound locations</h3></div></div>
+            <div class="pane-heading"><span>03</span><div class="sound-location-heading"><h3>Sound locations</h3><span id="soundLocationCoordinates" aria-live="polite" hidden></span></div></div>
             <div class="location-editor-tabs" role="group" aria-label="Sound catalog">
               <button type="button" title="Choose Xeno-canto in Sound Sources to edit Birdsong regions. Recordings come from within 100 km of each point." data-location-catalog="birdsong">Birdsong</button>
               <button type="button" title="Choose verified SanctSound recording sites." data-location-catalog="dolphin_calls">Dolphin Calls</button>

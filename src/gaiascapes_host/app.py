@@ -26,6 +26,7 @@ from .config import (
     default_frog_locations,
     event_kind_for_voice,
     event_mappings_for_slots,
+    locations_with_system_location,
     resolve_data_dir,
 )
 from .sanctsound import MARINE_KINDS, available_locations
@@ -78,12 +79,50 @@ def create_app(
         dolphin_calls_client=dolphin_calls_client,
     )
     system_location = geoip_resolver or GeoIpLocationResolver()
+    resolved_location = None
+    sound_locations_initialized = False
+    location_lock = asyncio.Lock()
+
+    def local_sound_defaults():
+        """Return reset catalogs with the resolved host in the first slot."""
+        location = resolved_location if config.system_location_enabled else None
+        return {
+            kind: locations_with_system_location(catalog, location)
+            for kind, catalog in (
+                ("birdsong", default_birdsong_locations()),
+                ("frog_calls", default_frog_locations()),
+                ("storm_outlook", default_forecast_locations(STORM_LOCATIONS)),
+            )
+        }
+
+    async def initialize_sound_locations():
+        """Resolve once per session and commit local sampling centers before polling."""
+        nonlocal resolved_location, sound_locations_initialized
+        async with location_lock:
+            if not config.system_location_enabled:
+                return None
+            if resolved_location is None:
+                location = await asyncio.to_thread(system_location.resolve)
+                if not config.system_location_enabled or location is None:
+                    return None
+                resolved_location = location
+            if not sound_locations_initialized:
+                changes = {}
+                for name in ("birdsong_locations", "frog_calls_locations", "storm_outlook_locations"):
+                    catalog = locations_with_system_location(getattr(config, name), resolved_location)
+                    if catalog != getattr(config, name):
+                        changes[name] = catalog
+                if changes:
+                    await service.update_settings(changes, config_path)
+                sound_locations_initialized = True
+            return resolved_location
 
     @asynccontextmanager
     async def lifespan(app):
         """Start and stop background service tasks with the web application."""
         try:
             if auto_capture:
+                await initialize_sound_locations()
                 await service.start_polling()
             if config.live_mode == "continuous":
                 await service.start_continuous()
@@ -154,10 +193,8 @@ def create_app(
             default_forecast_location_catalogs={
                 **{kind: [dict(location, selected=True) for location in available_locations(kind)]
                    for kind in MARINE_KINDS},
-                "frog_calls": default_frog_locations(),
-                "birdsong": default_birdsong_locations(),
+                **local_sound_defaults(),
                 "ocean_swell": default_forecast_locations(SURF_LOCATIONS),
-                "storm_outlook": default_forecast_locations(STORM_LOCATIONS),
             },
         )
 
@@ -173,11 +210,20 @@ def create_app(
 
     @app.get("/api/system-location")
     async def system_location_status():
-        """Return the host's approximate, session-cached public-IP location."""
+        """Return the cached host location and initialized sound sampling catalogs."""
         if not config.system_location_enabled:
             return {"location": None}
-        location = await asyncio.to_thread(system_location.resolve)
-        return {"location": location if config.system_location_enabled else None}
+        location = await initialize_sound_locations()
+        if not config.system_location_enabled:
+            return {"location": None}
+        return {
+            "location": location,
+            "sound_locations": {
+                kind: getattr(config, f"{kind}_locations")
+                for kind in ("birdsong", "frog_calls", "storm_outlook")
+            },
+            "default_sound_locations": local_sound_defaults(),
+        }
 
     @app.get("/api/events")
     async def events(hours: float | None = None, limit: int = 500):

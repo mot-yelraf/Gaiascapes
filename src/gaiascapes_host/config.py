@@ -89,6 +89,27 @@ def default_birdsong_locations() -> list[dict]:
     return default_forecast_locations(location[:4] for location in BIRDSONG_LOCATIONS)
 
 
+def locations_with_system_location(locations: list[dict], location: dict | None) -> list[dict]:
+    """Place the host first while preserving nineteen distinct sampling points."""
+    catalog = [dict(item) for item in locations]
+    if location is None:
+        return catalog
+    first = {
+        "name": ("My location: " + str(location.get("name") or "Approximate host location"))[:80],
+        "latitude": location["latitude"],
+        "longitude": location["longitude"],
+    }
+    coordinate = (round(float(first["latitude"]), 4), round(float(first["longitude"]), 4))
+    # If the host matches another slot, swap that slot with the old first
+    # location rather than introduce a duplicate or shrink the catalog.
+    for index, item in enumerate(catalog[1:], start=1):
+        if (round(item["latitude"], 4), round(item["longitude"], 4)) == coordinate:
+            catalog[index] = catalog[0]
+            break
+    catalog[0] = first
+    return validate_forecast_locations(catalog, "Sound locations")
+
+
 def default_frog_locations() -> list[dict]:
     """Return nineteen independent region centers for worldwide frog calls."""
     return [

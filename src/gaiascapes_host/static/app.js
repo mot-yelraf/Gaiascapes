@@ -255,6 +255,15 @@ function updateMapBackgroundLocation(location, color = EVENT_PALETTES.ocean_swel
 }
 
 function updateMapSystemLocation(location) {
+  const coordinates = byId("soundLocationCoordinates");
+  if (coordinates) {
+    const valid = location?.latitude != null && location?.longitude != null
+      && Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude));
+    coordinates.hidden = !valid;
+    coordinates.textContent = valid
+      ? `My location ${Number(location.latitude).toFixed(4)}, ${Number(location.longitude).toFixed(4)}`
+      : "";
+  }
   const layer = byId("mapSystemLocationLayer");
   if (!layer) return;
   layer.replaceChildren();
@@ -279,6 +288,7 @@ async function updateSystemLocation() {
   try {
     const payload = await request("/api/system-location");
     updateMapSystemLocation(payload.location);
+    window.dispatchEvent(new CustomEvent("systemlocationchange", {detail: payload}));
   } catch (error) {
     updateMapSystemLocation(null);
   }
@@ -1178,6 +1188,15 @@ if (settingsDialog && settingsForm) {
   };
   let activeForecastCatalog = "ocean_swell";
   let selectedForecastLocation = 0;
+
+  window.addEventListener("systemlocationchange", ({detail}) => {
+    if (!detail.sound_locations) return;
+    for (const kind of ["birdsong", "frog_calls", "storm_outlook"]) {
+      forecastLocationCatalogs[kind] = cloneCatalog(detail.sound_locations[kind]);
+      defaultForecastLocationCatalogs[kind] = cloneCatalog(detail.default_sound_locations[kind]);
+    }
+    renderForecastLocationEditor();
+  });
 
   function birdsongLocationsReadOnly() {
     return activeForecastCatalog === "birdsong" && byId("birdsongProvider").value !== "xeno_canto";

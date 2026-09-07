@@ -13,13 +13,20 @@ browser travels over HTTP. Use a trusted network; do not forward this port to
 the public internet. For host-only use, set `GAIA_SCAPE_HTTP_HOST=127.0.0.1`
 for the launching process.
 
-IP-based host location is enabled by default. Opening the UI can contact
+IP-based host location is enabled by default. Starting the application or opening the UI can contact
 `ipapi.co`, with `ipwho.is` as a fallback. These providers see the host’s public
-IP address. The approximate location is held in memory and shown to connected
-browsers. Turn off **Show this host’s approximate location on the map** under
+IP address. The approximate location is cached in memory and shown to connected
+browsers. At startup, its name and coordinates become the first sampling center
+for Xeno-canto Birdsong, Frog Calls, and Storm Outlook. These three locations
+are saved in `data/config.json` and sent to enabled sound/forecast providers
+as sampling coordinates. They refresh when the application restarts and a new
+lookup succeeds. Commons Birdsong retains its fixed recording catalog.
+Turn off **Show this host’s approximate location on the map** under
 **Settings → Sound Choices** to stop future lookups. Already-started requests
 may finish; no new location result is returned while the option is disabled.
-A browser that already displayed the marker may need to refresh.
+A browser that already displayed the marker may need to refresh. Disabling
+lookups leaves previously saved sampling centers in place; edit them in Sound
+locations if you want to replace them.
 
 Enabled data sources contact USGS, NOAA/Amazon S3, Open-Meteo, EUMETSAT,
 Wikimedia Commons, Xeno-canto, and NOAA recording storage as applicable.

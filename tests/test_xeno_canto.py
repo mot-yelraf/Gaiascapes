@@ -56,13 +56,57 @@ def test_cache_rotation_and_credential_separation(tmp_path):
 @pytest.mark.parametrize("changes", [
     {"lat": "restricted_species"}, {"lon": None}, {"lat": "NaN"}, {"lat": "91"},
     {"lon": "181"}, {"grp": "land mammals"}, {"status": "questioned"},
-    {"lic": "https://creativecommons.org/licenses/by-nc-sa/4.0/"},
+    {"lic": "https://creativecommons.org/licenses/by-nc-nd/4.0/"},
+    {"lic": "https://creativecommons.org/licenses/by-nc/4.0/"},
     {"lic": "https://creativecommons.org/licenses/by-nd/4.0/"},
     {"lic": "https://example.com/licenses/by-sa/4.0/"},
     {"file-name": "XC42.html"}, {"id": "../../config"}, {"length": "10:00"},
+    {"q": "C"}, {"q": ""},
 ])
 def test_reject_unusable_recordings(changes):
     assert _record(recording(**changes)) is None
+
+
+@pytest.mark.parametrize('group', ['birds', 'frogs'])
+@pytest.mark.parametrize('version', ['2.0', '2.5', '3.0', '4.0'])
+def test_noncommercial_sharealike_preserves_license_and_attribution(group, version):
+    license_url = f'https://creativecommons.org/licenses/by-nc-sa/{version}/'
+    item = _record(recording(grp=group, lic=license_url), group)
+    assert item['license'] == f'CC BY-NC-SA {version}'
+    assert item['license_url'] == license_url
+    assert item['creator'] == 'Recordist'
+    assert item['source_url'] == 'https://xeno-canto.org/42'
+
+
+@pytest.mark.parametrize('group', ['birds', 'frogs'])
+def test_catalog_refreshes_old_policy_and_includes_noncommercial_recordings(tmp_path, group):
+    import time
+    from urllib.parse import parse_qs, urlparse
+
+    requests = []
+    responses = [Response(json.dumps({'recordings': [recording(
+        id='84', grp=group, lic='https://creativecommons.org/licenses/by-nc-sa/4.0/')]}).encode()),
+        Response(b'ID3-audio')]
+
+    def opener(request, timeout):
+        requests.append(request.full_url)
+        return responses.pop(0)
+
+    client = XenoCantoClient(tmp_path, 'private-test-key', opener, group=group)
+    # A fresh cache from the previous license policy must not hide newly
+    # eligible local recordings for the rest of its 24-hour lifetime.
+    cache = client.media_dir / 'canada.json'
+    cache.write_text(json.dumps({'fetched_at': time.time(),
+                                 'records': [_record(recording(grp=group), group)]}))
+    event = client.event_at(0)
+    assert event.traits['recording_id'] == '84'
+    assert event.traits['license'] == 'CC BY-NC-SA 4.0'
+    query = parse_qs(urlparse(requests[0]).query)['query'][0]
+    assert 'lic:' not in query
+    assert ('q:">C"' in query) == (group == 'birds')
+    assert client.event_at(0).traits['recording_id'] == '84'
+    assert len(requests) == 2
+    assert 'private-test-key' not in cache.read_text()
 
 
 def test_api_error_redacts_key_and_backs_off(tmp_path):
@@ -197,3 +241,67 @@ def test_empty_frog_region_never_falls_back_to_birds(tmp_path):
     with pytest.raises(NoRecordingsError, match="frogs recordings within 100 km of Wetland"):
         client.event_at(0)
     assert not list(client.media_dir.glob("*.mp3"))
+
+
+@pytest.mark.parametrize('name', ['My location: Silver City, New Mexico, United States', 'Silver City, NM'])
+def test_new_mexico_plays_selected_roadrunner_outside_radius(tmp_path, name):
+    from urllib.parse import parse_qs, urlparse
+    from gaiascapes_host.xeno_canto import _within_region
+
+    location = {'name': name, 'latitude': 32.77, 'longitude': -108.28}
+    roadrunner = recording(id='254791', en='Greater Roadrunner', gen='Geococcyx',
+                          sp='californianus', lat='31.84', lon='-109.025',
+                          loc='Rodeo, Hidalgo County, New Mexico', cnt='United States',
+                          rec='Richard E. Webster', length='1:14', q='B',
+                          lic='https://creativecommons.org/licenses/by-nc-sa/4.0/')
+    assert not _within_region(_record(roadrunner), location)
+    responses = [Response(json.dumps({'recordings': [recording(), roadrunner]}).encode()),
+                 Response(b'ID3-roadrunner')]
+    requests = []
+
+    def opener(request, timeout):
+        requests.append(request.full_url)
+        return responses.pop(0)
+
+    client = XenoCantoClient(tmp_path, 'private-test-key', opener, locations=[location])
+    event = client.event_at(0)
+    assert event.traits['recording_id'] == '254791'
+    assert event.traits['title'] == 'Greater Roadrunner · song'
+    assert event.traits['creator'] == 'Richard E. Webster'
+    assert event.traits['license'] == 'CC BY-NC-SA 4.0'
+    assert event.traits['source_url'] == 'https://xeno-canto.org/254791'
+    assert event.traits['recording_selection'] == 'New Mexico state bird'
+    assert 'region_radius_km' not in event.traits
+    assert (event.latitude, event.longitude) == (31.84, -109.025)
+    assert event.traits['region_latitude'] == 32.77
+    query = parse_qs(urlparse(requests[0]).query)['query'][0]
+    assert 'nr:254791' in query and 'box:' not in query
+    assert client.event_at(1).traits['recording_id'] == '254791'
+    assert len(requests) == 2
+
+
+def test_unavailable_new_mexico_roadrunner_does_not_substitute_other_birds(tmp_path):
+    from gaiascapes_host.xeno_canto import NoRecordingsError
+
+    client = XenoCantoClient(tmp_path, 'test',
+                            lambda request, timeout: Response(json.dumps({'recordings': [recording()]}).encode()),
+                            locations=[{'name': 'Albuquerque, New Mexico', 'latitude': 35.08, 'longitude': -106.65}])
+    with pytest.raises(NoRecordingsError, match='Greater Roadrunner song .* unavailable or unsuitable'):
+        client.event_at(0)
+
+
+def test_new_mexico_frogs_still_use_regional_search(tmp_path):
+    from urllib.parse import parse_qs, urlparse
+
+    requests = []
+    frog = recording(grp='frogs', en='Canyon Tree Frog', lat='32.77', lon='-108.28')
+
+    def opener(request, timeout):
+        requests.append(request.full_url)
+        return Response(json.dumps({'recordings': [frog]}).encode())
+
+    location = {'name': 'Silver City, NM', 'latitude': 32.77, 'longitude': -108.28}
+    client = XenoCantoClient(tmp_path, 'test', opener, locations=[location], group='frogs')
+    assert client._catalog(location['name'], location)[0]['id'] == '42'
+    query = parse_qs(urlparse(requests[0]).query)['query'][0]
+    assert 'box:' in query and 'nr:' not in query
