@@ -132,14 +132,23 @@ fi
 if [[ "$SOURCE_DIR" != "$INSTALL_DIR" ]]; then
   install -m 755 "$SOURCE_DIR/install.sh" "$INSTALL_DIR/install.sh"
   install -m 755 "$SOURCE_DIR/uninstall.sh" "$INSTALL_DIR/uninstall.sh"
-  install -m 755 "$SOURCE_DIR/run_gaiascapes.sh" "$INSTALL_DIR/run_gaiascapes.sh"
-  install -m 755 "$SOURCE_DIR/run_gaiascapes_gui.sh" "$INSTALL_DIR/run_gaiascapes_gui.sh"
-  install -m 755 "$SOURCE_DIR/run_supercollider.sh" "$INSTALL_DIR/run_supercollider.sh"
+  install -m 755 "$SOURCE_DIR/scripts/run_gaiascapes.sh" "$INSTALL_DIR/scripts/run_gaiascapes.sh"
+  install -m 755 "$SOURCE_DIR/scripts/run_gaiascapes_gui.sh" "$INSTALL_DIR/scripts/run_gaiascapes_gui.sh"
+  install -m 755 "$SOURCE_DIR/scripts/run_supercollider.sh" "$INSTALL_DIR/scripts/run_supercollider.sh"
+  # Existing service definitions and shortcuts may still use the old paths.
+  # Keep those existing entry points as forwarding wrappers during upgrades.
+  for launcher in run_gaiascapes.sh run_gaiascapes_gui.sh run_supercollider.sh; do
+    if [[ -f "$INSTALL_DIR/$launcher" ]]; then
+      printf '#!/usr/bin/env bash\nexec "$(dirname -- "$0")/scripts/%s" "$@"\n' "$launcher" > "$INSTALL_DIR/$launcher"
+      chmod 755 "$INSTALL_DIR/$launcher"
+    fi
+  done
   install -m 755 "$SOURCE_DIR/scripts/resolve_macos_audio.py" "$INSTALL_DIR/scripts/resolve_macos_audio.py"
   install -m 644 "$SOURCE_DIR/supercollider/gaia-scape.scd" "$INSTALL_DIR/supercollider/gaia-scape.scd"
   install -m 644 "$SOURCE_DIR/README.md" "$INSTALL_DIR/README.md"
   install -m 644 "$SOURCE_DIR/requirements.txt" "$INSTALL_DIR/requirements.txt"
   install -m 644 "$SOURCE_DIR/SYSTEM_REQUIREMENTS.md" "$INSTALL_DIR/SYSTEM_REQUIREMENTS.md"
+  install -m 644 "$SOURCE_DIR/WINDOWS_INSTALL.md" "$INSTALL_DIR/WINDOWS_INSTALL.md"
   for notice in LICENSE THIRD_PARTY_NOTICES.md PRIVACY.md SECURITY.md; do
     install -m 644 "$SOURCE_DIR/$notice" "$INSTALL_DIR/$notice"
   done
@@ -164,13 +173,13 @@ if [[ "$enable_autostart" == yes ]]; then
   if [[ "$(uname -s)" == Linux ]] && command -v systemctl >/dev/null 2>&1; then
     service_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
     mkdir -p "$service_dir"
-    "$PYTHON_BIN" "$SOURCE_DIR/scripts/write_systemd_service.py" "$service_dir/gaia-scape.service" "$INSTALL_DIR/run_gaiascapes.sh"
+    "$PYTHON_BIN" "$SOURCE_DIR/scripts/write_systemd_service.py" "$service_dir/gaia-scape.service" "$INSTALL_DIR/scripts/run_gaiascapes.sh"
     systemctl --user daemon-reload
     systemctl --user enable --now gaia-scape.service
   elif [[ "$(uname -s)" == Darwin ]]; then
     plist="$HOME/Library/LaunchAgents/local.gaia-scape.plist"
     mkdir -p "$(dirname -- "$plist")"
-    "$PYTHON_BIN" "$SOURCE_DIR/scripts/write_launch_agent.py" "$plist" "$INSTALL_DIR/run_gaiascapes.sh" "$INSTALL_DIR/data"
+    "$PYTHON_BIN" "$SOURCE_DIR/scripts/write_launch_agent.py" "$plist" "$INSTALL_DIR/scripts/run_gaiascapes.sh" "$INSTALL_DIR/data"
     launchctl unload "$plist" >/dev/null 2>&1 || true
     launchctl load "$plist"
   fi
@@ -183,9 +192,9 @@ else
 fi
 
 printf '\nGaiascapes was installed in %s\n' "$INSTALL_DIR"
-printf 'Start audio: %s/run_supercollider.sh\n' "$INSTALL_DIR"
-printf 'Start the desktop app: %s/run_gaiascapes_gui.sh\n' "$INSTALL_DIR"
-printf 'Start headless: %s/run_gaiascapes.sh\n' "$INSTALL_DIR"
+printf 'Start audio: %s/scripts/run_supercollider.sh\n' "$INSTALL_DIR"
+printf 'Start the desktop app: %s/scripts/run_gaiascapes_gui.sh\n' "$INSTALL_DIR"
+printf 'Start headless: %s/scripts/run_gaiascapes.sh\n' "$INSTALL_DIR"
 printf 'Open locally: http://127.0.0.1:8768\n'
 printf 'Open on LAN: http://<gaia-host-ip>:8768\n'
 printf 'Application data: %s/data\n' "$INSTALL_DIR"

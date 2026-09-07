@@ -2,7 +2,7 @@
 
 Gaiascapes captures live terrestrial events and turns their time, location,
 and intensity into generative soundscapes. The primary runtime is
-Python on macOS, Linux, or Raspberry Pi. SuperCollider is the preferred audio
+Python on macOS, Linux, Raspberry Pi, or Windows 10/11. SuperCollider is the preferred audio
 engine; capture, history, and the web interface continue to work when it is not
 installed.
 
@@ -197,6 +197,11 @@ this host’s approximate location on the map** in **Settings → Sound Choices*
 are listed in `SYSTEM_REQUIREMENTS.md`. SuperCollider may be installed before
 or after Gaiascapes.
 
+On Windows 10/11 (64-bit), install Python 3.13 and the WebView2 Runtime, extract
+the source ZIP, and double-click `install.cmd`. It creates a desktop shortcut
+and a private installation in `%USERPROFILE%\Gaiascapes`. See
+[Windows installation](WINDOWS_INSTALL.md) for custom paths, audio, and repairs.
+
 On macOS:
 
 ```sh
@@ -210,7 +215,7 @@ sudo apt install python3 python3-venv python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4
 ./scripts/install_linux.sh
 ```
 
-The default installation and launch directory is `~/Gaiascapes`. The installer
+On macOS and Linux, the default installation and launch directory is `~/Gaiascapes`. The installer
 presents a folder selector, remembers the chosen location,
 creates a private `.venv`, installs a self-contained Python application, and
 preserves the selected installation's `data/` directory during updates.
@@ -245,7 +250,7 @@ The GUI launcher starts and supervises SuperCollider automatically, starts the
 local web service when needed, and opens Gaiascapes in a native pywebview window:
 
 ```sh
-./run_gaiascapes_gui.sh
+./scripts/run_gaiascapes_gui.sh
 ```
 
 Closing the window stops the web service started by that window. If a Gaiascapes
@@ -274,13 +279,13 @@ Write `system` to that file to restore system-output following. On macOS,
 device names. This supports output-only Bluetooth aggregate devices without
 pinning other system outputs.
 
-For separate-process operation, run `./run_supercollider.sh` in one terminal
-and `./run_gaiascapes_gui.sh` in another. You can override the remembered
+For separate-process operation, run `./scripts/run_supercollider.sh` in one terminal
+and `./scripts/run_gaiascapes_gui.sh` in another. You can override the remembered
 device for one launch with `GAIA_SCAPE_AUDIO_DEVICE` or `--audio-device`.
 Passing `GAIA_SCAPE_AUDIO_DEVICE` to the installer saves that selection in
 the installed data directory.
 
-For unattended operation, use `./run_gaiascapes.sh`. Open
+For unattended operation, use `./scripts/run_gaiascapes.sh`. Open
 `http://127.0.0.1:8768` locally or `http://<computer-ip>:8768` on the same LAN.
 
 ## OSC cue contract
@@ -356,7 +361,7 @@ and host code in `gaiascapes_host`. Use `gaiascapes-server`, `gaiascapes-gui`,
 `python -m gaiascapes_host`, or the source launcher `Gaiascapes.py`. Python
 imports using `gaia_scape` or `gaia_scape_host` must be updated.
 
-The shell launchers are `run_gaiascapes.sh` and `run_gaiascapes_gui.sh`;
+The shell launchers are `scripts/run_gaiascapes.sh` and `scripts/run_gaiascapes_gui.sh`;
 the source launcher is `Gaiascapes.py`. The source checkout remains at
 `~/Projects/Gaiascapes`, and the default installation is `~/Gaiascapes`.
 The repository is [mot-yelraf/Gaiascapes](https://github.com/mot-yelraf/Gaiascapes).

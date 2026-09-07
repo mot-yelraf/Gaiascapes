@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-RUNTIME_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+RUNTIME_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 SC_SCRIPT="$RUNTIME_DIR/supercollider/gaia-scape.scd"
 AUDIO_DEVICE_FILE="$RUNTIME_DIR/data/audio-device"
 AUDIO_DEVICE_MAP_FILE="$RUNTIME_DIR/data/audio-device-map"

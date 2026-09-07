@@ -8,6 +8,7 @@ import asyncio
 import re
 import threading
 import time
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -1944,8 +1945,8 @@ def test_homebrew_supercollider_bundle_is_detected(tmp_path, monkeypatch):
     status = service.detect_supercollider()
 
     assert status["available"] is True
-    assert status["sclang"].endswith("SuperCollider.app/Contents/MacOS/sclang")
-    assert status["scsynth"].endswith("SuperCollider.app/Contents/Resources/scsynth")
+    assert Path(status["sclang"]).as_posix().endswith("SuperCollider.app/Contents/MacOS/sclang")
+    assert Path(status["scsynth"]).as_posix().endswith("SuperCollider.app/Contents/Resources/scsynth")
 
 
 @pytest.mark.parametrize("legacy_name", ["gaia_rhythms.sqlite3", "earth_rhythms.sqlite3"])

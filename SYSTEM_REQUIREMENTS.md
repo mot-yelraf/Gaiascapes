@@ -1,6 +1,8 @@
 # System requirements
 
-Gaiascapes supports macOS, Linux, and Raspberry Pi OS.
+Gaiascapes provides installers for macOS, Linux, Raspberry Pi OS, and 64-bit
+Windows 10/11. See [Windows installation](WINDOWS_INSTALL.md) for setup and
+the current validation scope.
 
 ## Required
 
@@ -17,6 +19,11 @@ and WebKitGTK bindings:
 sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
 ```
 
+Windows uses the Microsoft Edge WebView2 Evergreen Runtime and .NET Framework
+4.8. Python 3.13 x64 is recommended. `install.cmd` checks the Runtime before
+installing desktop dependencies; `install.cmd -Mode Headless` skips this
+requirement and provides the browser UI instead.
+
 The browser-accessible web UI and headless service continue to work without
 these desktop-window packages. Use `GAIA_SCAPE_INSTALL_MODE=headless ./install.sh`
 to skip their installation checks. A minimal `pip install .` also omits satellite
@@ -29,6 +36,8 @@ SuperCollider is required for sound output but not for capture, history, or the 
 
 - macOS: install the SuperCollider application in `/Applications`.
 - Debian, Ubuntu, or Raspberry Pi OS: install the `supercollider` package.
+- Windows: install the Windows SuperCollider package in its standard
+  `Program Files` location, or set `GAIA_SCAPE_SCLANG` to `sclang.exe`.
 
 On macOS with Homebrew, a typical installation is:
 

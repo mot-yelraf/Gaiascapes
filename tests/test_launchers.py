@@ -96,6 +96,7 @@ def test_desktop_icon_assets_are_packaged():
     assert icns[:4] == b"icns"
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='POSIX executable symlink')
 def test_macos_identity_bundle_contains_plist_icon_and_python_link(
     tmp_path, monkeypatch
 ):
@@ -258,6 +259,7 @@ print(json.dumps({
     assert identity["executable"] == str(executable)
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='POSIX executable symlink')
 def test_macos_symlinked_executable_imports_installed_desktop_module(
     tmp_path, monkeypatch
 ):

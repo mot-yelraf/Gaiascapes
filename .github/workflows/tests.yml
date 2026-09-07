@@ -28,7 +28,7 @@ jobs:
           export GAIA_SCAPE_DATA_DIR="$(mktemp -d)"
           python -m pytest -q
           python -m compileall -q src tests
-          bash -n install.sh run_gaiascapes.sh run_gaiascapes_gui.sh run_supercollider.sh
+          bash -n install.sh scripts/run_gaiascapes.sh scripts/run_gaiascapes_gui.sh scripts/run_supercollider.sh
       - name: Build and smoke-test a clean headless installation
         shell: bash
         run: |
@@ -38,3 +38,35 @@ jobs:
           "$package_dir/venv/bin/python" -m pip install "$package_dir"/wheels/*.whl httpx
           export GAIA_SCAPE_DATA_DIR="$(mktemp -d)"
           "$package_dir/venv/bin/python" scripts/smoke_installed.py
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+          architecture: x64
+      - name: Install Windows test and desktop dependencies
+        run: |
+          python -m pip install '.[dev,desktop,lightning,eumetsat]' wheel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -c "import webview; import webview.platforms.winforms"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test with isolated runtime state
+        run: |
+          $env:GAIA_SCAPE_DATA_DIR = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString())
+          New-Item -ItemType Directory -Path $env:GAIA_SCAPE_DATA_DIR | Out-Null
+          python -m pytest -q
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m compileall -q src tests
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test PowerShell installation, shortcuts, and repair
+        run: |
+          $env:GAIA_SCAPE_DATA_DIR = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString())
+          New-Item -ItemType Directory -Path $env:GAIA_SCAPE_DATA_DIR | Out-Null
+          python scripts/smoke_windows_install.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
