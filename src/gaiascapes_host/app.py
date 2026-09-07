@@ -235,6 +235,15 @@ def create_app(
         """Long-poll for renderer cues emitted after an optional sequence."""
         return await service.emitted_cues(after=after)
 
+    @app.post("/api/recordings/advance")
+    async def advance_recording(request: Request):
+        """Advance only the current continuous recording's location."""
+        body = await _json_body(request)
+        try:
+            return {"advanced": service.advance_recording(body.get("sequence"))}
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     @app.post("/api/capture")
     async def capture():
         """Run one capture cycle for the configured non-GLM providers."""

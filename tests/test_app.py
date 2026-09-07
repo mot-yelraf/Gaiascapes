@@ -2347,3 +2347,49 @@ def test_eumetsat_failure_status_does_not_leak_sdk_secrets(tmp_path, monkeypatch
         assert status.status_code == 200
         assert 'demo-private-secret' not in capture.text + status.text
         assert 'EUMETSAT request failed' in status.text
+
+
+@pytest.mark.parametrize('kind', ['birdsong', 'frog_calls', 'whale_song', 'dolphin_calls'])
+def test_recording_rotation_waits_for_player_and_rejects_stale_signals(tmp_path, kind):
+    app = create_app(tmp_path, auto_capture=False, birdsong_client=FakeBirdsong())
+    svc = app.state.service
+    svc.playback.start()
+    svc.config.event_instruments['background'] = kind
+    setattr(svc.config, f'{kind}_enabled', True)
+    svc.config.xeno_canto_api_key = 'test-key'
+
+    class Recordings(FakeBirdsong):
+        def event_at(self, index):
+            event = super().event_at(index)
+            event.kind = kind
+            return event
+
+    recordings = Recordings()
+    setattr(svc, kind, recordings)
+
+    async def scenario():
+        assert await svc.play_next_ambient_layers() == (kind,)
+        cue = svc._emitted_cues[-1]
+        sequence = cue['sequence']
+        assert cue['recording_rotation'] is True
+        assert await svc.play_next_ambient_layers() == ()
+        assert recordings.indices == [0]
+        # A reloaded player receives the held recording rather than silence.
+        assert (await svc.emitted_cues())['cues'] == (cue,)
+        assert not svc.advance_recording(sequence + 1)
+        # Preview completion must not release the continuous recording.
+        await svc.preview_instrument(kind, kind)
+        assert not svc.advance_recording(svc._cue_sequence)
+        assert svc.advance_recording(sequence)
+        assert not svc.advance_recording(sequence)
+        assert await svc.play_next_ambient_layers() == (kind,)
+        assert recordings.indices == [0, 0, 1]
+        assert not svc.advance_recording(sequence)
+        await svc.stop_continuous()
+        assert svc._recording_sequences == {}
+
+    asyncio.run(scenario())
+    with TestClient(app) as client:
+        for value in (None, -1, '1', True):
+            assert client.post('/api/recordings/advance', json={'sequence': value}).status_code == 422
+        assert client.post('/api/recordings/advance', json={'sequence': 1}).json() == {'advanced': False}
