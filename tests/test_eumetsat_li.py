@@ -119,3 +119,22 @@ def test_li_sampling_keeps_strongest_flashes_within_each_cell():
     sampled = _select_geographically_distributed(events, 2)
 
     assert [event.event_id for event in sampled] == ["4", "3"]
+
+
+def test_sdk_failures_do_not_expose_credentials_or_response_bodies(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    import pytest
+    from gaiascapes_host.eumetsat_li import EumetsatLiClient
+
+    def failing_token(credentials):
+        raise ValueError(f'upstream response: {credentials!r}; Bearer demo-token')
+
+    monkeypatch.setitem(sys.modules, 'eumdac', SimpleNamespace(AccessToken=failing_token))
+    client = EumetsatLiClient('demo-key', 'demo-secret')
+    with pytest.raises(RuntimeError, match='check credentials') as caught:
+        client.fetch()
+    visible = str(caught.value) + str(client.status())
+    for private in ('demo-key', 'demo-secret', 'demo-token', 'upstream response'):
+        assert private not in visible
+    assert caught.value.__suppress_context__ is True

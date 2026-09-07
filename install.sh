@@ -15,6 +15,21 @@ STATE_FILE="$STATE_DIR/install-location"
 
 fail() { printf 'Gaiascapes installation failed: %s\n' "$1" >&2; exit 1; }
 
+# An installed copy delegates repair to the source checkout that installed it.
+if [[ ! -f "$SOURCE_DIR/pyproject.toml" ]]; then
+  source_checkout=""
+  if [[ -f "$SOURCE_DIR/data/install-source" ]]; then
+    IFS= read -r source_checkout < "$SOURCE_DIR/data/install-source" || true
+  fi
+  if [[ -n "$source_checkout" && "$source_checkout" != "$SOURCE_DIR" && -f "$source_checkout/pyproject.toml" && -x "$source_checkout/install.sh" ]]; then
+    if [[ -z "${GAIA_SCAPE_INSTALL_MODE:-}" && -f "$SOURCE_DIR/data/install-mode" ]]; then
+      IFS= read -r INSTALL_MODE < "$SOURCE_DIR/data/install-mode" || true
+    fi
+    exec env GAIA_SCAPE_INSTALL_DIR="$SOURCE_DIR" GAIA_SCAPE_INSTALL_MODE="$INSTALL_MODE" "$source_checkout/install.sh" "$@"
+  fi
+  fail "Run install.sh from your Gaiascapes source checkout with GAIA_SCAPE_INSTALL_DIR set to $SOURCE_DIR. The recorded source checkout is unavailable."
+fi
+
 command -v "$PYTHON_BIN" >/dev/null 2>&1 || fail "Python 3.10 or newer was not found."
 "$PYTHON_BIN" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' || fail "Python 3.10 or newer is required."
 
@@ -125,10 +140,15 @@ if [[ "$SOURCE_DIR" != "$INSTALL_DIR" ]]; then
   install -m 644 "$SOURCE_DIR/README.md" "$INSTALL_DIR/README.md"
   install -m 644 "$SOURCE_DIR/requirements.txt" "$INSTALL_DIR/requirements.txt"
   install -m 644 "$SOURCE_DIR/SYSTEM_REQUIREMENTS.md" "$INSTALL_DIR/SYSTEM_REQUIREMENTS.md"
+  for notice in LICENSE THIRD_PARTY_NOTICES.md PRIVACY.md SECURITY.md; do
+    install -m 644 "$SOURCE_DIR/$notice" "$INSTALL_DIR/$notice"
+  done
   rm -f "$INSTALL_DIR/run_earth_rhythms.sh" "$INSTALL_DIR/run_earth_rhythms_gui.sh"
   rm -f "$INSTALL_DIR/supercollider/earth-rhythms.scd"
 fi
 
+printf '%s\n' "$SOURCE_DIR" > "$INSTALL_DIR/data/install-source"
+printf '%s\n' "$INSTALL_MODE" > "$INSTALL_DIR/data/install-mode"
 mkdir -p "$STATE_DIR"
 state_temp="$STATE_FILE.tmp.$$"
 printf '%s\n' "$INSTALL_DIR" > "$state_temp"

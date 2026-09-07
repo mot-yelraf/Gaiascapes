@@ -5,7 +5,7 @@ extras. The caller must provide a newly created, empty runtime directory.
 """
 
 import importlib.util
-from importlib.metadata import version
+from importlib.metadata import distribution, version
 import os
 from pathlib import Path
 import subprocess
@@ -26,6 +26,13 @@ def main() -> None:
     from gaiascapes_host.config import AppConfig
 
     assert version('gaiascapes') == __version__.removeprefix('v')
+    package = distribution('gaiascapes')
+    assert package.metadata['License-Expression'] == 'BSD-2-Clause'
+    license_files = package.metadata.get_all('License-File') or []
+    assert {'LICENSE', 'THIRD_PARTY_NOTICES.md'} <= set(license_files)
+    for notice in license_files:
+        assert any(str(path).endswith('/licenses/' + notice) for path in package.files)
+
     AppConfig(enabled_sources=[], osc_enabled=False).save(data_dir / 'config.json')
     with TestClient(create_app(auto_capture=False)) as client:
         assert client.get('/healthz').json()['version'] == __version__

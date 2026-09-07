@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,8 @@ dynamic = ["version"]
 description = "Turn live terrestrial events into generative musical performances."
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "BSD-2-Clause"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 authors = [{name = "Tom Farley"}]
 dependencies = [
   "fastapi>=0.115,<1.0",
@@ -22,8 +23,13 @@ lightning = ["netCDF4>=1.7,<2.0"]
 eumetsat = ["netCDF4>=1.7,<2.0", "eumdac>=3.0,<4.0"]
 dev = [
   "httpx>=0.28,<1.0",
-  "pytest>=8.0,<9.0",
+  "pytest>=9.0.3,<10.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/mot-yelraf/Gaiascapes"
+Documentation = "https://github.com/mot-yelraf/Gaiascapes#readme"
+Issues = "https://github.com/mot-yelraf/Gaiascapes/issues"
 
 [project.scripts]
 gaiascapes-server = "gaiascapes_host.__main__:main"

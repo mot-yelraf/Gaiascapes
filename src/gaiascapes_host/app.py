@@ -125,6 +125,7 @@ def create_app(
             live_mode=config.live_mode,
             app_view=config.app_view,
             map_projection=config.map_projection,
+            system_location_enabled=config.system_location_enabled,
             enabled_sources=set(config.enabled_sources),
             units=config.units,
             instrument_slots=config.instrument_slots(),
@@ -173,8 +174,10 @@ def create_app(
     @app.get("/api/system-location")
     async def system_location_status():
         """Return the host's approximate, session-cached public-IP location."""
+        if not config.system_location_enabled:
+            return {"location": None}
         location = await asyncio.to_thread(system_location.resolve)
-        return {"location": location}
+        return {"location": location if config.system_location_enabled else None}
 
     @app.get("/api/events")
     async def events(hours: float | None = None, limit: int = 500):
@@ -285,6 +288,7 @@ def create_app(
             changes = {
                 "enabled_sources": sources, "event_instruments": mappings,
                 "units": body.get("units", config.units),
+                "system_location_enabled": body.get("system_location_enabled", config.system_location_enabled),
                 "instrument_volumes": body.get("instrument_volumes", config.instrument_volumes),
                 "lightning_sample_rate": body.get("lightning_sample_rate", config.lightning_sample_rate),
                 **{f"{kind}_enabled": body.get(f"{kind}_enabled", getattr(config, f"{kind}_enabled"))

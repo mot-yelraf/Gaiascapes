@@ -382,3 +382,6 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 
 .marine-location-selection { display: flex; align-items: center; gap: .4rem; font-size: .75rem; }
 .marine-location-selection input { width: auto; accent-color: var(--moss); }
+
+.location-privacy-option { justify-content: flex-start; gap: .6rem; margin-top: 1.25rem; cursor: pointer; }
+.location-privacy-option input { flex: 0 0 auto; width: auto; accent-color: var(--moss); }

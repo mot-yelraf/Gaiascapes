@@ -163,3 +163,32 @@ def test_headless_launcher_uses_selected_runtime(tmp_path):
             str(runtime), str(runtime / 'data'),
             ['-m', 'gaiascapes_host', '--port', '18868'],
         ]
+
+
+def test_installed_repair_delegates_to_recorded_checkout(tmp_path):
+    import os
+    import shutil
+    import subprocess
+
+    runtime = tmp_path / 'installed app'
+    checkout = tmp_path / 'source checkout'
+    (runtime / 'data').mkdir(parents=True)
+    checkout.mkdir()
+    shutil.copy2('install.sh', runtime / 'install.sh')
+    (checkout / 'pyproject.toml').write_text('[project]\nname="gaiascapes"\n')
+    (checkout / 'install.sh').write_text(
+        '#!/bin/bash\nprintf "%s\\n" "$GAIA_SCAPE_INSTALL_DIR" "$GAIA_SCAPE_INSTALL_MODE" "$1"\n'
+    )
+    (checkout / 'install.sh').chmod(0o755)
+    (runtime / 'data/install-source').write_text(str(checkout) + '\n')
+    (runtime / 'data/install-mode').write_text('headless\n')
+    env = {key: value for key, value in os.environ.items() if key != 'GAIA_SCAPE_INSTALL_MODE'}
+    env['GAIA_SCAPE_DATA_DIR'] = str(runtime / 'data')
+    result = subprocess.run(['bash', str(runtime / 'install.sh'), 'example-argument'],
+                            env=env, capture_output=True, text=True, check=True)
+    assert result.stdout.splitlines() == [str(runtime), 'headless', 'example-argument']
+    (runtime / 'data/install-source').write_text(str(tmp_path / 'missing') + '\n')
+    result = subprocess.run(['bash', str(runtime / 'install.sh')], env=env,
+                            capture_output=True, text=True)
+    assert result.returncode == 1
+    assert 'source checkout is unavailable' in result.stderr

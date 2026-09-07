@@ -2302,3 +2302,49 @@ def test_frog_background_status_reports_loading_empty_region_and_recovery(tmp_pa
         await svc.stop()
 
     asyncio.run(scenario())
+
+
+def test_location_opt_out_persists_and_prevents_lookup(tmp_path):
+    from gaiascapes_host.config import AppConfig
+
+    class Location:
+        calls = 0
+
+        def resolve(self):
+            self.calls += 1
+            return {'latitude': 40, 'longitude': -105}
+
+    location = Location()
+    AppConfig(enabled_sources=[], osc_enabled=False).save(tmp_path / 'config.json')
+    app = create_app(tmp_path, auto_capture=False, geoip_resolver=location)
+    with TestClient(app) as client:
+        assert client.get('/api/system-location').json()['location'] is not None
+        payload = {'enabled_sources': [], 'instrument_slots': app.state.config.instrument_slots(),
+                   'system_location_enabled': False}
+        assert client.put('/api/settings/audio', json=payload).status_code == 200
+        assert client.get('/api/system-location').json() == {'location': None}
+        assert location.calls == 1
+        assert client.get('/api/config').json()['system_location_enabled'] is False
+        assert 'id="systemLocationEnabled" >' in client.get('/').text
+    restored = AppConfig.load(tmp_path / 'config.json')
+    assert restored.system_location_enabled is False
+    assert (restored.http_host, restored.http_port, restored.osc_port) == ('0.0.0.0', 8768, 57130)
+
+
+def test_eumetsat_failure_status_does_not_leak_sdk_secrets(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    from gaiascapes_host.config import AppConfig
+
+    def failing_token(_credentials):
+        raise RuntimeError('demo-private-secret')
+
+    monkeypatch.setitem(sys.modules, 'eumdac', SimpleNamespace(AccessToken=failing_token))
+    AppConfig(enabled_sources=['eumetsat_mtg_li'], osc_enabled=False,
+              eumetsat_consumer_key='demo-key', eumetsat_consumer_secret='demo-private-secret').save(tmp_path / 'config.json')
+    with TestClient(create_app(tmp_path, auto_capture=False)) as client:
+        capture = client.post('/api/capture')
+        status = client.get('/api/status')
+        assert status.status_code == 200
+        assert 'demo-private-secret' not in capture.text + status.text
+        assert 'EUMETSAT request failed' in status.text

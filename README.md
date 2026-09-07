@@ -192,7 +192,8 @@ Dependency versions are declared in `pyproject.toml`; `requirements.txt` delegat
 to its desktop and satellite extras.
 The map uses an approximate public-IP location from `ipapi.co`, with `ipwho.is`
 as an HTTPS fallback, to mark the host system with a small green circle. The
-result is held only in process memory. System and SuperCollider prerequisites
+result is held only in process memory. To disable these lookups, clear **Show
+this host’s approximate location on the map** in **Settings → Sound Choices**. System and SuperCollider prerequisites
 are listed in `SYSTEM_REQUIREMENTS.md`. SuperCollider may be installed before
 or after Gaiascapes.
 
@@ -364,3 +365,20 @@ The transition preserves `GAIA_SCAPE_*` environment variables,
 `gaia_scape.sqlite3`, browser storage keys, asset filenames, OS integration
 identifiers. HTTP remains on 8768 and OSC on 57130.
 Installed runtime state is not migrated by these source changes.
+
+## Privacy and security
+
+LAN access remains enabled by default on port 8768 so other devices can browse
+and listen. Devices that can reach the app can also change its settings; there
+is no login, and HTTP traffic is not encrypted. Use it on a trusted LAN and do
+not expose it directly to the internet.
+
+See [Privacy](PRIVACY.md) for outbound services and local data storage, and
+[Security](SECURITY.md) for private vulnerability reporting.
+
+To repair an installation, run its `install.sh`; it delegates to the recorded
+source checkout and preserves the selected installation and install mode.
+Keep that checkout available. If it has moved or is missing, run `install.sh`
+from a current source checkout with `GAIA_SCAPE_INSTALL_DIR` set explicitly.
+When moving an installation, recreate its `.venv` from the source checkout;
+virtual environments contain absolute paths. Keep the `data/` folder.

@@ -241,6 +241,8 @@
               {{ sound_tile("Event " ~ number, "event" ~ number, "event_" ~ number, [("earthquake", "Earthquake"), ("natural_thunder", "Thunder"), ("seismic_bells", "Seismic Tone"), ("tidal_bell", "Tidal Tone"), ("none", "None")], "event") }}
               {% endfor %}
             </div>
+            <label class="location-privacy-option"><input type="checkbox" aria-describedby="systemLocationHint" id="systemLocationEnabled" {% if system_location_enabled %}checked{% endif %}> Show this host’s approximate location on the map</label>
+            <p class="units-note" id="systemLocationHint">Uses IP location services (ipapi.co, with ipwho.is as a fallback). Turn off to stop location lookups.</p>
           </section>
           <section class="settings-pane location-settings-pane" data-pane="locations" hidden>
             <div class="pane-heading"><span>03</span><div><h3>Sound locations</h3></div></div>

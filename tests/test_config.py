@@ -317,3 +317,15 @@ def test_default_data_directory_is_independent_of_working_directory(monkeypatch,
     assert resolve_data_dir() == tmp_path / 'Gaiascapes' / 'data'
     monkeypatch.setenv('GAIA_SCAPE_DATA_DIR', str(tmp_path / 'custom' / 'data'))
     assert resolve_data_dir() == tmp_path / 'custom' / 'data'
+
+
+def test_credential_fields_are_omitted_from_repr():
+    config = AppConfig(eumetsat_consumer_key='demo-key',
+                       eumetsat_consumer_secret='demo-secret',
+                       xeno_canto_api_key='demo-bird-key')
+    assert all(value not in repr(config) for value in ('demo-key', 'demo-secret', 'demo-bird-key'))
+
+
+def test_system_location_setting_requires_a_boolean():
+    with pytest.raises(ValueError, match='System location'):
+        AppConfig(system_location_enabled='false').validate()

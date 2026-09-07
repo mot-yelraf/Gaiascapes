@@ -1,8 +1,7 @@
 # Gaiascapes agent guidance
 
-- The project checkout path is `~/Projects/Gaiascapes` (that is,
-  `/Users/twfarley/Projects/Gaiascapes`). Never rename, move, or temporarily
-  relocate this directory.
+- The project checkout path is `~/Projects/Gaiascapes`. Never rename, move,
+  or temporarily relocate this directory.
 - Gaiascapes is a host-first Python application for macOS, Linux, and
   Raspberry Pi. ESP32 support may be added later as a companion device.
 - The default HTTP port is 8768. Ports 8000, 8765, and 8767 belong to sibling

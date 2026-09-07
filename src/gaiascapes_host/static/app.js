@@ -1698,6 +1698,7 @@ if (settingsDialog && settingsForm) {
           birdsong_provider: byId("birdsongProvider").value,
           xeno_canto_api_key: byId("xenoCantoApiKey").value,
           units: byId("displayUnits").value,
+          system_location_enabled: byId("systemLocationEnabled").checked,
         }),
       });
       if (audioSettings.eumetsat_credentials_configured) {
@@ -1715,6 +1716,7 @@ if (settingsDialog && settingsForm) {
         });
       }
       if (recordingKind && !audioSettings[`${recordingKind}_enabled`]) stopRecordingPlayback();
+      await updateSystemLocation();
       status.textContent = "Settings saved.";
       await updateEvents();
     } catch (error) {

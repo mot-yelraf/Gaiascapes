@@ -257,3 +257,11 @@ Mode and Dashboard/Map view changes are applied and saved immediately through th
 | **A saved sound has no effect** | Confirm the save succeeded and inspect the running version. The app can only show features present in that running release. |
 
 Automatic source-recovery notices can appear when an environmental feed fails or recovers. A source problem does not necessarily stop other enabled sources. A cached recording can remain playable even while new network lookups are unavailable.
+
+## Location privacy
+
+In **Settings → Sound Choices**, clear **Show this host’s approximate location
+on the map** and save to stop IP-based location lookups. This hides the host
+marker without changing environmental events, audio, or LAN access. The setting
+applies to the installation; other open browsers may need a refresh to remove
+a previously displayed marker. See [Privacy](PRIVACY.md) for details.

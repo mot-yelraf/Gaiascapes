@@ -280,8 +280,12 @@ class EumetsatLiClient:
             self.last_error = ""
             return events
         except Exception as exc:
-            self.last_error = f"{type(exc).__name__}: {exc}"
-            raise
+            # SDK exceptions may contain authenticated URLs or response bodies.
+            self.last_error = (
+                f"EUMETSAT request failed ({type(exc).__name__}); "
+                "check credentials, network access, and Data Store availability."
+            )
+            raise RuntimeError(self.last_error) from None
 
     def status(self) -> dict:
         """Return non-secret details from the latest Data Store update."""

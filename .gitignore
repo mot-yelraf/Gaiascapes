@@ -9,3 +9,12 @@ dist/
 data/
 install.log
 
+# Local secrets and editor metadata
+.DS_Store
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.orig
+*.rej

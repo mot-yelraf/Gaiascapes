@@ -132,6 +132,7 @@ class AppConfig:
     live_mode: str = "capture"
     app_view: str = "dashboard"
     map_projection: str = "robinson"
+    system_location_enabled: bool = True
     continuous_interval_seconds: float = 23.0
     osc_host: str = "127.0.0.1"
     osc_port: int = 57130
@@ -145,8 +146,8 @@ class AppConfig:
         default_factory=lambda: dict(DEFAULT_INSTRUMENT_VOLUMES)
     )
     lightning_sample_rate: int = 1
-    eumetsat_consumer_key: str = ""
-    eumetsat_consumer_secret: str = ""
+    eumetsat_consumer_key: str = field(default="", repr=False)
+    eumetsat_consumer_secret: str = field(default="", repr=False)
     whale_song_enabled: bool = False
     dolphin_calls_enabled: bool = False
     whale_song_regions: list[str] = field(default_factory=lambda: default_regions("whale_song"))
@@ -214,6 +215,8 @@ class AppConfig:
         self.usgs_url = str(self.usgs_url).strip()
         if not self.usgs_url.startswith("https://"):
             raise ValueError("USGS URL must use HTTPS")
+        if not isinstance(self.system_location_enabled, bool):
+            raise ValueError("System location enabled must be true or false")
         self.http_port = _port(self.http_port, "HTTP")
         self.osc_port = _port(self.osc_port, "OSC")
         self.poll_seconds = max(60, int(self.poll_seconds))
