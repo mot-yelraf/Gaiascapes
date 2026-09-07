@@ -84,10 +84,10 @@ def create_app(
     location_lock = asyncio.Lock()
 
     def local_sound_defaults():
-        """Return reset catalogs with the resolved host in the first slot."""
+        """Localize bird and weather defaults while retaining verified frog regions."""
         location = resolved_location if config.system_location_enabled else None
         return {
-            kind: locations_with_system_location(catalog, location)
+            kind: locations_with_system_location(catalog, location) if kind != "frog_calls" else catalog
             for kind, catalog in (
                 ("birdsong", default_birdsong_locations()),
                 ("frog_calls", default_frog_locations()),
@@ -108,7 +108,7 @@ def create_app(
                 resolved_location = location
             if not sound_locations_initialized:
                 changes = {}
-                for name in ("birdsong_locations", "frog_calls_locations", "storm_outlook_locations"):
+                for name in ("birdsong_locations", "storm_outlook_locations"):
                     catalog = locations_with_system_location(getattr(config, name), resolved_location)
                     if catalog != getattr(config, name):
                         changes[name] = catalog

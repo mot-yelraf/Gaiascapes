@@ -29,8 +29,7 @@ DESKTOP_ICON_PATH = STATIC_DIR / "gaia-scape-desktop-icon.png"
 WINDOWS_ICON_PATH = STATIC_DIR / "gaia-scape-desktop-icon.ico"
 MACOS_ICON_PATH = STATIC_DIR / "gaia-scape-desktop-icon.icns"
 LINUX_APP_ID = "earth.gaia_scape.GaiaScape"
-# Preserve the existing bundle path and executable during the staged rename.
-MACOS_APP_NAME = "Gaia Scape"
+MACOS_APP_NAME = "Gaiascapes"
 MACOS_BUNDLE_IDENTIFIER = "earth.gaiascape.GaiaScape"
 MACOS_RELAUNCH_MARKER = "GAIA_SCAPE_MACOS_APP_RELAUNCHED"
 MACOS_HEADLESS_MARKER = "GAIA_SCAPE_HEADLESS"
@@ -50,7 +49,8 @@ _windows_icon: Any = None
 
 def _macos_application_support_dir() -> Path:
     """Return the per-user directory containing macOS integration metadata."""
-    return Path.home() / "Library" / "Application Support" / MACOS_APP_NAME
+    # Keep existing integration metadata in its established support directory.
+    return Path.home() / "Library" / "Application Support" / "Gaia Scape"
 
 
 def _path_is_in_app_bundle(path: Path) -> bool:
@@ -108,7 +108,7 @@ def _ensure_macos_app_bundle() -> Path:
 
     bundle_version = _macos_bundle_version()
     document = {
-        "CFBundleDisplayName": "Gaiascapes",
+        "CFBundleDisplayName": MACOS_APP_NAME,
         "CFBundleName": MACOS_APP_NAME,
         "CFBundleExecutable": MACOS_APP_NAME,
         "CFBundleIdentifier": MACOS_BUNDLE_IDENTIFIER,

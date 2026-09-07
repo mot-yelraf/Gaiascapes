@@ -54,6 +54,25 @@ is disabled by default and caches its media under `data/media/frog_calls/`.
 Frog searches include ungraded recordings and calls of 1–180 seconds, accepting
 CC BY, CC BY-SA, and CC BY-NC-SA licenses. The background status strip reports loading and
 lookup failures, including regions without suitable recordings.
+The default frog centers are checked using those same filters, with a sample
+download from every region; see the [verification report](docs/frog-locations-audit.json).
+Seven originally empty regions have been replaced. Existing installations migrate
+unchanged default entries and the old automatically inserted **My location** entry
+once, while preserving custom locations and avoiding duplicate coordinates.
+Frog Calls no longer substitutes the host location automatically; add a local
+frog region manually if desired. Catalog availability can change after verification.
+
+To recheck all default frog regions, run this from the checkout with its Python
+environment (catalogs and downloads use disposable temporary storage):
+
+```bash
+PYTHONPATH=src python scripts/audit_frog_locations.py \
+  --config "$HOME/Gaiascapes/data/config.json" \
+  --output /tmp/gaiascapes-frog-audit.json
+```
+
+The command reads only the API key from the configuration, writes a public report,
+and exits unsuccessfully if any region has no eligible downloadable sample.
 
 Birdsong, Frog Calls, Whale Song, and Dolphin Calls play each selected clip once
 per location visit, without looping short clips. On the next full pass through
@@ -221,11 +240,12 @@ to its desktop and satellite extras.
 The map uses an approximate public-IP location from `ipapi.co`, with `ipwho.is`
 as an HTTPS fallback, to mark the host system with a small green circle. The
 result is cached in process memory. At startup it also replaces location 1 of
-the 19 Sound locations for Xeno-canto Birdsong, Frog Calls, and Storm Outlook,
+the 19 Sound locations for Xeno-canto Birdsong and Storm Outlook,
 and those sampling centers are saved in `data/config.json`. The other 18 slots
 remain unchanged unless one matches the host; that slot swaps with the previous
 first entry to retain 19 distinct locations. Restore defaults also puts the
-detected host first. Commons Birdsong retains its curated recording locations.
+detected host first for those catalogs. Frog Calls retains its verified defaults
+or manually edited regions. Commons Birdsong retains its curated recording locations.
 If GeoIP is unavailable, saved locations remain in use. To disable lookups and
 automatic location updates, clear **Show
 this host’s approximate location on the map** in **Settings → Sound Choices**. System and SuperCollider prerequisites
@@ -295,9 +315,10 @@ it and leaves it running. Window size and position can be overridden with
 `GAIA_SCAPE_GUI_Y`.
 
 On macOS, the GUI creates a lightweight identity bundle at
-`~/Library/Application Support/Gaia Scape/Gaia Scape.app` and relaunches through
-it with the display name Gaiascapes. The bundle path and executable retain their
-legacy names during this stage of the rename.
+`~/Library/Application Support/Gaia Scape/Gaiascapes.app` and relaunches through
+it with the display name, bundle name, and executable name Gaiascapes. The support
+directory retains its legacy name. Install the update and fully quit and reopen
+the desktop app to refresh its Dock identity.
 Set `GAIA_SCAPE_HEADLESS=1` to suppress this GUI-only relaunch when embedding the
 desktop module in an unattended process.
 

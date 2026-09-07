@@ -10,6 +10,8 @@ import pytest
 
 from gaiascapes_host.config import (
     AppConfig,
+    _legacy_frog_locations,
+    default_frog_locations,
     event_mappings_for_slots,
     validate_forecast_locations,
     volume_mappings_for_slots,
@@ -172,7 +174,7 @@ def test_existing_config_enables_glm_once_during_revision_migration(tmp_path):
     config.save(path)
     reloaded = AppConfig.load(path)
 
-    assert config.config_revision == 6
+    assert config.config_revision == 7
     assert config.enabled_sources == ["usgs", "noaa_glm"]
     assert reloaded.enabled_sources == ["usgs", "noaa_glm"]
 
@@ -329,3 +331,39 @@ def test_credential_fields_are_omitted_from_repr():
 def test_system_location_setting_requires_a_boolean():
     with pytest.raises(ValueError, match='System location'):
         AppConfig(system_location_enabled='false').validate()
+
+
+def test_legacy_frog_defaults_migrate_once_without_changing_custom_locations(tmp_path):
+    path = tmp_path / "config.json"
+    locations = _legacy_frog_locations()
+    custom = {"name": "My wetland", "latitude": 40.1, "longitude": -75.2}
+    locations[6] = custom
+    locations[0] = {"name": "My location: Denver", "latitude": 39.7, "longitude": -105.0}
+    path.write_text(json.dumps({"config_revision": 6, "frog_calls_locations": locations}))
+    original = path.read_bytes()
+    config = AppConfig.load(path)
+    expected = default_frog_locations()
+    expected[6] = custom
+    assert config.frog_calls_locations == expected
+    assert path.read_bytes() == original  # Loading does not write runtime settings.
+    config.save(path)
+    assert AppConfig.load(path).frog_calls_locations == expected
+    config.frog_calls_locations[0] = locations[0]
+    config.save(path)
+    assert AppConfig.load(path).frog_calls_locations[0] == locations[0]
+
+
+def test_frog_migration_preserves_custom_coordinates_that_match_a_replacement(tmp_path):
+    path = tmp_path / "config.json"
+    locations = _legacy_frog_locations()
+    locations[1] = dict(default_frog_locations()[0], name="My Canadian wetland")
+    path.write_text(json.dumps({"config_revision": 6, "frog_calls_locations": locations}))
+    config = AppConfig.load(path)
+    assert config.frog_calls_locations[:2] == locations[:2]
+    assert len(config.frog_calls_locations) == 19
+
+
+def test_all_legacy_frog_defaults_migrate_to_verified_regions(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"frog_calls_locations": _legacy_frog_locations()}))
+    assert AppConfig.load(path).frog_calls_locations == default_frog_locations()

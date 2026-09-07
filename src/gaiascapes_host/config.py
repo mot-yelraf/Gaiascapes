@@ -110,8 +110,8 @@ def locations_with_system_location(locations: list[dict], location: dict | None)
     return validate_forecast_locations(catalog, "Sound locations")
 
 
-def default_frog_locations() -> list[dict]:
-    """Return nineteen independent region centers for worldwide frog calls."""
+def _legacy_frog_locations() -> list[dict]:
+    """Return the original region centers for one-time configuration migration."""
     return [
         {"name": name, "latitude": latitude, "longitude": longitude}
         for name, latitude, longitude in (
@@ -138,11 +138,39 @@ def default_frog_locations() -> list[dict]:
     ]
 
 
+def default_frog_locations() -> list[dict]:
+    """Return nineteen regions verified against the Xeno-canto playback filters."""
+    return [
+        {"name": name, "latitude": latitude, "longitude": longitude}
+        for name, latitude, longitude in (
+            ("Montmorency Forest, Canada", 47.3205, -71.1411),
+            ("Everglades, United States", 25.3, -80.9),
+            ("Veracruz, Mexico", 19.5, -96.9),
+            ("Sarapiqui, Costa Rica", 10.4, -84.0),
+            ("Mindo, Ecuador", -0.05, -78.77),
+            ("Atlantic Forest, Brazil", -24.0, -47.5),
+            ("Riachuelo, Argentina", -27.5824, -58.7597),
+            ("Camargue, France", 43.5, 4.5),
+            ("Rainham Marshes, United Kingdom", 51.4946, 0.1946),
+            ("Biebrza, Poland", 53.5, 22.8),
+            ("Doñana, Spain", 37.0, -6.4),
+            ("Lake Dayet Srij, Morocco", 31.0813, -4.0407),
+            ("Lambwe, Kenya", -0.6066, 34.3303),
+            ("Skukuza, South Africa", -24.9953, 31.5928),
+            ("Linnei, Taiwan", 23.7263, 120.6225),
+            ("Western Ghats, India", 11.7, 76.1),
+            ("Sabah, Malaysia", 5.0, 117.7),
+            ("Okinawa, Japan", 26.7, 128.2),
+            ("Wet Tropics, Australia", -17.0, 145.6),
+        )
+    ]
+
+
 @dataclass
 class AppConfig:
     """Validated runtime settings stored alongside application data."""
 
-    config_revision: int = 6
+    config_revision: int = 7
     http_host: str = "0.0.0.0"
     http_port: int = 8768
     usgs_url: str = DEFAULT_USGS_URL
@@ -203,6 +231,9 @@ class AppConfig:
                     config.enabled_sources.append("noaa_glm")
             if int(document.get("config_revision", 0)) < 6:
                 config.config_revision = 6
+            if int(document.get("config_revision", 0)) < 7:
+                config._migrate_frog_locations()
+                config.config_revision = 7
             config._migrate_legacy_instruments()
             # v0.26.236.36 lengthened the original, non-user-facing default.
             if document.get("continuous_interval_seconds") in {12, 12.0}:
@@ -210,6 +241,30 @@ class AppConfig:
         config.apply_environment()
         config.validate()
         return config
+
+    def _migrate_frog_locations(self) -> None:
+        """Replace untouched legacy frog centers while preserving custom entries."""
+        if not isinstance(self.frog_calls_locations, list):
+            return
+        legacy = _legacy_frog_locations()
+        defaults = default_frog_locations()
+        for index, location in enumerate(self.frog_calls_locations):
+            replacement = None
+            for old, new in zip(legacy, defaults):
+                if location == old:
+                    replacement = new
+                    break
+            # Earlier startup logic automatically inserted an unverified host.
+            if (index == 0 and isinstance(location, dict)
+                    and str(location.get("name", "")).startswith("My location: ")):
+                replacement = defaults[0]
+            if replacement is not None and not any(
+                other_index != index and isinstance(other, dict)
+                and (other.get("latitude"), other.get("longitude"))
+                == (replacement["latitude"], replacement["longitude"])
+                for other_index, other in enumerate(self.frog_calls_locations)
+            ):
+                self.frog_calls_locations[index] = dict(replacement)
 
     def apply_environment(self) -> None:
         """Apply process-only overrides without making them persistent settings."""
@@ -231,7 +286,7 @@ class AppConfig:
     def validate(self) -> None:
         """Normalize values and reject unsafe ranges."""
         self.http_host = str(self.http_host).strip() or "0.0.0.0"
-        self.config_revision = max(6, int(self.config_revision))
+        self.config_revision = max(7, int(self.config_revision))
         self.osc_host = str(self.osc_host).strip() or "127.0.0.1"
         self.usgs_url = str(self.usgs_url).strip()
         if not self.usgs_url.startswith("https://"):

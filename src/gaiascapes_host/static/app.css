@@ -75,6 +75,11 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 1.45rem; }
 .metrics strong { display: block; overflow: hidden; font-size: clamp(1rem, 2.1vw, 1.3rem); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .metrics small { display: block; min-height: 1.2em; margin-top: 8px; overflow: hidden; color: var(--muted); font-size: .76rem; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .status-card--background { --status-accent: #6ab5bd; }
+.metrics .recording-description { display: flex; align-items: baseline; justify-content: center; gap: .5em; max-width: 100%; margin-bottom: 0; font-size: inherit; letter-spacing: normal; text-transform: none; }
+.recording-description a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.metrics .recording-countdown { flex: none; margin-bottom: 0; color: var(--status-accent); font-size: inherit; font-variant-numeric: tabular-nums; letter-spacing: normal; text-transform: none; }
+.metrics .recording-countdown[hidden] { display: none; }
+.metrics .recording-attribution { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .status-card--event { --status-accent: #e5aa2b; }
 .status-card--earthquake { --status-accent: #b98258; }
 .status-card > span, .status-card > strong, .status-card > small,

@@ -1,0 +1,329 @@
+{
+  "checked_at": "2026-09-07T18:10:06.048232+00:00",
+  "radius_km": 100.0,
+  "locations": [
+    {
+      "location": {
+        "name": "Montmorency Forest, Canada",
+        "latitude": 47.3205,
+        "longitude": -71.1411
+      },
+      "eligible_matches": 16,
+      "sample": {
+        "id": "1020611",
+        "source_url": "https://xeno-canto.org/1020611",
+        "latitude": 47.425,
+        "longitude": -70.318,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 14936664
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Everglades, United States",
+        "latitude": 25.3,
+        "longitude": -80.9
+      },
+      "eligible_matches": 6,
+      "sample": {
+        "id": "982932",
+        "source_url": "https://xeno-canto.org/982932",
+        "latitude": 25.3893,
+        "longitude": -80.6566,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 3150178
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Veracruz, Mexico",
+        "latitude": 19.5,
+        "longitude": -96.9
+      },
+      "eligible_matches": 2,
+      "sample": {
+        "id": "1137895",
+        "source_url": "https://xeno-canto.org/1137895",
+        "latitude": 19.5397,
+        "longitude": -96.9447,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 2196588
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Sarapiqui, Costa Rica",
+        "latitude": 10.4,
+        "longitude": -84.0
+      },
+      "eligible_matches": 20,
+      "sample": {
+        "id": "1045971",
+        "source_url": "https://xeno-canto.org/1045971",
+        "latitude": 10.4496,
+        "longitude": -84.0685,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 9329292
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Mindo, Ecuador",
+        "latitude": -0.05,
+        "longitude": -78.77
+      },
+      "eligible_matches": 8,
+      "sample": {
+        "id": "1082636",
+        "source_url": "https://xeno-canto.org/1082636",
+        "latitude": 0.5262,
+        "longitude": -79.2128,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 139675
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Atlantic Forest, Brazil",
+        "latitude": -24.0,
+        "longitude": -47.5
+      },
+      "eligible_matches": 17,
+      "sample": {
+        "id": "1139730",
+        "source_url": "https://xeno-canto.org/1139730",
+        "latitude": -24.3893,
+        "longitude": -47.0188,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 380522
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Riachuelo, Argentina",
+        "latitude": -27.5824,
+        "longitude": -58.7597
+      },
+      "eligible_matches": 10,
+      "sample": {
+        "id": "1039654",
+        "source_url": "https://xeno-canto.org/1039654",
+        "latitude": -27.5811,
+        "longitude": -58.7598,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 705030
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Camargue, France",
+        "latitude": 43.5,
+        "longitude": 4.5
+      },
+      "eligible_matches": 39,
+      "sample": {
+        "id": "1139790",
+        "source_url": "https://xeno-canto.org/1139790",
+        "latitude": 43.2755,
+        "longitude": 5.48,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 7690804
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Rainham Marshes, United Kingdom",
+        "latitude": 51.4946,
+        "longitude": 0.1946
+      },
+      "eligible_matches": 8,
+      "sample": {
+        "id": "1175877",
+        "source_url": "https://xeno-canto.org/1175877",
+        "latitude": 51.4946,
+        "longitude": 0.1946,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 18174892
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Biebrza, Poland",
+        "latitude": 53.5,
+        "longitude": 22.8
+      },
+      "eligible_matches": 14,
+      "sample": {
+        "id": "1147181",
+        "source_url": "https://xeno-canto.org/1147181",
+        "latitude": 53.1523,
+        "longitude": 22.8512,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 3562156
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Doñana, Spain",
+        "latitude": 37.0,
+        "longitude": -6.4
+      },
+      "eligible_matches": 18,
+      "sample": {
+        "id": "1153756",
+        "source_url": "https://xeno-canto.org/1153756",
+        "latitude": 37.1058,
+        "longitude": -6.2577,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 1154584
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Lake Dayet Srij, Morocco",
+        "latitude": 31.0813,
+        "longitude": -4.0407
+      },
+      "eligible_matches": 4,
+      "sample": {
+        "id": "1153757",
+        "source_url": "https://xeno-canto.org/1153757",
+        "latitude": 31.1047,
+        "longitude": -4.0613,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 5584092
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Lambwe, Kenya",
+        "latitude": -0.6066,
+        "longitude": 34.3303
+      },
+      "eligible_matches": 4,
+      "sample": {
+        "id": "1100769",
+        "source_url": "https://xeno-canto.org/1100769",
+        "latitude": -0.6066,
+        "longitude": 34.3303,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 4505024
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Skukuza, South Africa",
+        "latitude": -24.9953,
+        "longitude": 31.5928
+      },
+      "eligible_matches": 3,
+      "sample": {
+        "id": "1080070",
+        "source_url": "https://xeno-canto.org/1080070",
+        "latitude": -24.9953,
+        "longitude": 31.5928,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 889855
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Linnei, Taiwan",
+        "latitude": 23.7263,
+        "longitude": 120.6225
+      },
+      "eligible_matches": 12,
+      "sample": {
+        "id": "1045299",
+        "source_url": "https://xeno-canto.org/1045299",
+        "latitude": 23.7263,
+        "longitude": 120.6225,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 3394720
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Western Ghats, India",
+        "latitude": 11.7,
+        "longitude": 76.1
+      },
+      "eligible_matches": 4,
+      "sample": {
+        "id": "1032614",
+        "source_url": "https://xeno-canto.org/1032614",
+        "latitude": 12.302,
+        "longitude": 75.8681,
+        "license": "CC BY-SA 4.0",
+        "download_bytes": 11665476
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Sabah, Malaysia",
+        "latitude": 5.0,
+        "longitude": 117.7
+      },
+      "eligible_matches": 6,
+      "sample": {
+        "id": "1036442",
+        "source_url": "https://xeno-canto.org/1036442",
+        "latitude": 4.9634,
+        "longitude": 117.8028,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 676084
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Okinawa, Japan",
+        "latitude": 26.7,
+        "longitude": 128.2
+      },
+      "eligible_matches": 2,
+      "sample": {
+        "id": "1009428",
+        "source_url": "https://xeno-canto.org/1009428",
+        "latitude": 26.7546,
+        "longitude": 128.301,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 11290312
+      },
+      "status": "verified"
+    },
+    {
+      "location": {
+        "name": "Wet Tropics, Australia",
+        "latitude": -17.0,
+        "longitude": 145.6
+      },
+      "eligible_matches": 21,
+      "sample": {
+        "id": "1051103",
+        "source_url": "https://xeno-canto.org/1051103",
+        "latitude": -16.588,
+        "longitude": 145.3959,
+        "license": "CC BY-NC-SA 4.0",
+        "download_bytes": 357292
+      },
+      "status": "verified"
+    }
+  ]
+}
