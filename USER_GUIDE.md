@@ -34,7 +34,11 @@ Use **Dashboard** for playback controls and history. **Settings** opens Sound so
 
 ![Dashboard in Continuous mode, with the replay-only fields hidden](docs/images/user-guide/04-dashboard-continuous.png)
 
-Continuous playback normally advances to another background location approximately every **23 seconds**. Network searches and downloads can take longer. Wildlife recordings are archived audio, even while the app is in Continuous mode.
+Ocean Swells and Storm Outlook normally advance to another background location approximately every **23 seconds**. Wildlife recordings use their audio length instead. Network searches and downloads can take longer. Wildlife recordings are archived audio, even while the app is in Continuous mode.
+
+For **Birdsong, Frog Calls, Whale Song, and Dolphin Calls**, each location visit plays one complete recording once. Short recordings do not loop, and long recordings are not cut off after 23 seconds. The player requests the next location during the final **three seconds**, or final **10%** of a short clip, and fades between recordings while the outgoing clip finishes. A first-time download can leave a gap between clips. Keep the browser or desktop player open for the rotation to advance. **Preview** remains an eight-second sample; **Stop** or changing the background can interrupt a recording.
+
+With **Xeno-canto Birdsong** and **Frog Calls**, the first pass plays the first available recording at each of the 19 regions. The next pass selects the second recording at each region, and later passes continue through its available recordings before wrapping to the first. **Whale Song** and **Dolphin Calls** follow the same sequence across their included hydrophone sites, rather than 19 regions. A location with only one recording repeats that recording on each pass; **Wikimedia Commons Birdsong** has one curated recording per location.
 
 ### Event History
 

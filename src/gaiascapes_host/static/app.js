@@ -20,6 +20,12 @@ let recordingPreviewTimer = null;
 let recordingPreviewUntil = 0;
 const activeRecordingAudio = new Set();
 
+async function advanceRecording(sequence) {
+  return request("/api/recordings/advance", {
+    method: "POST", body: JSON.stringify({sequence}),
+  });
+}
+
 function stopRecordingPlayback(fadeMilliseconds = 700) {
   recordingPlaybackGeneration += 1;
   recordingKind = null;
@@ -58,7 +64,9 @@ async function playRecordingCue(cue) {
     ? Date.now() + (cueDuration * 1000) : 0;
   const previous = recordingAudio;
   const next = new Audio(mediaUrl);
-  next.loop = true;
+  next.rotationSequence = cue.recording_rotation ? cue.sequence : previous?.rotationSequence;
+  // Play once per location visit; the next rotation selects the next recording.
+  next.loop = false;
   next.preload = "auto";
   next.volume = 0;
   try {
@@ -75,24 +83,52 @@ async function playRecordingCue(cue) {
   }
   recordingAudio = next;
   activeRecordingAudio.add(next);
+  if (cue.recording_rotation) {
+    let advancing = false;
+    const advanceAtEnd = async () => {
+      if (advancing || generation !== recordingPlaybackGeneration) return;
+      const transition = Math.min(3, next.duration * 0.1);
+      if (!next.ended && (!Number.isFinite(next.duration)
+          || next.duration - next.currentTime > transition)) return;
+      advancing = true;
+      try {
+        await advanceRecording(cue.sequence);
+      } catch (error) {
+        advancing = false;
+        message(`Unable to advance recording: ${error.message}`, true);
+        setTimeout(advanceAtEnd, 1000);
+      }
+    };
+    next.addEventListener("timeupdate", advanceAtEnd);
+    next.addEventListener("ended", advanceAtEnd);
+  }
   if (recordingPreviewTimer) clearTimeout(recordingPreviewTimer);
   if (cueDuration > 0 && cueDuration <= 10) {
     recordingPreviewUntil = Date.now() + (cueDuration * 1000);
-    recordingPreviewTimer = setTimeout(() => stopRecordingPlayback(), cueDuration * 1000);
+    recordingPreviewTimer = setTimeout(() => {
+      stopRecordingPlayback();
+      if (previous?.rotationSequence) {
+        advanceRecording(previous.rotationSequence).catch(error => message(error.message, true));
+      }
+    }, cueDuration * 1000);
   } else {
     recordingPreviewTimer = null;
     recordingPreviewUntil = 0;
   }
   if (recordingFadeTimer) clearInterval(recordingFadeTimer);
   const startedAt = performance.now();
-  const fadeMilliseconds = 3000;
+  const fadeMilliseconds = Number.isFinite(next.duration)
+    ? Math.max(50, Math.min(3000, next.duration * 100)) : 3000;
+  const previousFadeMilliseconds = cue.recording_rotation && previous && Number.isFinite(previous.duration)
+    ? Math.max(50, (previous.duration - previous.currentTime) * 1000) : fadeMilliseconds;
   const targetVolume = Math.max(0, Math.min(1, Number(cue.volume ?? 1) * 0.75));
   const previousVolume = previous?.volume || 0;
   recordingFadeTimer = setInterval(() => {
     const progress = Math.min(1, (performance.now() - startedAt) / fadeMilliseconds);
     next.volume = targetVolume * progress;
-    if (previous) previous.volume = previousVolume * (1 - progress);
-    if (progress >= 1) {
+    const previousProgress = Math.min(1, (performance.now() - startedAt) / previousFadeMilliseconds);
+    if (previous) previous.volume = previousVolume * (1 - previousProgress);
+    if (progress >= 1 && (!previous || previousProgress >= 1)) {
       clearInterval(recordingFadeTimer);
       recordingFadeTimer = null;
       if (previous) {

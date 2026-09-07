@@ -117,3 +117,66 @@ assert.equal(context.location.name, "New wetland");
 '''
     result = subprocess.run([node, "-e", script, str(source)], capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize('kind', ['birdsong', 'frog_calls', 'whale_song', 'dolphin_calls'])
+@pytest.mark.parametrize('duration', [1, 74])
+def test_recording_advances_only_at_its_audio_transition(kind, duration):
+    node = shutil.which('node')
+    if node is None:
+        pytest.skip('Node.js is needed to exercise the browser player')
+    source = Path(__file__).parents[1] / 'src/gaiascapes_host/static/app.js'
+    script = r'''
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const source = fs.readFileSync(process.argv[1], 'utf8');
+const duration = Number(process.argv[3]);
+const players = [], requests = [];
+let now = 0, fade;
+const context = vm.createContext({
+  document: {getElementById: () => null}, console,
+  performance: {now: () => now},
+  setInterval: fn => { fade = fn; return 1; }, clearInterval: () => {},
+  setTimeout: () => 1, clearTimeout: () => {},
+  request: async (url, options) => { requests.push(JSON.parse(options.body)); },
+  Audio: class {
+    constructor() {
+      this.duration = duration; this.currentTime = 0; this.ended = false;
+      this.listeners = {}; players.push(this);
+    }
+    async play() {}
+    pause() { this.paused = true; }
+    removeAttribute() {}
+    addEventListener(name, fn) { this.listeners[name] = fn; }
+  },
+});
+vm.runInContext(source.slice(0, source.indexOf('\nlet mapProjection =')), context);
+context.cue = {sequence: 42, recording_rotation: true, duration: 24.5, volume: 1,
+  event: {kind: process.argv[2], traits: {media_url: '/test.wav'}}};
+(async () => {
+  await vm.runInContext('playRecordingCue(cue)', context);
+  const first = players[0];
+  assert.equal(first.loop, false);
+  now = Math.min(3000, duration * 100); fade();
+  assert.equal(first.volume, .75);
+  first.currentTime = duration === 74 ? 23 : .5;
+  await first.listeners.timeupdate();
+  assert.equal(requests.length, 0);
+  const overlap = Math.min(3, duration * .1);
+  first.currentTime = duration - overlap / 2;
+  await first.listeners.timeupdate();
+  await first.listeners.timeupdate();
+  assert.deepEqual(requests, [{sequence: 42}]);
+  await vm.runInContext('playRecordingCue({...cue, sequence: 43})', context);
+  now += overlap * 250; fade();
+  assert.ok(first.volume > 0);
+  assert.ok(!first.paused);
+  now += 4000; fade();
+  assert.equal(first.paused, true);
+  assert.equal(players[1].volume, .75);
+})().catch(error => {console.error(error); process.exitCode = 1;});
+'''
+    result = subprocess.run([node, '-e', script, str(source), kind, str(duration)],
+                            capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stderr

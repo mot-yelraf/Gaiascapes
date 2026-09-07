@@ -55,6 +55,16 @@ Frog searches include ungraded recordings and calls of 1–180 seconds, acceptin
 CC BY, CC BY-SA, and CC BY-NC-SA licenses. The background status strip reports loading and
 lookup failures, including regions without suitable recordings.
 
+Birdsong, Frog Calls, Whale Song, and Dolphin Calls play each selected clip once
+per location visit, without looping short clips. On the next full pass through
+the locations, Xeno-canto and SanctSound select the next available recording for
+each location, wrapping after its last recording. Commons has one curated clip
+per location. These recordings play to the end instead of being cut off by the
+23-second location interval. The browser requests the next location during the
+final three seconds (or final 10% of short clips), fading between recordings.
+First-use downloads can leave a gap. Keep the browser or desktop player open
+for the recording rotation to advance. Previews remain limited to eight seconds.
+
 Whale Song and Dolphin Calls use NOAA NCEI / SanctSound recordings without an
 API key. Enable their tiles under Background sound sources, select one in
 Instruments, and choose included sites in Sound locations. Whale Song includes

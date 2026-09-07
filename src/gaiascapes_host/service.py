@@ -177,6 +177,8 @@ class GaiascapesService:
             kind: {"state": "idle", "error": ""}
             for kind in ("birdsong", "frog_calls", *MARINE_KINDS)
         }
+        self._recording_sequences = {}
+        self._recording_advance = asyncio.Event()
         self._last_continuous_cycle_at = time.time()
         self.continuous_played_count = 0
         self.continuous_last_error = ""
@@ -444,6 +446,7 @@ class GaiascapesService:
         async with self._playback_lifecycle_lock:
             self.playback.start()
             if self._continuous_task is None or self._continuous_task.done():
+                self._recording_sequences.clear()
                 self._last_continuous_cycle_at = time.time()
                 self._continuous_task = self.playback.schedule(
                     self._continuous_loop(), name="gaiascapes-continuous"
@@ -454,6 +457,7 @@ class GaiascapesService:
         """Pause all continuous playback while leaving capture enabled."""
         async with self._playback_lifecycle_lock:
             await self.playback.stop()
+            self._recording_sequences.clear()
             self._continuous_task = None
             self._glm_sonification_task = None
             self._glm_replaying_cached_field = False
@@ -856,6 +860,7 @@ class GaiascapesService:
             self._latest_background_location = None
             self._latest_sound_location = None
             for kind in changed_kinds:
+                self._recording_sequences.pop(kind, None)
                 self._ambient_cursors[kind] = 0
                 if kind in self._recording_status:
                     self._recording_status[kind] = {"state": "idle", "error": ""}
@@ -953,7 +958,8 @@ class GaiascapesService:
     async def emitted_cues(self, after=None) -> dict:
         """Return cue events emitted after a browser.s sequence cursor."""
         if after is None:
-            cues = ()
+            cues = tuple(cue for cue in self._emitted_cues
+                         if cue["sequence"] in self._recording_sequences.values())
         else:
             cursor = max(0, int(after))
             while self._cue_sequence <= cursor:
@@ -968,6 +974,17 @@ class GaiascapesService:
                     break
             cues = tuple(cue for cue in self._emitted_cues if cue["sequence"] > cursor)
         return {"latest_sequence": self._cue_sequence, "cues": cues}
+
+    def advance_recording(self, sequence: int) -> bool:
+        """Release the current recording when its player reaches the transition."""
+        if type(sequence) is not int or sequence < 1:
+            raise ValueError("A positive recording cue sequence is required")
+        for kind, current in tuple(self._recording_sequences.items()):
+            if current == sequence and self.playback.enabled and self._instruments_for_kind(kind):
+                del self._recording_sequences[kind]
+                self._recording_advance.set()
+                return True
+        return False
 
     def _record_emitted_cue(
         self,
@@ -1022,6 +1039,9 @@ class GaiascapesService:
             event=event,
         )
         self._emitted_cues.append(payload)
+        if publish_background and cue.kind in self._recording_status:
+            payload["recording_rotation"] = True
+            self._recording_sequences[cue.kind] = self._cue_sequence
         self._cue_event.set()
 
     def _start_glm_sonification(self, events) -> None:
@@ -1168,6 +1188,7 @@ class GaiascapesService:
 
     async def _continuous_loop(self) -> None:
         while True:
+            self._recording_advance.clear()
             try:
                 await self.play_next_ambient_layers()
                 self.continuous_last_error = ""
@@ -1175,7 +1196,11 @@ class GaiascapesService:
                 raise
             except Exception as exc:
                 self.continuous_last_error = f"{type(exc).__name__}: {exc}"
-            await asyncio.sleep(self.config.continuous_interval_seconds)
+            try:
+                await asyncio.wait_for(self._recording_advance.wait(),
+                                       timeout=self.config.continuous_interval_seconds)
+            except asyncio.TimeoutError:
+                pass
 
     async def play_next_ambient_layers(self) -> tuple[str, ...]:
         """Rotate the background and play Event 2 only when a tide turn is due."""
@@ -1205,7 +1230,7 @@ class GaiascapesService:
             selected.append(choices[cursor % len(choices)])
             self._ambient_cursors[kind] = cursor + 1
         for kind in ("birdsong", "frog_calls", *MARINE_KINDS):
-            if not self._instruments_for_kind(kind):
+            if not self._instruments_for_kind(kind) or kind in self._recording_sequences:
                 continue
             cursor = self._ambient_cursors[kind]
             recording_client = getattr(self, kind)
