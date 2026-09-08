@@ -33,6 +33,10 @@ class Renderer(Protocol):
         """Release a persistent layer."""
         ...
 
+    def set_volumes(self, volumes: dict[str, float]) -> None:
+        """Apply saved volume controls to active output channels."""
+        ...
+
     def status(self) -> dict:
         """Report transport state, without claiming audible delivery."""
         ...

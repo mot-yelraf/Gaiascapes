@@ -15,8 +15,20 @@ def test_cue_gain_scales_renderer_amplitude_without_changing_music():
 
     quieter = cue_with_gain(cue, 0.35)
 
-    assert quieter.velocity < cue.velocity
+    assert quieter.velocity == cue.velocity
+    assert quieter.gain == 0.35 ** 2
     assert quieter.pitch == cue.pitch
     assert quieter.duration == cue.duration
     assert quieter.pan == cue.pan
     assert quieter.offset == cue.offset
+
+
+def test_volume_taper_matches_recorded_player_at_low_and_high_settings():
+    import pytest
+
+    cue = ScoreCue(0, GaiaEvent("test", "quiet", "earthquake", 1), 60, 100)
+    for slider, expected in ((0, 0), (.1, .01), (.5, .25), (.9, .81), (1, 1)):
+        adjusted = cue_with_gain(cue, slider, "event_2")
+        assert adjusted.gain == pytest.approx(expected)
+        assert adjusted.velocity == 100
+        assert adjusted.output_channel == "event_2"

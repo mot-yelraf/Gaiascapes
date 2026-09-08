@@ -351,8 +351,17 @@ arguments:
 
 ```text
 event_id, kind, instrument, pitch, velocity, duration, pan, strength,
-longitude, latitude, raw_magnitude, depth_km
+longitude, latitude, raw_magnitude, depth_km, gain, output_channel
 ```
+
+`gain` is a linear output multiplier calculated as `(slider / 100)²`, separate
+from musical velocity. `output_channel` identifies `background`, `event_1`,
+`event_2`, `event_3`, or an unassigned `preview`. `/gaia/volumes` carries four
+linear gains in Background, Event 1, Event 2, Event 3 order, updating active synths
+when settings are saved. Each channel is independent, including duplicate voices.
+The receiver accepts older cues without these two trailing arguments at unity
+gain. Update and restart both the host and SuperCollider for the new volume behavior;
+older receivers ignore the new output-gain controls.
 
 Continuous ocean or storm state uses the same arguments at `/gaia/layer`; repeated
 messages smoothly update one persistent synth instead of replacing it. Storm

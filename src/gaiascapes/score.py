@@ -20,9 +20,13 @@ class ScoreCue:
         "duration",
         "pan",
         "event",
+        "gain",
+        "output_channel",
     )
 
-    def __init__(self, offset, event, pitch, velocity, duration=0.35, pan=0.0):
+    def __init__(self, offset, event, pitch, velocity, duration=0.35, pan=0.0,
+                 gain=1.0, output_channel="preview"):
+        """Create a cue with independent linear gain and an optional mixer channel."""
         self.offset = float(offset)
         self.provider = event.provider
         self.event_id = event.event_id
@@ -32,6 +36,8 @@ class ScoreCue:
         self.duration = float(duration)
         self.pan = max(-1.0, min(1.0, float(pan)))
         self.event = event
+        self.gain = max(0.0, min(1.0, float(gain)))
+        self.output_channel = str(output_channel)
 
     def as_dict(self):
         """Return a JSON-serializable cue summary."""
@@ -44,6 +50,8 @@ class ScoreCue:
             "velocity": self.velocity,
             "duration": self.duration,
             "pan": self.pan,
+            "gain": self.gain,
+            "output_channel": self.output_channel,
         }
 
 

@@ -69,7 +69,7 @@ SynthDef(\earthquake, {
         * bodyMotion * sWaveEnvelope;
     signal = ((pWave + groundTone + subharmonic + lowFriction) * 0.78).tanh;
     outputSignal = LeakDC.ar(signal) * envelope * amp * 3.75;
-    Out.ar(out, Limiter.ar(Pan2.ar(outputSignal, pan), 0.86, 0.008));
+    Out.ar(out, Limiter.ar(Pan2.ar(outputSignal, pan), 0.86, 0.008) * NamedControl.kr(\volumeGain, 1, 0.03));
 }).add;
 
 SynthDef(\seismicBells, {
@@ -78,7 +78,7 @@ SynthDef(\seismicBells, {
     envelope = EnvGen.kr(Env.perc(0.004, duration.clip(0.18, 1.78) * 2.4, curve: -5), doneAction: Done.freeSelf);
     shimmer = SinOsc.ar(freq * [1, 1.507, 2.013], 0, [0.5, 0.25, 0.12]).sum;
     lowBell = SinOsc.ar((freq * 0.5).max(28), 0, 0.24 + (strength * 0.12));
-    Out.ar(out, Pan2.ar((shimmer + lowBell) * envelope * amp, pan));
+    Out.ar(out, Pan2.ar((shimmer + lowBell) * envelope * amp, pan) * NamedControl.kr(\volumeGain, 1, 0.03));
 }).add;
 
 SynthDef(\testTone, {
@@ -89,7 +89,7 @@ SynthDef(\testTone, {
         doneAction: Done.freeSelf
     );
     signal = SinOsc.ar(440, 0, amp * 0.3) * envelope;
-    Out.ar(out, Limiter.ar(Pan2.ar(signal, pan), 0.25, 0.005));
+    Out.ar(out, Limiter.ar(Pan2.ar(signal, pan), 0.25, 0.005) * NamedControl.kr(\volumeGain, 1, 0.03));
 }).add;
 
 SynthDef(\lightningGlass, {
@@ -123,7 +123,7 @@ SynthDef(\lightningGlass, {
     ).sum;
     lowPulse = SinOsc.ar((pitchContour * 0.5).max(42), 0, 0.09 * strength);
     signal = crack + ((shimmer + sparkle + lowPulse) * glassEnvelope);
-    Out.ar(out, Pan2.ar(signal.tanh * amp * 0.52, pan));
+    Out.ar(out, Pan2.ar(signal.tanh * amp * 0.52, pan) * NamedControl.kr(\volumeGain, 1, 0.03));
 }).add;
 
 SynthDef(\naturalThunder, {
@@ -182,7 +182,7 @@ SynthDef(\naturalThunder, {
     drySignal = Pan2.ar(rumble + deepBody, pan);
     signal = LeakDC.ar(drySignal + reflections) * amp * 0.92;
     signal = Compander.ar(signal, signal, 0.42, 1, 0.34, 0.002, 0.22);
-    Out.ar(out, Limiter.ar(signal, 0.82, 0.005));
+    Out.ar(out, Limiter.ar(signal, 0.82, 0.005) * NamedControl.kr(\volumeGain, 1, 0.03));
 }).add;
 
 SynthDef(\tectonicDrone, {
@@ -191,7 +191,7 @@ SynthDef(\tectonicDrone, {
     envelope = EnvGen.kr(Env.linen(0.08, duration.max(0.4), 0.7, curve: -3), doneAction: Done.freeSelf);
     drift = VarSaw.ar(freq * [0.25, 0.251], 0, 0.22, 0.16).sum;
     rumble = RLPF.ar(BrownNoise.ar(0.42), (freq * 1.7).clip(45, 420), 0.28 + (strength * 0.2));
-    Out.ar(out, Pan2.ar((drift + rumble) * envelope * amp, pan));
+    Out.ar(out, Pan2.ar((drift + rumble) * envelope * amp, pan) * NamedControl.kr(\volumeGain, 1, 0.03));
 }).add;
 
 SynthDef(\oceanSwell, {
@@ -201,7 +201,7 @@ SynthDef(\oceanSwell, {
     surge = RLPF.ar(PinkNoise.ar(0.7), (freq * 3).clip(180, 900), 0.22 + (strength * 0.18));
     foam = BPF.ar(WhiteNoise.ar(0.22), (freq * 8).clip(700, 3200), 0.5);
     undertow = SinOsc.ar((freq * 0.5).clip(45, 130), 0, 0.22);
-    Out.ar(out, Pan2.ar((surge + foam + undertow) * envelope * amp, pan));
+    Out.ar(out, Pan2.ar((surge + foam + undertow) * envelope * amp, pan) * NamedControl.kr(\volumeGain, 1, 0.03));
 }).add;
 
 SynthDef(\oceanSwellLayer, {
@@ -228,7 +228,7 @@ SynthDef(\oceanSwellLayer, {
     ) * swellCycle;
     undertow = SinOsc.ar((smoothFreq * 0.5).clip(45, 130), 0, 0.2);
     signal = (surge + foam + undertow) * envelope * smoothAmp;
-    Out.ar(out, Pan2.ar(signal, smoothPan));
+    Out.ar(out, Pan2.ar(signal, smoothPan) * NamedControl.kr(\volumeGain, 1, 0.03));
 }).add;
 
 SynthDef(\tidalBell, {
@@ -236,7 +236,7 @@ SynthDef(\tidalBell, {
     var envelope, bell;
     envelope = EnvGen.kr(Env.perc(0.08, (duration - 0.08).max(1.0), curve: -4), doneAction: Done.freeSelf);
     bell = SinOsc.ar(freq * [0.5, 1, 1.498, 2.01], 0, [0.28, 0.36, 0.17, 0.08]).sum;
-    Out.ar(out, Pan2.ar(bell * envelope * amp, pan));
+    Out.ar(out, Pan2.ar(bell * envelope * amp, pan) * NamedControl.kr(\volumeGain, 1, 0.03));
 }).add;
 
 SynthDef(\stormPotential, {
@@ -254,7 +254,7 @@ SynthDef(\stormPotential, {
     roofTone = HPF.ar(WhiteNoise.ar(0.11), 4800) * LFNoise2.kr(3.5).range(0.25, 1);
     distantBody = RLPF.ar(BrownNoise.ar(0.18), (freq * 2).clip(90, 320), 0.35);
     signal = (wash + drops + roofTone + distantBody) * envelope * amp;
-    Out.ar(out, Pan2.ar(signal, pan));
+    Out.ar(out, Pan2.ar(signal, pan) * NamedControl.kr(\volumeGain, 1, 0.03));
 }).add;
 
 SynthDef(\stormRainLayer, {
@@ -283,10 +283,21 @@ SynthDef(\stormRainLayer, {
     surface = HPF.ar(WhiteNoise.ar(0.1), 4600) * LFNoise2.kr(3.2).range(0.2, 1);
     distantBody = RLPF.ar(BrownNoise.ar(0.2), (smoothFreq * 2).clip(90, 340), 0.36);
     signal = (wash + drops + surface + distantBody) * envelope * smoothAmp;
-    Out.ar(out, Pan2.ar(signal, smoothPan));
+    Out.ar(out, Pan2.ar(signal, smoothPan) * NamedControl.kr(\volumeGain, 1, 0.03));
 }).add;
 
     s.sync;
+    // Static groups let Save adjust active voices independently, including
+    // duplicate instruments in different slots. New cues carry their own gain.
+    ~gaiaVolumeGroups = IdentityDictionary.new;
+    [\background, \event_1, \event_2, \event_3, \preview].do({ |channel|
+        ~gaiaVolumeGroups[channel] = Group.tail(s);
+    });
+    OSCdef(\gaiaVolumes, { |msg|
+        [\background, \event_1, \event_2, \event_3].do({ |channel, index|
+            ~gaiaVolumeGroups[channel].set(\volumeGain, msg[index + 1].asFloat.clip(0, 1));
+        });
+    }, '/gaia/volumes', recvPort: oscPort);
     OSCdef(\earthCue, {
         |msg, time, addr, recvPort|
         var eventId = msg[1];
@@ -302,6 +313,9 @@ SynthDef(\stormRainLayer, {
         var magnitude = msg[11].asFloat;
         var depth = msg[12].asFloat;
         var synthName = \earthquake;
+        var volumeGain = if(msg.size > 13, { msg[13].asFloat.clip(0, 1) }, { 1 });
+        var channel = if(msg.size > 14, { msg[14].asString.asSymbol }, { \preview });
+        var group = ~gaiaVolumeGroups[channel] ? ~gaiaVolumeGroups[\preview];
 
         if(instrument == "seismic_bells", { synthName = \seismicBells });
         if(instrument == "lightning_glass", { synthName = \lightningGlass });
@@ -317,8 +331,9 @@ SynthDef(\stormRainLayer, {
             \duration, duration,
             \pan, pan,
             \depth, depth,
-            \strength, strength
-        ]);
+            \strength, strength,
+            \volumeGain, volumeGain
+        ], group);
         if(kind != "lightning_flash", {
             ("Gaia cue " ++ eventId ++ " -> " ++ instrument ++ " M" ++ magnitude.round(0.1)
                 ++ " @ " ++ latitude.round(0.01) ++ ", "
@@ -340,6 +355,7 @@ SynthDef(\stormRainLayer, {
         var key = kind.asSymbol;
         var layer = ~gaiaLayers[key];
         var synthName;
+        var volumeGain = if(msg.size > 13, { msg[13].asFloat.clip(0, 1) }, { 1 });
 
         if(instrument == "ocean_swell", { synthName = \oceanSwellLayer });
         if(instrument == "storm_potential", { synthName = \stormRainLayer });
@@ -351,8 +367,9 @@ SynthDef(\stormRainLayer, {
                     \transition, transition,
                     \pan, pan,
                     \depth, depth,
-                    \strength, strength
-                ]);
+                    \strength, strength,
+                    \volumeGain, volumeGain
+                ], ~gaiaVolumeGroups[\background]);
                 ~gaiaLayers[key] = layer;
             }, {
                 layer.set(
@@ -361,7 +378,8 @@ SynthDef(\stormRainLayer, {
                     \transition, transition,
                     \pan, pan,
                     \depth, depth,
-                    \strength, strength
+                    \strength, strength,
+                    \volumeGain, volumeGain
                 );
             });
             ("Gaia layer " ++ kind ++ " updated from " ++ eventId).postln;

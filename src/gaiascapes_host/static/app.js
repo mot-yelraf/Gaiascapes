@@ -12,13 +12,33 @@ let lastLightningIntensityUpdate = 0;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const MARINE_BACKGROUNDS = ["whale_song", "dolphin_calls"];
 const RECORDED_BACKGROUNDS = ["birdsong", "frog_calls", ...MARINE_BACKGROUNDS];
+let recordingLoadController = null;
 let recordingKind = null;
 let recordingPlaybackGeneration = 0;
 let recordingAudio = null;
+let pendingRecordingAudio = null;
 let recordingFadeTimer = null;
 let recordingPreviewTimer = null;
 let recordingPreviewUntil = 0;
 const activeRecordingAudio = new Set();
+
+function setRecordingFade(audio, fraction) {
+  audio.recordingFade = fraction;
+  // A squared taper gives the lower slider range useful background levels.
+  audio.recordingOutputGain = audio.recordingVolume ** 2 * 0.75 * fraction;
+  audio.setRecordingOutputGain?.(audio.recordingOutputGain);
+}
+
+function applyRecordingVolume(volume) {
+  const level = Number(volume);
+  if (!Number.isFinite(level)) return;
+  const players = new Set(activeRecordingAudio);
+  if (pendingRecordingAudio) players.add(pendingRecordingAudio);
+  players.forEach((audio) => {
+    audio.recordingVolume = Math.max(0, Math.min(1, level));
+    setRecordingFade(audio, audio.recordingFade);
+  });
+}
 
 function updateRecordingCountdown() {
   document.querySelectorAll(".recording-countdown").forEach((countdown) => {
@@ -46,6 +66,7 @@ async function advanceRecording(sequence) {
 }
 
 function stopRecordingPlayback(fadeMilliseconds = 700) {
+  recordingLoadController?.abort();
   recordingPlaybackGeneration += 1;
   recordingKind = null;
   if (recordingFadeTimer) clearInterval(recordingFadeTimer);
@@ -56,15 +77,16 @@ function stopRecordingPlayback(fadeMilliseconds = 700) {
   const players = Array.from(activeRecordingAudio);
   recordingAudio = null;
   if (!players.length) return;
-  const initialVolumes = players.map((audio) => audio.volume);
+  const initialFades = players.map((audio) => audio.recordingFade);
   const startedAt = performance.now();
   const timer = setInterval(() => {
     const progress = Math.min(1, (performance.now() - startedAt) / fadeMilliseconds);
-    players.forEach((audio, index) => { audio.volume = initialVolumes[index] * (1 - progress); });
+    players.forEach((audio, index) => setRecordingFade(audio, initialFades[index] * (1 - progress)));
     if (progress >= 1) {
       clearInterval(timer);
       players.forEach((audio) => {
         audio.pause();
+        audio.releaseNormalization?.();
         audio.removeAttribute("src");
         activeRecordingAudio.delete(audio);
       });
@@ -75,14 +97,20 @@ function stopRecordingPlayback(fadeMilliseconds = 700) {
 async function playRecordingCue(cue) {
   const mediaUrl = cue.event?.traits?.media_url;
   if (!mediaUrl) return;
+  recordingLoadController?.abort();
+  const controller = new AbortController();
+  recordingLoadController = controller;
   const generation = ++recordingPlaybackGeneration;
   recordingKind = cue.event.kind;
   const cueDuration = Number(cue.duration ?? 0);
   // Protect a preview from status refreshes while the media is still loading.
   recordingPreviewUntil = cueDuration > 0 && cueDuration <= 10
-    ? Date.now() + (cueDuration * 1000) : 0;
+    ? Infinity : 0;
   const previous = recordingAudio;
   const next = new Audio(mediaUrl);
+  pendingRecordingAudio = next;
+  next.recordingVolume = Math.max(0, Math.min(1, Number(cue.volume ?? 1)));
+  setRecordingFade(next, 0);
   next.recordingMediaUrl = mediaUrl;
   next.fullRecording = !(cueDuration > 0 && cueDuration <= 10);
   next.rotationSequence = cue.recording_rotation ? cue.sequence : previous?.rotationSequence;
@@ -90,15 +118,38 @@ async function playRecordingCue(cue) {
   next.loop = false;
   next.preload = "auto";
   next.volume = 0;
+  let rejectLoad;
+  const cancelled = new Promise((_, reject) => { rejectLoad = reject; });
+  const onAbort = () => rejectLoad(controller.signal.reason);
+  controller.signal.addEventListener("abort", onAbort, {once: true});
+  const loadTimeout = setTimeout(() => {
+    controller.abort(new Error("Recording loading timed out"));
+  }, 30000);
   try {
-    await next.play();
+    await Promise.race([cancelled, (async () => {
+      await recordingNormalizer.resume();
+      controller.signal.throwIfAborted();
+      await recordingNormalizer.prepare(next, mediaUrl, controller.signal);
+      controller.signal.throwIfAborted();
+      await next.play();
+    })()]);
   } catch (error) {
-    console.warn("Browser blocked recording playback", error);
-    message(`${instrumentLabel(cue.event.kind)} is ready. Select Start or Preview again to allow audio.`, true);
+    next.pause();
+    next.releaseNormalization?.();
+    next.removeAttribute("src");
+    if (generation !== recordingPlaybackGeneration) return;
+    recordingPreviewUntil = 0;
+    console.warn("Unable to play normalized recording", error);
+    message(`Unable to play recording: ${error.message}. Select Start or Preview to retry.`, true);
     return;
+  } finally {
+    clearTimeout(loadTimeout);
+    controller.signal.removeEventListener("abort", onAbort);
+    if (pendingRecordingAudio === next) pendingRecordingAudio = null;
   }
   if (generation !== recordingPlaybackGeneration) {
     next.pause();
+    next.releaseNormalization?.();
     next.removeAttribute("src");
     return;
   }
@@ -145,18 +196,18 @@ async function playRecordingCue(cue) {
     ? Math.max(50, Math.min(3000, next.duration * 100)) : 3000;
   const previousFadeMilliseconds = cue.recording_rotation && previous && Number.isFinite(previous.duration)
     ? Math.max(50, (previous.duration - previous.currentTime) * 1000) : fadeMilliseconds;
-  const targetVolume = Math.max(0, Math.min(1, Number(cue.volume ?? 1) * 0.75));
-  const previousVolume = previous?.volume || 0;
+  const previousFade = previous?.recordingFade || 0;
   recordingFadeTimer = setInterval(() => {
     const progress = Math.min(1, (performance.now() - startedAt) / fadeMilliseconds);
-    next.volume = targetVolume * progress;
+    setRecordingFade(next, progress);
     const previousProgress = Math.min(1, (performance.now() - startedAt) / previousFadeMilliseconds);
-    if (previous) previous.volume = previousVolume * (1 - previousProgress);
+    if (previous) setRecordingFade(previous, previousFade * (1 - previousProgress));
     if (progress >= 1 && (!previous || previousProgress >= 1)) {
       clearInterval(recordingFadeTimer);
       recordingFadeTimer = null;
       if (previous) {
         previous.pause();
+        previous.releaseNormalization?.();
         previous.removeAttribute("src");
         activeRecordingAudio.delete(previous);
       }
@@ -1728,6 +1779,8 @@ if (settingsDialog && settingsForm) {
             kind,
             instrument,
             volume: Number(byId(button.dataset.volume).value) / 100,
+            output_channel: {backgroundVolume: "background", event1Volume: "event_1",
+              event2Volume: "event_2", event3Volume: "event_3"}[button.dataset.volume],
           }),
         });
         status.textContent = "Previewed " + instrumentLabel(payload.instrument) + ".";
@@ -1822,6 +1875,7 @@ if (settingsDialog && settingsForm) {
           system_location_enabled: byId("systemLocationEnabled").checked,
         }),
       });
+      applyRecordingVolume(audioSettings.instrument_volumes.background);
       if (audioSettings.eumetsat_credentials_configured) {
         mtgLiToggle.dataset.credentialsConfigured = "true";
         eumetsatConsumerKey.value = "";

@@ -94,7 +94,8 @@ let finishLoading;
 let audio;
 const context = vm.createContext({
   document: {getElementById: () => null},
-  performance, console,
+  performance, console, AbortController,
+  recordingNormalizer: {resume: async () => {}, prepare: async () => {}},
   setInterval: () => 1, clearInterval: () => {},
   setTimeout: () => 1, clearTimeout: () => {},
   Audio: class {
@@ -110,6 +111,13 @@ context.cue = {duration: 8, volume: .4, event: {kind, traits: {media_url: "/test
   const pending = vm.runInContext("playRecordingCue(cue)", context);
   assert.equal(vm.runInContext("recordingKind", context), kind);
   assert.ok(vm.runInContext("recordingPreviewUntil > Date.now()", context));
+  vm.runInContext("applyRecordingVolume(0)", context);
+  assert.equal(audio.recordingVolume, 0);
+  assert.equal(audio.volume, 0);
+  vm.runInContext("applyRecordingVolume(.2)", context);
+  assert.equal(audio.recordingVolume, .2);
+  assert.equal(audio.volume, 0); // Remain silent until prepared and faded in.
+  await new Promise(resolve => setImmediate(resolve));
   vm.runInContext("stopRecordingPlayback()", context);
   finishLoading();
   await pending;
@@ -206,6 +214,8 @@ const countdowns = Array.from({length: 2}, () => ({
 let now = 0, fade;
 const context = vm.createContext({
   document: {getElementById: () => null, querySelectorAll: () => countdowns}, console,
+  AbortController,
+  recordingNormalizer: {resume: async () => {}, prepare: async () => {}},
   performance: {now: () => now},
   setInterval: fn => { fade = fn; return 1; }, clearInterval: () => {},
   setTimeout: () => 1, clearTimeout: () => {},
@@ -241,7 +251,13 @@ context.cue = {sequence: 42, recording_rotation: true, duration: 24.5, volume: 1
   assert.equal(countdowns[0].hidden, true);
   first.duration = duration;
   now = Math.min(3000, duration * 100); fade();
-  assert.equal(first.volume, .75);
+  assert.equal(first.recordingOutputGain, .75);
+  vm.runInContext('applyRecordingVolume(0)', context);
+  assert.equal(first.recordingOutputGain, 0);
+  assert.ok(!first.paused);
+  vm.runInContext('applyRecordingVolume(.2)', context);
+  assert.ok(Math.abs(first.recordingOutputGain - .03) < 1e-9);
+  vm.runInContext('applyRecordingVolume(1)', context);
   first.currentTime = duration === 74 ? 23 : .5;
   await first.listeners.timeupdate();
   assert.equal(requests.length, 0);
@@ -252,11 +268,21 @@ context.cue = {sequence: 42, recording_rotation: true, duration: 24.5, volume: 1
   assert.deepEqual(requests, [{sequence: 42}]);
   await vm.runInContext('playRecordingCue({...cue, sequence: 43})', context);
   now += overlap * 250; fade();
-  assert.ok(first.volume > 0);
+  assert.ok(first.recordingOutputGain > 0);
   assert.ok(!first.paused);
+  vm.runInContext('applyRecordingVolume(0)', context);
+  assert.equal(first.recordingOutputGain, 0);
+  assert.equal(players[1].recordingOutputGain, 0);
+  now += 10; fade(); // Crossfade must not undo a saved mute.
+  assert.equal(first.recordingOutputGain, 0);
+  assert.equal(players[1].recordingOutputGain, 0);
+  vm.runInContext('applyRecordingVolume(.4)', context);
+  assert.ok(first.recordingOutputGain > 0);
+  assert.ok(players[1].recordingOutputGain > 0);
+  vm.runInContext('applyRecordingVolume(1)', context);
   now += 4000; fade();
   assert.equal(first.paused, true);
-  assert.equal(players[1].volume, .75);
+  assert.equal(players[1].recordingOutputGain, .75);
   players[1].currentTime = duration === 74 ? 15 : .5;
   vm.runInContext('updateRecordingCountdown()', context);
   assert.equal(countdowns[0].textContent, duration === 74 ? '−0:59' : '−0:01');
@@ -273,5 +299,107 @@ context.cue = {sequence: 42, recording_rotation: true, duration: 24.5, volume: 1
 })().catch(error => {console.error(error); process.exitCode = 1;});
 '''
     result = subprocess.run([node, '-e', script, str(source), kind, str(duration)],
+                            capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stderr
+
+
+def test_recording_normalization_gain_and_audio_graph():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is needed to exercise recording normalization")
+    source = Path(__file__).parents[1] / "src/gaiascapes_host/static/recording-audio.js"
+    script = r'''
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+function buffer(amplitude, silence = 0, stereo = false) {
+  const samples = Float32Array.from({length: 4000 + silence}, (_, i) =>
+    i < silence ? 0 : amplitude * Math.sin(2 * Math.PI * i / 40));
+  return {length: samples.length, sampleRate: 1000, numberOfChannels: stereo ? 2 : 1,
+    getChannelData: () => samples};
+}
+const nodes = [];
+function node() {
+  const result = {connect(to) {this.to = to;}, disconnect() {this.disconnected = true;},
+    gain: {}, threshold: {}, knee: {}, ratio: {}, attack: {}, release: {}};
+  nodes.push(result);
+  return result;
+}
+let fetches = 0, fail = false;
+const context = vm.createContext({
+  window: {AudioContext: class {
+    constructor() {this.state = 'running'; this.destination = {};}
+    async resume() {}
+    createDynamicsCompressor() {throw new Error("Automatic makeup gain must not amplify recordings");}
+    createWaveShaper() {return node();}
+    createGain() {return node();}
+    createMediaElementSource() {return node();}
+    async decodeAudioData() {return buffer(.8);}
+  }},
+  fetch: async () => {fetches++; return {ok: !fail, status: 500, arrayBuffer: async () => new ArrayBuffer(0)};},
+});
+vm.runInContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const normalizer = vm.runInContext('recordingNormalizer', context);
+const gain = normalizer.measureGain;
+const loud = gain(buffer(.8)), quiet = gain(buffer(.1));
+assert.ok(Math.abs(loud * .8 - quiet * .1) < 1e-6);
+assert.ok(loud < 1);
+assert.equal(gain(buffer(0)), 1);
+assert.equal(gain(buffer(.001)), 1); // Do not amplify near-silent noise.
+assert.equal(gain(buffer(.01)), 1); // Quiet recordings must never be boosted.
+assert.ok(Math.abs(loud * .8 / Math.sqrt(2) - 10 ** (-30 / 20)) < 1e-6);
+for (const amplitude of [.001, .01, .03, .1, .5, 1]) {
+  for (const silence of [0, 8000]) {
+    const level = gain(buffer(amplitude, silence));
+    assert.ok(level > 0 && level <= 1);
+  }
+}
+assert.ok(Math.abs(gain(buffer(.8, 8000)) - loud) < 1e-6);
+assert.ok(Math.abs(gain(buffer(.8, 0, true)) - loud) < 1e-6);
+const transient = buffer(.02);
+transient.getChannelData()[2000] = 1;
+assert.ok(gain(transient) <= .85);
+const invalid = buffer(.2); invalid.getChannelData()[0] = NaN;
+assert.throws(() => gain(invalid), /invalid audio/);
+(async () => {
+  await normalizer.resume();
+  const audio = {};
+  await normalizer.prepare(audio, '/a.wav', new AbortController().signal);
+  assert.equal(fetches, 1);
+  assert.equal(nodes[2].gain.value, loud);
+  assert.equal(nodes[1].to, nodes[2]);
+  assert.equal(nodes[2].to, nodes[3]);
+  assert.equal(nodes[3].to, nodes[0]);
+  assert.equal(audio.volume, 1);
+  assert.equal(nodes[3].gain.value, 0); // Nothing audible until the player fades in.
+  // Exercise the real slider/fade function against the real gain graph.
+  vm.runInContext(fs.readFileSync(process.argv[1].replace('recording-audio.js', 'app.js'), 'utf8')
+    .split('function setRecordingFade(audio, fraction) {')[1]
+    .split('function applyRecordingVolume(')[0]
+    .replace(/^/, 'function setRecordingFade(audio, fraction) {'), context);
+  const fade = vm.runInContext('setRecordingFade', context);
+  for (const [slider, expected] of [[0, 0], [.1, .0075], [.5, .1875], [.9, .6075], [1, .75]]) {
+    audio.recordingVolume = slider;
+    fade(audio, 1);
+    assert.ok(Math.abs(nodes[3].gain.value - expected) < 1e-12);
+    assert.equal(audio.volume, 1); // Attenuation comes entirely from Web Audio.
+    fade(audio, .5);
+    assert.ok(Math.abs(nodes[3].gain.value - expected / 2) < 1e-12);
+  }
+  assert.ok(Math.max(...nodes[0].curve) <= .951);
+  for (let i = 0; i < nodes[0].curve.length; i++) {
+    assert.ok(Math.abs(nodes[0].curve[i]) <= Math.abs(i / 2048 - 1) + 1e-7);
+  }
+  audio.releaseNormalization();
+  assert.ok(nodes[1].disconnected && nodes[2].disconnected && nodes[3].disconnected);
+  await normalizer.prepare({}, '/a.wav', new AbortController().signal);
+  assert.equal(fetches, 1);
+  const cancelled = new AbortController(); cancelled.abort();
+  await assert.rejects(normalizer.prepare({}, '/a.wav', cancelled.signal), {name: 'AbortError'});
+  fail = true;
+  await assert.rejects(normalizer.prepare({}, '/bad.wav', new AbortController().signal), /HTTP 500/);
+})().catch(error => {console.error(error); process.exitCode = 1;});
+'''
+    result = subprocess.run([node, "-e", script, str(source)],
                             capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stderr

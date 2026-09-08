@@ -949,8 +949,9 @@ def test_event_history_includes_older_event_emitted_inside_window(tmp_path):
     assert history[0]["emitted_at"] is not None
 
 
-def test_audio_settings_persist_and_update_live_renderer(tmp_path):
+def test_audio_settings_persist_and_update_live_renderer(tmp_path, monkeypatch):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    monkeypatch.setattr(app.state.service.renderer, "set_volumes", lambda volumes: None)
 
     with TestClient(app) as client:
         response = client.put(
@@ -1329,7 +1330,8 @@ def test_instrument_preview_uses_unsaved_slider_volume(tmp_path):
         emitted = client.get("/api/cues", params={"after": 0}).json()["cues"]
 
     assert response.status_code == 200
-    assert played[0].velocity < 116
+    assert played[0].velocity == 116
+    assert played[0].gain == .25 ** 2
     assert emitted[0]["volume"] == 0.25
 
 
@@ -1352,7 +1354,8 @@ def test_440_hz_test_tone_preview_routes_as_an_event(tmp_path):
         "kind": "earthquake",
     }
     assert played[0][1] == "test_tone"
-    assert played[0][0].velocity < 116
+    assert played[0][0].velocity == 116
+    assert played[0][0].gain == .5 ** 2
 
 
 def test_natural_thunder_preview_routes_to_lightning(tmp_path):
@@ -2350,7 +2353,7 @@ def test_eumetsat_failure_status_does_not_leak_sdk_secrets(tmp_path, monkeypatch
 
 
 @pytest.mark.parametrize('kind', ['birdsong', 'frog_calls', 'whale_song', 'dolphin_calls'])
-def test_recording_rotation_waits_for_player_and_rejects_stale_signals(tmp_path, kind):
+def test_recording_rotation_waits_for_player_and_rejects_stale_signals(tmp_path, kind, monkeypatch):
     app = create_app(tmp_path, auto_capture=False, birdsong_client=FakeBirdsong())
     svc = app.state.service
     svc.playback.start()
@@ -2365,6 +2368,7 @@ def test_recording_rotation_waits_for_player_and_rejects_stale_signals(tmp_path,
             return event
 
     recordings = Recordings()
+    monkeypatch.setattr(svc.renderer, "set_volumes", lambda volumes: None)
     setattr(svc, kind, recordings)
 
     async def scenario():
@@ -2380,10 +2384,22 @@ def test_recording_rotation_waits_for_player_and_rejects_stale_signals(tmp_path,
         # Preview completion must not release the continuous recording.
         await svc.preview_instrument(kind, kind)
         assert not svc.advance_recording(svc._cue_sequence)
+        await svc.update_settings({"instrument_volumes": {
+            **svc.config.instrument_volumes, "background": 0,
+        }}, tmp_path / "config.json")
+        assert (await svc.emitted_cues())["cues"][0]["volume"] == 0
         assert svc.advance_recording(sequence)
         assert not svc.advance_recording(sequence)
         assert await svc.play_next_ambient_layers() == (kind,)
         assert recordings.indices == [0, 0, 1]
+        muted_cue = svc._emitted_cues[-1]
+        assert muted_cue["volume"] == 0
+        assert svc.advance_recording(muted_cue["sequence"])
+        await svc.update_settings({"instrument_volumes": {
+            **svc.config.instrument_volumes, "background": .3,
+        }}, tmp_path / "config.json")
+        assert await svc.play_next_ambient_layers() == (kind,)
+        assert svc._emitted_cues[-1]["volume"] == .3
         assert not svc.advance_recording(sequence)
         await svc.stop_continuous()
         assert svc._recording_sequences == {}
@@ -2393,3 +2409,89 @@ def test_recording_rotation_waits_for_player_and_rejects_stale_signals(tmp_path,
         for value in (None, -1, '1', True):
             assert client.post('/api/recordings/advance', json={'sequence': value}).status_code == 422
         assert client.post('/api/recordings/advance', json={'sequence': 1}).json() == {'advanced': False}
+
+
+def test_birdsong_mute_does_not_mute_earthquake_or_tide(tmp_path, monkeypatch):
+    app = create_app(tmp_path, auto_capture=False, birdsong_client=FakeBirdsong())
+    svc = app.state.service
+    svc.playback.start()
+    rendered = []
+
+    def render(cue, instrument):
+        rendered.append((cue.kind, instrument, cue.velocity))
+        return True
+
+    monkeypatch.setattr(svc.renderer, "play", render)
+    monkeypatch.setattr(svc.renderer, "stop_layer", lambda *args: False)
+    monkeypatch.setattr(svc.renderer, "set_volumes", lambda volumes: None)
+
+    async def scenario():
+        await svc.update_settings({
+            "event_instruments": {"background": "birdsong", "event_1": "earthquake",
+                                  "event_2": "tidal_bell", "event_3": "none"},
+            "birdsong_enabled": True,
+            "instrument_volumes": {"background": 1, "event_1": 1, "event_2": 1, "event_3": 1},
+        }, tmp_path / "config.json")
+        await svc.play_next_ambient_layers()
+        held_sequence = svc._recording_sequences["birdsong"]
+        for volume in (1, 0, .19):
+            await svc.update_settings({"instrument_volumes": {
+                **svc.config.instrument_volumes, "background": volume,
+            }}, tmp_path / "config.json")
+            # An unfinished recording must not block either event renderer.
+            assert svc._recording_sequences["birdsong"] == held_sequence
+            for kind in ("earthquake", "tide_turn"):
+                event = GaiaEvent("test", kind, kind, time.time(), strength=.6)
+                await asyncio.wait_for(svc._play_live_event(event), timeout=1)
+                assert svc._emitted_cues[-1]["volume"] == 1
+        assert rendered[:2] == rendered[2:4] == rendered[4:]
+        assert [entry[:2] for entry in rendered[:2]] == [
+            ("earthquake", "earthquake"), ("tide_turn", "tidal_bell"),
+        ]
+
+    asyncio.run(scenario())
+
+
+def test_saved_volumes_and_duplicate_instruments_keep_independent_channels(tmp_path, monkeypatch):
+    app = create_app(tmp_path, auto_capture=False)
+    svc = app.state.service
+    svc.playback.start()
+    rendered, saved = [], []
+    monkeypatch.setattr(svc.renderer, "play", lambda cue, instrument: rendered.append(cue))
+    monkeypatch.setattr(svc.renderer, "set_volumes", lambda volumes: saved.append(volumes))
+    monkeypatch.setattr(svc.renderer, "stop_layer", lambda *args: False)
+
+    async def scenario():
+        await svc.update_settings({
+            "event_instruments": {"background": "none", "event_1": "earthquake",
+                                  "event_2": "earthquake", "event_3": "none"},
+            "instrument_volumes": {"background": 1, "event_1": .1, "event_2": .9, "event_3": 0},
+        }, tmp_path / "config.json")
+        event = GaiaEvent("test", "quake", "earthquake", time.time(), strength=.6)
+        await svc._play_live_event(event)
+        assert [cue.output_channel for cue in rendered] == ["event_1", "event_2"]
+        assert [cue.gain for cue in rendered] == pytest.approx([.01, .81])
+        await svc.update_settings({"instrument_volumes": {
+            **svc.config.instrument_volumes, "event_1": 0,
+        }}, tmp_path / "config.json")
+        assert saved[-1]["event_1"] == 0
+        assert saved[-1]["event_2"] == .9
+        await svc.preview_instrument("earthquake", volume=.1, output_channel="event_1")
+        assert rendered[-1].gain == pytest.approx(.01)
+        assert rendered[-1].output_channel == "event_1"
+        await svc.player.start((ScoreCue(0, event, 60, 100),))
+        await svc.player._task
+        assert rendered[-1].output_channel == "event_2"
+        assert rendered[-1].gain == pytest.approx(.81)
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("channel", ["invalid", None, [], {}])
+def test_preview_rejects_invalid_output_channel(tmp_path, channel):
+    app = create_app(tmp_path, auto_capture=False)
+    with TestClient(app) as client:
+        response = client.post("/api/instruments/preview", json={
+            "instrument": "earthquake", "output_channel": channel,
+        })
+    assert response.status_code == 422

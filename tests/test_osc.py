@@ -110,3 +110,31 @@ def test_renderer_updates_and_releases_persistent_layer(monkeypatch):
     assert renderer.stop_layer("ocean_swell", release=4.0) is True
     assert sent[1][0].startswith(LAYER_STOP_ADDRESS.encode())
     assert renderer.status()["active_layers"] == []
+
+
+def test_renderer_transmits_independent_gain_and_saved_channel_volumes(monkeypatch):
+    packets = []
+
+    class FakeSocket:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def sendto(self, packet, destination):
+            packets.append(packet)
+
+    monkeypatch.setattr(socket, "socket", lambda *args: FakeSocket())
+    event = GaiaEvent("test", "quiet", "earthquake", 1, strength=.5)
+    cue = ScoreCue(0, event, 60, 120, gain=.01, output_channel="event_2")
+    renderer = OscRenderer("127.0.0.1", 57130)
+    for send in (renderer.play, renderer.update_layer):
+        send(cue, "earthquake")
+        assert packets[-1].endswith(struct.pack(">f", .01) + b"event_2\0")
+    renderer.set_volumes({"background": .9, "event_1": .1, "event_2": 0, "event_3": .5})
+    assert packets[-1] == encode_message("/gaia/volumes", (.9 ** 2, .1 ** 2, 0.0, .25))
+    renderer.enabled = False
+    count = len(packets)
+    renderer.set_volumes({})
+    assert len(packets) == count
