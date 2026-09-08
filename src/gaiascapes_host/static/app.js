@@ -769,6 +769,9 @@ function lightningMeasurements(traits) {
 }
 
 function renderLastEventStatus(event) {
+  document.querySelectorAll(".status-card--event").forEach((card) => {
+    card.dataset.eventKind = event?.kind || "";
+  });
   const text = eventStatusText(event);
   updateStatusField("last-event-type", text, text === "—" ? "" : text);
   const locationAndTime = event
@@ -1855,3 +1858,24 @@ document.querySelectorAll(".status-card").forEach((card) => {
 Promise.all([updateStatus(), updateEvents(), updateEmittedCues(), updateSystemLocation()]);
 setInterval(updateStatus, 3000);
 setInterval(updateRecordingCountdown, 250);
+
+// Appearance is local to this browser and does not change installation settings.
+const themeInputs = Array.from(document.querySelectorAll('input[name="theme"]'));
+function applyTheme(name) {
+  const selected = themeInputs.some((input) => input.value === name) ? name : "earth";
+  document.documentElement.dataset.theme = selected;
+  themeInputs.forEach((input) => { input.checked = input.value === selected; });
+}
+try {
+  applyTheme(window.localStorage.getItem("gaiascapes-theme"));
+} catch (_error) {
+  applyTheme("earth");
+}
+themeInputs.forEach((input) => input.addEventListener("change", () => {
+  applyTheme(input.value);
+  try {
+    window.localStorage.setItem("gaiascapes-theme", input.value);
+  } catch (_error) {
+    byId("settingsStatus").textContent = "Theme applied. Browser storage is unavailable, so it cannot be remembered after reload.";
+  }
+}));
