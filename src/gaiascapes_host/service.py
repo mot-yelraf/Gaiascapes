@@ -24,7 +24,7 @@ from .contracts import EventProvider
 from .sanctsound import MARINE_KINDS, SanctSoundClient
 from .commons_birdsong import CommonsBirdsongClient
 from .xeno_canto import NoRecordingsError, XenoCantoClient
-from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS, SUPPORTED_SOURCES
+from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS, SUPPORTED_SOURCES, EVENT_KIND_BY_VOICE
 from .eumetsat_li import EumetsatLiClient
 from .open_meteo import (
     OpenMeteoMarineClient,
@@ -157,7 +157,7 @@ class GaiascapesService:
         self.player = PerformancePlayer(
             self.renderer,
             self._record_emitted_cue,
-            lambda cue: self._voices_for_kind(cue.kind),
+            lambda cue: self._voices_with_channels(cue.kind),
         )
         self._glm_sonification_task = None
         self._last_glm_sonification_events = ()
@@ -843,6 +843,10 @@ class GaiascapesService:
                 self.mtg_li.set_credentials(*credentials)
         for item in fields(AppConfig):
             setattr(self.config, item.name, getattr(candidate, item.name))
+        # Reconnecting players must receive the saved gain for a held recording.
+        for cue in self._emitted_cues:
+            if cue["sequence"] in self._recording_sequences.values():
+                cue["volume"] = self.config.instrument_volumes["background"]
         self.glm.sonification_sample_stride = self.config.lightning_sample_rate
         self.renderer.instrument_mappings = self.config.background_mappings()
         for source in set(self.config.enabled_sources) - previous_sources:
@@ -869,11 +873,17 @@ class GaiascapesService:
     async def update_settings(self, changes: dict, path: Path) -> int:
         """Persist a candidate before applying coordinated runtime changes."""
         async with self._settings_lock:
+            previous_volumes = dict(self.config.instrument_volumes)
             candidate = settings_candidate(self.config, changes)
             await persist_settings(candidate, path)
             pruned = 0
             try:
                 changed_kinds = self._apply_config(candidate)
+                if previous_volumes != self.config.instrument_volumes:
+                    async with self._live_play_lock:
+                        await asyncio.to_thread(
+                            self.renderer.set_volumes, self.config.volume_slots()
+                        )
                 for kind, source, catalog, prefix in (
                     ("ocean_swell", "open_meteo_marine", self.config.ocean_swell_locations, "swell"),
                     ("storm_potential", "open_meteo_storm", self.config.storm_outlook_locations, "storm"),
@@ -897,9 +907,14 @@ class GaiascapesService:
             return pruned
 
     async def preview_instrument(
-        self, instrument: str, kind: str = "earthquake", volume: float = 1.0
+        self, instrument: str, kind: str = "earthquake", volume: float = 1.0,
+        output_channel: str = "preview",
     ) -> dict:
         """Play a representative cue through the selected host instrument."""
+        if not isinstance(output_channel, str) or output_channel not in {
+            "preview", "background", "event_1", "event_2", "event_3"
+        }:
+            raise ValueError("Unsupported audio output channel")
         instrument = str(instrument)
         kind = str(kind)
         if kind not in EVENT_INSTRUMENT_OPTIONS:
@@ -947,7 +962,7 @@ class GaiascapesService:
             duration=preview_duration, pan=0.0,
         )
         volume = _preview_volume(volume)
-        cue = cue_with_gain(cue, volume)
+        cue = cue_with_gain(cue, volume, output_channel)
         rendered = await asyncio.to_thread(self.renderer.play, cue, instrument)
         if rendered is not False:
             if kind in {"earthquake", "tide_turn", "lightning_flash"}:
@@ -1307,8 +1322,8 @@ class GaiascapesService:
             render = (
                 self.renderer.update_layer if persistent_background else self.renderer.play
             )
-            for instrument, gain in self._voices_for_kind(event.kind):
-                rendered_cue = cue_with_gain(cue, gain)
+            for instrument, gain, channel in self._voices_with_channels(event.kind):
+                rendered_cue = cue_with_gain(cue, gain, channel)
                 rendered = (
                     True
                     if event.kind in {"birdsong", "frog_calls", *MARINE_KINDS}
@@ -1327,13 +1342,29 @@ class GaiascapesService:
         """Resolve every configured slot that an environmental event triggers."""
         return tuple(instrument for instrument, _gain in self._voices_for_kind(kind))
 
+    def _voices_with_channels(self, kind: str) -> tuple[tuple[str, float, str], ...]:
+        """Keep each selected voice tied to its independent volume channel."""
+        if kind in {"earthquake", "tide_turn", "lightning_flash"}:
+            return tuple(
+                (instrument, self.config.instrument_volumes[slot], slot)
+                for slot in ("event_1", "event_2", "event_3")
+                if (instrument := self.config.event_instruments[slot]) != "none"
+                and EVENT_KIND_BY_VOICE[instrument] == kind
+                and self.config.instrument_volumes[slot] > 0
+            )
+        return tuple((instrument, gain, "background")
+                     for instrument, gain in self._voices_for_kind(kind))
+
     def _voices_for_kind(self, kind: str) -> tuple[tuple[str, float], ...]:
         """Resolve configured instruments and independent slot gains."""
         if kind in {"earthquake", "tide_turn", "lightning_flash"}:
             return self.config.voices_for_event(kind)
         instrument = self.config.background_mappings().get(kind, "none")
         gain = self.config.instrument_volumes["background"]
-        return () if instrument == "none" or gain <= 0 else ((instrument, gain),)
+        # Muted recordings still need a player and completion acknowledgements
+        # so their rotation can continue and later unmuting cannot strand it.
+        recorded = kind in {"birdsong", "frog_calls", *MARINE_KINDS}
+        return () if instrument == "none" or (gain <= 0 and not recorded) else ((instrument, gain),)
 
 
 def _capture_error_message(source: str, error: Exception) -> str:

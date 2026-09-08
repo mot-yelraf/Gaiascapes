@@ -15,19 +15,13 @@ from .contracts import Renderer
 from .playback import render_call
 
 
-def cue_with_gain(cue, gain: float):
-    """Return a cue whose MIDI velocity produces the requested amplitude gain."""
+def cue_with_gain(cue, gain: float, output_channel: str = "preview"):
+    """Apply the squared slider curve independently of musical velocity."""
     gain = max(0.0, min(1.0, float(gain)))
-    source_amplitude = 0.08 + ((cue.velocity - 20) / 107.0 * 0.5)
-    target_amplitude = source_amplitude * gain
-    velocity = round(20 + ((target_amplitude - 0.08) / 0.5 * 107.0))
     return ScoreCue(
-        cue.offset,
-        cue.event,
-        cue.pitch,
-        max(0, min(127, velocity)),
-        duration=cue.duration,
-        pan=cue.pan,
+        cue.offset, cue.event, cue.pitch, cue.velocity,
+        duration=cue.duration, pan=cue.pan,
+        gain=gain ** 2, output_channel=output_channel,
     )
 
 
@@ -85,8 +79,8 @@ class PerformancePlayer:
                 delay = origin + cue.offset - loop.time()
                 if delay > 0:
                     await asyncio.sleep(delay)
-                for instrument, gain in self._voices(cue):
-                    rendered_cue = cue_with_gain(cue, gain)
+                for instrument, gain, channel in self._voices(cue):
+                    rendered_cue = cue_with_gain(cue, gain, channel)
                     rendered = await render_call(
                         self.renderer.play, rendered_cue, instrument
                     )
@@ -101,17 +95,20 @@ class PerformancePlayer:
         finally:
             self.finished_at = time.time()
 
-    def _voices(self, cue) -> tuple[tuple[str | None, float], ...]:
+    def _voices(self, cue) -> tuple[tuple[str | None, float, str], ...]:
         if self.instruments_for_cue is None:
-            return ((None, 1.0),)
+            return ((None, 1.0, "preview"),)
         voices = []
         for selection in self.instruments_for_cue(cue):
+            channel = "preview"
             if isinstance(selection, tuple):
-                instrument, gain = selection
+                instrument, gain = selection[:2]
+                if len(selection) == 3:
+                    channel = selection[2]
             else:
                 instrument, gain = selection, 1.0
             if float(gain) > 0:
-                voices.append((instrument, float(gain)))
+                voices.append((instrument, float(gain), channel))
         return tuple(voices)
 
     def status(self) -> dict:

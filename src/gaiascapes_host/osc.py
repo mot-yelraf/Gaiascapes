@@ -87,6 +87,8 @@ class OscRenderer:
             event.latitude,
             magnitude,
             secondary,
+            cue.gain,
+            cue.output_channel,
         )
         try:
             packet = encode_message(CUE_ADDRESS, arguments)
@@ -132,6 +134,8 @@ class OscRenderer:
             event.latitude,
             float(event.traits.get("magnitude", 0.0)),
             secondary,
+            cue.gain,
+            cue.output_channel,
         )
         try:
             packet = encode_message(LAYER_ADDRESS, arguments)
@@ -158,6 +162,21 @@ class OscRenderer:
             self.sent_count += 1
             self.last_error = ""
             return True
+        except OSError as exc:
+            self.last_error = f"{type(exc).__name__}: {exc}"
+            raise
+
+    def set_volumes(self, volumes: dict[str, float]) -> None:
+        """Apply saved squared slider gains to currently sounding channels."""
+        if not self.enabled:
+            return
+        arguments = tuple(max(0.0, min(1.0, float(volumes[slot]))) ** 2
+                          for slot in ("background", "event_1", "event_2", "event_3"))
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as output:
+                output.sendto(encode_message("/gaia/volumes", arguments), (self.host, self.port))
+            self.sent_count += 1
+            self.last_error = ""
         except OSError as exc:
             self.last_error = f"{type(exc).__name__}: {exc}"
             raise

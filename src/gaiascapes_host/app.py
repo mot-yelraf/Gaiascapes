@@ -415,7 +415,8 @@ def create_app(
             if instrument in EVENT_VOICE_OPTIONS and instrument != "none":
                 kind = event_kind_for_voice(instrument)
             return await service.preview_instrument(
-                instrument, kind or "earthquake", body.get("volume", 1.0)
+                instrument, kind or "earthquake", body.get("volume", 1.0),
+                body.get("output_channel", "preview"),
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
