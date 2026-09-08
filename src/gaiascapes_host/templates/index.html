@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="earth">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,8 +11,9 @@
   <div class="event-pulse-layer" id="eventPulseLayer" aria-hidden="true"></div>
   <aside class="recovery-toast-stack" id="recoveryToasts" aria-live="polite" aria-label="Data source recovery status"></aside>
   <main>
-    <header>
+    <header class="app-header">
       <div class="heading-block">
+        <img class="heading-icon" src="/static/gaia-scape-icon.png?v={{ version }}" alt="" width="512" height="512">
         <p class="eyebrow">Live Terrestrial Sonification</p>
         <div class="title-line">
           <h1>Gaiascapes</h1>
@@ -77,9 +78,6 @@
     </div>
 
     <section class="map-view" id="mapView" data-app-view="map" aria-label="Global event map"{% if app_view != 'map' %} hidden{% endif %}>
-      <div class="map-heading map-heading--legend-only">
-        <div class="map-legend" aria-label="Map marker legend"><span><i class="map-legend-background"></i>Background</span><span><i class="map-legend-event"></i>Event</span><span><b class="map-legend-system" aria-hidden="true"></b>My location</span></div>
-      </div>
       <div class="map-stage">
         <svg id="worldMap" viewBox="0 170 1024 684" role="img" aria-labelledby="worldMapTitle worldMapDescription">
           <title id="worldMapTitle">Live Gaiascapes world map</title>
@@ -100,6 +98,9 @@
         </svg>
         <output class="map-coordinate-readout" id="mapCoordinateReadout" aria-live="polite">Move over the map to inspect coordinates</output>
       </div>
+      <div class="map-heading map-heading--legend-only">
+        <div class="map-legend" aria-label="Map marker legend"><span><i class="map-legend-background"></i>Background</span><span><i class="map-legend-event"></i>Event</span><span><b class="map-legend-system" aria-hidden="true"></b>My location</span></div>
+      </div>
       <section class="metrics map-status" aria-label="Map application status">
         <article class="status-card status-card--background"><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "whale_song" %}Whale Song{% elif instrument_slots.background == "dolphin_calls" %}Dolphin Calls{% elif instrument_slots.background == "frog_calls" %}Frog Calls{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% else %}Background Sounds{% endif %}</span><strong data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></article>
         <article class="status-card status-card--event"><span>Last Event</span><strong data-status-field="last-event-type">—</strong><small data-status-field="last-event-time">Not yet</small></article>
@@ -108,8 +109,6 @@
     </section>
 
   </main>
-
-  <footer class="site-footer"><img src="/static/gaia-scape-icon.png?v={{ version }}" alt="Gaiascapes"><p>Created by Peace Hill Studios</p></footer>
 
   <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
     <form id="settingsForm">
@@ -122,8 +121,20 @@
           <button type="button" class="settings-tab is-active" data-settings-pane="sources">Sound sources</button>
           <button type="button" class="settings-tab" data-settings-pane="instruments">Sound Choices</button>
           <button type="button" class="settings-tab" data-settings-pane="locations">Sound locations</button>
+          <button type="button" class="settings-tab" data-settings-pane="theme">Theme</button>
+          <img class="settings-studio-logo" src="/static/peace-hill-studios-512.png?v={{ version }}" alt="Created by Peace Hill Studios" width="512" height="512">
         </nav>
         <div class="settings-content">
+          <section class="settings-pane" data-pane="theme" hidden>
+            <div class="pane-heading"><span>04</span><div><h3>Theme</h3><p>Choose a light palette for Gaiascapes and its dialogs.</p></div></div>
+            <fieldset class="theme-options">
+              <legend>Appearance</legend>
+              <label class="theme-option" data-theme-swatch="earth"><input type="radio" name="theme" value="earth" checked><span><strong>Earth</strong><small>Light brown</small></span></label>
+              <label class="theme-option" data-theme-swatch="wind"><input type="radio" name="theme" value="wind"><span><strong>Wind</strong><small>Light yellow</small></span></label>
+              <label class="theme-option" data-theme-swatch="fire"><input type="radio" name="theme" value="fire"><span><strong>Fire</strong><small>Light red</small></span></label>
+              <label class="theme-option" data-theme-swatch="ocean"><input type="radio" name="theme" value="ocean"><span><strong>Ocean</strong><small>Light blue</small></span></label>
+            </fieldset>
+          </section>
           <section class="settings-pane is-active" data-pane="sources">
             <div class="pane-heading"><span>01</span><div><h3>Captured sound sources</h3><p>Choose live Earth data feeds and archived animal recordings.</p></div></div>
             {% macro marine_source_tile(kind, label, control, enabled) %}
