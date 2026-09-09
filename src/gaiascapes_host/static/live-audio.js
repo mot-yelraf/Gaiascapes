@@ -1,0 +1,110 @@
+/* Per-device playback of framed stereo PCM from the host renderer.
+ * Short scheduled buffers work on ordinary LAN HTTP, without AudioWorklet's
+ * secure-context requirement. Late data is discarded instead of accumulating.
+ */
+class LiveAudioPlayer {
+  constructor(onState) {
+    this.onState = onState;
+    this.context = null;
+    this.controller = null;
+    this.sources = new Set();
+  }
+
+  async unlock() {
+    if (this.context) return this.context.resume();
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error('This browser does not support audio playback.');
+    const context = new AudioContextClass();
+    this.context = context;
+    await context.resume();
+    if (context.state !== 'running') throw new Error('Tap Listen to allow audio playback.');
+  }
+
+  async start() {
+    const context = this.context;
+    if (!context || context.state !== 'running') throw new Error('Tap Listen to allow audio playback.');
+    const controller = new AbortController();
+    this.controller = controller;
+    this.nextTime = 0;
+    this.sequence = null;
+    const response = await fetch('/api/audio/stream', {signal: controller.signal, cache: 'no-store'});
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Host audio is unavailable.');
+    }
+    if (!response.body) throw new Error('This browser does not support live audio streaming.');
+    if (controller.signal.aborted) return;
+    this.onState('listening');
+    this.read(response.body.getReader(), controller).catch(error => {
+      if (!controller.signal.aborted) {
+        this.stop();
+        this.onState('error', error.message);
+      }
+    });
+  }
+
+  async read(reader, controller) {
+    let pending = new Uint8Array(0);
+    const blockBytes = 12 + 512 * 2 * 4;
+    try {
+      while (!controller.signal.aborted) {
+        const {value, done} = await reader.read();
+        if (done) throw new Error('Host audio disconnected. Tap Listen to reconnect.');
+        const bytes = new Uint8Array(pending.length + value.length);
+        bytes.set(pending);
+        bytes.set(value, pending.length);
+        let offset = 0;
+        while (offset + blockBytes <= bytes.length) {
+          this.schedule(new DataView(bytes.buffer, offset, blockBytes));
+          offset += blockBytes;
+        }
+        pending = bytes.slice(offset);
+      }
+    } finally {
+      await reader.cancel().catch(() => {});
+    }
+  }
+
+  schedule(packet) {
+    if (packet.getUint32(0, false) !== 0x47414941) throw new Error('Invalid host audio stream.');
+    const sequence = packet.getUint32(4, true);
+    const rate = packet.getUint32(8, true);
+    if (rate < 8000 || rate > 192000) throw new Error('Invalid host audio sample rate.');
+    const context = this.context;
+    if (!context || context.state !== 'running') {
+      throw new Error('Audio was paused by this browser. Tap Listen to reconnect.');
+    }
+    if (this.sequence !== null && sequence <= this.sequence) return;
+    const duration = 512 / rate;
+    if (this.sequence !== null) this.nextTime += Math.min(0.25, (sequence - this.sequence - 1) * duration);
+    this.sequence = sequence;
+    if (this.nextTime <= context.currentTime) this.nextTime = context.currentTime + 0.15;
+    // Keep a slow/backgrounded browser from replaying an old backlog.
+    if (this.nextTime > context.currentTime + 0.75) return;
+    const buffer = context.createBuffer(2, 512, rate);
+    for (let channel = 0; channel < 2; channel++) {
+      const samples = buffer.getChannelData(channel);
+      for (let frame = 0; frame < 512; frame++) {
+        const value = packet.getFloat32(12 + (frame * 2 + channel) * 4, true);
+        if (!Number.isFinite(value)) throw new Error('Invalid host audio sample.');
+        samples[frame] = Math.max(-0.95, Math.min(0.95, value));
+      }
+    }
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(context.destination);
+    this.sources.add(source);
+    source.onended = () => { source.disconnect(); this.sources.delete(source); };
+    source.start(this.nextTime);
+    this.nextTime += duration;
+  }
+
+  stop() {
+    this.controller?.abort();
+    this.controller = null;
+    this.sources.forEach(source => { source.stop(); source.disconnect(); });
+    this.sources.clear();
+    if (this.context) this.context.close().catch(() => {});
+    this.context = null;
+  }
+}

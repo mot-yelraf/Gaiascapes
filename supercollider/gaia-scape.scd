@@ -286,13 +286,85 @@ SynthDef(\stormRainLayer, {
     Out.ar(out, Pan2.ar(signal, smoothPan) * NamedControl.kr(\volumeGain, 1, 0.03));
 }).add;
 
+// Copy completed 512-frame stereo blocks from a ring buffer. The audio-rate
+// writer never waits for the language process or network listeners.
+SynthDef(\gaiaAudioOutput, { |inbus| Out.ar(0, In.ar(inbus, 2)) }).add;
+SynthDef(\gaiaAudioTap, { |buffer, inbus|
+    var phase = Phasor.ar(0, 1, 0, 32768);
+    var block = A2K.kr(phase).div(512);
+    var ready = Changed.kr(block);
+    BufWr.ar(In.ar(inbus, 2), buffer, phase);
+    SendReply.kr(ready, '/gaia/audio/block', [
+        (block + 63) % 64, PulseCount.kr(ready)
+    ]);
+}).add;
+
     s.sync;
     // Static groups let Save adjust active voices independently, including
     // duplicate instruments in different slots. New cues carry their own gain.
+    ~gaiaMixBus = Bus.audio(s, 2);
     ~gaiaVolumeGroups = IdentityDictionary.new;
     [\background, \event_1, \event_2, \event_3, \preview].do({ |channel|
         ~gaiaVolumeGroups[channel] = Group.tail(s);
     });
+    ~gaiaAudioOutput = Synth.tail(s, \gaiaAudioOutput, [\inbus, ~gaiaMixBus]);
+    ~gaiaAudioToken = nil;
+    ~gaiaAudioStop = {
+        if(~gaiaAudioTap.notNil, { ~gaiaAudioTap.free; ~gaiaAudioTap = nil });
+        if(~gaiaAudioBuffer.notNil, { ~gaiaAudioBuffer.free; ~gaiaAudioBuffer = nil });
+        ~gaiaAudioToken = nil;
+        ~gaiaAudioPending = IdentityDictionary.new;
+    };
+    OSCdef(\gaiaAudioStart, { |msg, time, addr|
+        var token = msg[1].asString;
+        var port = msg[2].asInteger;
+        if((addr.ip == "127.0.0.1") and: { port > 0 and: { port < 65536 } }, {
+            ~gaiaAudioLease = Main.elapsedTime;
+            if(~gaiaAudioToken != token, {
+                ~gaiaAudioStop.value;
+                ~gaiaAudioToken = token;
+                ~gaiaAudioTarget = NetAddr("127.0.0.1", port);
+                fork {
+                    var buffer = Buffer.alloc(s, 32768, 2);
+                    s.sync;
+                    if(~gaiaAudioToken == token, {
+                        ~gaiaAudioBuffer = buffer;
+                        ~gaiaAudioTap = Synth.tail(s, \gaiaAudioTap, [\buffer, buffer, \inbus, ~gaiaMixBus]);
+                    }, { buffer.free });
+                };
+            });
+        });
+    }, '/gaia/audio/start', recvPort: oscPort);
+    OSCdef(\gaiaAudioStopRequest, { |msg, time, addr|
+        if((addr.ip == "127.0.0.1") and: { msg[1].asString == ~gaiaAudioToken }, {
+            ~gaiaAudioStop.value;
+        });
+    }, '/gaia/audio/stop', recvPort: oscPort);
+    OSCdef(\gaiaAudioBlock, { |msg|
+        var index = msg[3].asInteger * 1024;
+        if(~gaiaAudioTap.notNil and: { msg[1] == ~gaiaAudioTap.nodeID }, {
+            ~gaiaAudioPending[index] = msg[4].asInteger - 1;
+            s.sendMsg('/b_getn', ~gaiaAudioBuffer.bufnum, index, 1024);
+        });
+    }, '/gaia/audio/block', s.addr);
+    OSCdef(\gaiaAudioSamples, { |msg|
+        var sequence;
+        if(~gaiaAudioBuffer.notNil and: { msg[1] == ~gaiaAudioBuffer.bufnum }, {
+            sequence = ~gaiaAudioPending.removeAt(msg[2].asInteger);
+            if(sequence.notNil and: { msg[3] == 1024 }, {
+                ~gaiaAudioTarget.sendMsg('/gaia/audio', ~gaiaAudioToken,
+                    sequence, s.sampleRate.asInteger, *msg[4..]);
+            });
+        });
+    }, '/b_setn', s.addr);
+    // A crashed web process cannot leave the tap running indefinitely.
+    Routine({ loop {
+        1.wait;
+        if(~gaiaAudioToken.notNil and: { (Main.elapsedTime - ~gaiaAudioLease) > 6 }, {
+            ~gaiaAudioStop.value;
+        });
+    } }).play(SystemClock);
+
     OSCdef(\gaiaVolumes, { |msg|
         [\background, \event_1, \event_2, \event_3].do({ |channel, index|
             ~gaiaVolumeGroups[channel].set(\volumeGain, msg[index + 1].asFloat.clip(0, 1));
@@ -326,6 +398,7 @@ SynthDef(\stormRainLayer, {
         if(instrument == "tidal_bell", { synthName = \tidalBell });
         if(instrument == "storm_potential", { synthName = \stormPotential });
         Synth(synthName, [
+            \out, ~gaiaMixBus,
             \freq, pitch.midicps,
             \amp, velocity.linlin(20, 127, 0.08, 0.58),
             \duration, duration,
@@ -362,6 +435,7 @@ SynthDef(\stormRainLayer, {
         if(synthName.notNil, {
             if(layer.isNil, {
                 layer = Synth(synthName, [
+                    \out, ~gaiaMixBus,
                     \freq, pitch.midicps,
                     \amp, velocity.linlin(20, 127, 0.06, 0.34),
                     \transition, transition,

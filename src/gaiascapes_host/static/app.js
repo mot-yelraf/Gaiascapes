@@ -12,6 +12,11 @@ let lastLightningIntensityUpdate = 0;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const MARINE_BACKGROUNDS = ["whale_song", "dolphin_calls"];
 const RECORDED_BACKGROUNDS = ["birdsong", "frog_calls", ...MARINE_BACKGROUNDS];
+let deviceListening = false;
+let deviceMuted = false;
+let listeningAttempt = 0;
+const localRecordingPlayback = document.body?.dataset.localPlayback !== "false";
+let lastPlayedRecordingSequence = null;
 let recordingLoadController = null;
 let recordingKind = null;
 let recordingPlaybackGeneration = 0;
@@ -107,7 +112,11 @@ async function playRecordingCue(cue) {
   recordingPreviewUntil = cueDuration > 0 && cueDuration <= 10
     ? Infinity : 0;
   const previous = recordingAudio;
-  const next = new Audio(mediaUrl);
+  const next = deviceListening ? recordingNormalizer.createPlayer() : new Audio(mediaUrl);
+  if (deviceListening && cue.emitted_at) {
+    next.startOffset = Math.max(0, Date.now() / 1000 - cue.emitted_at);
+  }
+  lastPlayedRecordingSequence = cue.sequence;
   pendingRecordingAudio = next;
   next.recordingVolume = Math.max(0, Math.min(1, Number(cue.volume ?? 1)));
   setRecordingFade(next, 0);
@@ -158,7 +167,7 @@ async function playRecordingCue(cue) {
   if (byId("mapPulseLayer")) {
     animateMapEvent(cue.event, cue.instrument, cueRole(cue), cueDuration, next);
   }
-  if (cue.recording_rotation) {
+  if (cue.recording_rotation && localRecordingPlayback) {
     let advancing = false;
     const advanceAtEnd = async () => {
       if (advancing || generation !== recordingPlaybackGeneration) return;
@@ -182,7 +191,7 @@ async function playRecordingCue(cue) {
     recordingPreviewUntil = Date.now() + (cueDuration * 1000);
     recordingPreviewTimer = setTimeout(() => {
       stopRecordingPlayback();
-      if (previous?.rotationSequence) {
+      if (previous?.rotationSequence && localRecordingPlayback) {
         advanceRecording(previous.rotationSequence).catch(error => message(error.message, true));
       }
     }, cueDuration * 1000);
@@ -1067,7 +1076,8 @@ async function updateEmittedCues() {
     const query = observedCueSequence === null ? "" : `?after=${observedCueSequence}`;
     const payload = await request(`/api/cues${query}`);
     payload.cues.forEach((cue) => {
-      if (RECORDED_BACKGROUNDS.includes(cue.event?.kind)) playRecordingCue(cue);
+      if (RECORDED_BACKGROUNDS.includes(cue.event?.kind)
+          && !deviceMuted && (deviceListening || localRecordingPlayback)) playRecordingCue(cue);
       animateCapturedEvent(
         cue.event, cue.instrument, cueRole(cue), cue.duration, cue.volume ?? 1
       );
@@ -1170,6 +1180,74 @@ function escapeHtml(value) {
   node.textContent = String(value);
   return node.innerHTML;
 }
+
+const listenButton = byId("listenButton");
+const listenStatus = byId("listenStatus");
+const liveAudioPlayer = new LiveAudioPlayer((state, detail) => {
+  if (state === "error") {
+    muteDevice();
+    listenStatus.textContent = detail;
+    listenStatus.classList.add("error");
+  } else {
+    listenStatus.textContent = "Listening on this device";
+  }
+});
+
+function muteDevice() {
+  listeningAttempt += 1;
+  deviceListening = false;
+  deviceMuted = true;
+  liveAudioPlayer.stop();
+  // Silence immediately; clean up recording players through their normal path.
+  activeRecordingAudio.forEach(audio => audio.setRecordingOutputGain?.(0));
+  stopRecordingPlayback(1);
+  lastPlayedRecordingSequence = null;
+  listenButton.textContent = "Listen on this device";
+  listenButton.setAttribute("aria-pressed", "false");
+  listenStatus.textContent = "Muted on this device";
+}
+
+async function listenOnDevice() {
+  const attempt = ++listeningAttempt;
+  deviceListening = true;
+  deviceMuted = false;
+  listenButton.textContent = "Mute this device";
+  listenButton.setAttribute("aria-pressed", "true");
+  listenStatus.textContent = "Connecting to host audio…";
+  listenStatus.classList.remove("error");
+  try {
+    // Treat explicit listening as media playback, including in iPhone Silent Mode.
+    if (navigator.audioSession) navigator.audioSession.type = "playback";
+    // Unlock both contexts synchronously within the original tap on iPhone.
+    await Promise.all([recordingNormalizer.resume(), liveAudioPlayer.unlock()]);
+    if (attempt !== listeningAttempt) return;
+    const availability = await request("/api/audio/status");
+    if (attempt !== listeningAttempt) return;
+    if (availability.enabled) {
+      await liveAudioPlayer.start();
+    } else {
+      listenStatus.textContent = "Listening to recordings; host synthesized audio is disabled.";
+    }
+    if (attempt !== listeningAttempt) return;
+    const current = await request("/api/cues");
+    if (attempt !== listeningAttempt) return;
+    const cue = current.cues.filter(cue => RECORDED_BACKGROUNDS.includes(cue.event?.kind)).at(-1);
+    if (cue && cue.sequence !== lastPlayedRecordingSequence) await playRecordingCue(cue);
+  } catch (error) {
+    if (attempt !== listeningAttempt) return;
+    muteDevice();
+    listenStatus.textContent = error.message;
+    listenStatus.classList.add("error");
+  }
+}
+
+listenButton.addEventListener("click", () => {
+  if (deviceListening) muteDevice();
+  else listenOnDevice();
+});
+window.addEventListener("pagehide", () => {
+  if (deviceListening) muteDevice();
+});
 
 byId("startButton").addEventListener("click", async () => {
   try {
@@ -1312,6 +1390,19 @@ workspaceTabs.forEach((tab, index) => {
     activateWorkspacePane(workspaceTabs[next].dataset.workspaceTab, true);
   });
 });
+
+let settingsToastTimer = null;
+
+// Keep dialog feedback visible for five seconds after the latest result.
+function showSettingsToast(text, failed = false) {
+  const stack = byId("settingsToasts");
+  clearTimeout(settingsToastTimer);
+  const toast = document.createElement("div");
+  toast.className = `dialog-toast${failed ? " dialog-toast--error" : ""}`;
+  toast.textContent = `${failed ? "Error: " : ""}${text}`;
+  stack.replaceChildren(toast);
+  settingsToastTimer = setTimeout(() => stack.replaceChildren(), 5000);
+}
 
 const settingsDialog = byId("settingsDialog");
 const settingsForm = byId("settingsForm");
@@ -1583,7 +1674,7 @@ if (settingsDialog && settingsForm) {
     );
     selectedForecastLocation = 0;
     renderForecastLocationEditor();
-    byId("settingsStatus").textContent = `${forecastCatalogLabel()} defaults restored. Save settings to apply.`;
+    showSettingsToast(`${forecastCatalogLabel()} defaults restored. Save settings to apply.`);
   });
 
   function activatePane(name, focusTab = false) {
@@ -1760,10 +1851,8 @@ if (settingsDialog && settingsForm) {
     instrumentSelect.addEventListener("change", updatePreviewState);
     updatePreviewState();
     button.addEventListener("click", async () => {
-      const status = byId("settingsStatus");
       button.disabled = true;
-      status.textContent = "Playing preview…";
-      status.classList.remove("error");
+      button.setAttribute("aria-busy", "true");
       try {
         const instrument = byId(button.dataset.select).value;
         const kind = button.dataset.kind === "background"
@@ -1783,12 +1872,12 @@ if (settingsDialog && settingsForm) {
               event2Volume: "event_2", event3Volume: "event_3"}[button.dataset.volume],
           }),
         });
-        status.textContent = "Previewed " + instrumentLabel(payload.instrument) + ".";
+        showSettingsToast("Previewed " + instrumentLabel(payload.instrument) + ".");
         await Promise.all([updateStatus(), updateEvents()]);
       } catch (error) {
-        status.textContent = error.message;
-        status.classList.add("error");
+        showSettingsToast(error.message, true);
       } finally {
+        button.removeAttribute("aria-busy");
         updatePreviewState();
       }
     });
@@ -1824,9 +1913,9 @@ if (settingsDialog && settingsForm) {
   });
   settingsForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const status = byId("settingsStatus");
-    status.textContent = "Saving…";
-    status.classList.remove("error");
+    const saveButton = settingsForm.querySelector('button[type="submit"]');
+    saveButton.disabled = true;
+    saveButton.textContent = "Saving…";
     try {
       await request("/api/settings/locations", {
         method: "PUT",
@@ -1892,11 +1981,13 @@ if (settingsDialog && settingsForm) {
       }
       if (recordingKind && !audioSettings[`${recordingKind}_enabled`]) stopRecordingPlayback();
       await updateSystemLocation();
-      status.textContent = "Settings saved.";
+      showSettingsToast("Settings saved.");
       await updateEvents();
     } catch (error) {
-      status.textContent = error.message;
-      status.classList.add("error");
+      showSettingsToast(error.message, true);
+    } finally {
+      saveButton.disabled = false;
+      saveButton.textContent = "Save settings";
     }
   });
 }
@@ -1929,7 +2020,8 @@ themeInputs.forEach((input) => input.addEventListener("change", () => {
   applyTheme(input.value);
   try {
     window.localStorage.setItem("gaiascapes-theme", input.value);
+    showSettingsToast("Theme applied.");
   } catch (_error) {
-    byId("settingsStatus").textContent = "Theme applied. Browser storage is unavailable, so it cannot be remembered after reload.";
+    showSettingsToast("Theme applied. Browser storage is unavailable, so it cannot be remembered after reload.", true);
   }
 }));
