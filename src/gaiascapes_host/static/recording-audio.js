@@ -52,19 +52,63 @@ const recordingNormalizer = (() => {
     if (context.state !== "running") throw new Error("Select Start or Preview to allow normalized audio");
   }
 
+  // AudioBuffer playback uses the context unlocked by Listen, so every new
+  // animal recording does not require another iPhone media-element gesture.
+  function createPlayer() {
+    const player = new EventTarget();
+    player.webAudio = true;
+    player.paused = true;
+    player.ended = false;
+    player.duration = NaN;
+    let source;
+    let startedAt = 0;
+    let offset = 0;
+    let timer;
+    Object.defineProperty(player, "currentTime", {get: () => player.paused
+      ? offset : Math.min(player.duration, offset + context.currentTime - startedAt)});
+    player.play = async () => {
+      source = context.createBufferSource();
+      source.buffer = player.decodedBuffer;
+      source.connect(player.input);
+      offset = Math.max(0, Math.min(player.duration, player.startOffset || 0));
+      startedAt = context.currentTime;
+      player.paused = false;
+      source.onended = () => {
+        offset = player.duration;
+        player.paused = true;
+        player.ended = true;
+        clearInterval(timer);
+        source.disconnect();
+        player.dispatchEvent(new Event("ended"));
+      };
+      source.start(0, offset);
+      timer = setInterval(() => player.dispatchEvent(new Event("timeupdate")), 250);
+    };
+    player.pause = () => {
+      offset = player.currentTime;
+      player.paused = true;
+      clearInterval(timer);
+      if (source) { source.onended = null; source.stop(); source.disconnect(); source = null; }
+    };
+    player.removeAttribute = () => { player.decodedBuffer = null; };
+    return player;
+  }
+
   async function prepare(audio, url, signal) {
     let gain = gains.get(url);
-    if (gain === undefined) {
+    if (gain === undefined || audio.webAudio) {
       const response = await fetch(url, {signal});
       if (!response.ok) throw new Error(`Unable to load recording (HTTP ${response.status})`);
       const buffer = await context.decodeAudioData(await response.arrayBuffer());
       signal.throwIfAborted();
       gain = measureGain(buffer);
+      if (audio.webAudio) { audio.decodedBuffer = buffer; audio.duration = buffer.duration; }
       if (gains.size >= 64) gains.delete(gains.keys().next().value);
       gains.set(url, gain);
     }
     signal.throwIfAborted();
-    const source = context.createMediaElementSource(audio);
+    const source = audio.webAudio ? context.createGain() : context.createMediaElementSource(audio);
+    if (audio.webAudio) audio.input = source;
     const level = context.createGain();
     level.gain.value = gain;
     const volume = context.createGain();
@@ -86,5 +130,5 @@ const recordingNormalizer = (() => {
     };
   }
 
-  return {resume, prepare, measureGain};
+  return {resume, prepare, measureGain, createPlayer};
 })();

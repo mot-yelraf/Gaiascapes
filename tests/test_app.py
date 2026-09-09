@@ -137,7 +137,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert client.get("/healthz").status_code == 200
         home = client.get("/")
         assert home.status_code == 200
-        assert 'class="project-version"' in home.text
+        assert f"Gaiascape {app.version}" in home.text
         assert app.version in home.text
         assert "USGS Earthquake Hazards Program data" not in home.text
         assert 'id="settingsDialog"' in home.text
@@ -410,7 +410,7 @@ def test_selected_app_view_persists_across_restart(tmp_path):
 
     assert invalid.status_code == 422
     assert restarted_app.state.config.app_view == "map"
-    assert '<body data-initial-app-view="map">' in home.text
+    assert 'data-initial-app-view="map"' in home.text
     assert '<body data-app-view=' not in home.text
     assert 'class="view-option is-active" id="mapViewButton"' in home.text
     assert 'id="dashboardView" data-app-view="dashboard" hidden' in home.text

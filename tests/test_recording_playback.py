@@ -315,7 +315,7 @@ const vm = require('node:vm');
 function buffer(amplitude, silence = 0, stereo = false) {
   const samples = Float32Array.from({length: 4000 + silence}, (_, i) =>
     i < silence ? 0 : amplitude * Math.sin(2 * Math.PI * i / 40));
-  return {length: samples.length, sampleRate: 1000, numberOfChannels: stereo ? 2 : 1,
+  return {length: samples.length, duration: samples.length / 1000, sampleRate: 1000, numberOfChannels: stereo ? 2 : 1,
     getChannelData: () => samples};
 }
 const nodes = [];
@@ -325,15 +325,22 @@ function node() {
   nodes.push(result);
   return result;
 }
-let fetches = 0, fail = false;
+let fetches = 0, fail = false, audioClock, decodedSource;
 const context = vm.createContext({
+  EventTarget, Event, setInterval, clearInterval,
   window: {AudioContext: class {
-    constructor() {this.state = 'running'; this.destination = {};}
+    constructor() {this.state = 'running'; this.destination = {}; this.currentTime = 0; audioClock = this;}
     async resume() {}
     createDynamicsCompressor() {throw new Error("Automatic makeup gain must not amplify recordings");}
     createWaveShaper() {return node();}
     createGain() {return node();}
     createMediaElementSource() {return node();}
+    createBufferSource() {
+      decodedSource = node();
+      decodedSource.start = (time, offset) => {decodedSource.offset = offset;};
+      decodedSource.stop = () => {decodedSource.stopped = true;};
+      return decodedSource;
+    }
     async decodeAudioData() {return buffer(.8);}
   }},
   fetch: async () => {fetches++; return {ok: !fail, status: 500, arrayBuffer: async () => new ArrayBuffer(0)};},
@@ -398,6 +405,22 @@ assert.throws(() => gain(invalid), /invalid audio/);
   await assert.rejects(normalizer.prepare({}, '/a.wav', cancelled.signal), {name: 'AbortError'});
   fail = true;
   await assert.rejects(normalizer.prepare({}, '/bad.wav', new AbortController().signal), /HTTP 500/);
+  fail = false;
+  const player = normalizer.createPlayer();
+  await normalizer.prepare(player, '/a.wav', new AbortController().signal);
+  player.startOffset = 1;
+  await player.play();
+  assert.equal(decodedSource.offset, 1);
+  audioClock.currentTime = 2;
+  assert.equal(player.currentTime, 3);
+  assert.equal(player.duration, 4);
+  player.pause();
+  assert.ok(decodedSource.stopped);
+  audioClock.currentTime = 5;
+  assert.equal(player.currentTime, 3); // Paused time does not keep advancing.
+  player.releaseNormalization();
+  player.removeAttribute('src');
+  assert.equal(player.decodedBuffer, null);
 })().catch(error => {console.error(error); process.exitCode = 1;});
 '''
     result = subprocess.run([node, "-e", script, str(source)],

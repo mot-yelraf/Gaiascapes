@@ -370,6 +370,26 @@ releases the synth when continuous mode stops or the background selection change
 Birdsong uses the renderer-neutral emitted-cue stream and is played from Gaiascapes's
 local media cache by the web view, so it does not require a SuperCollider sampler.
 
+LAN browsers can choose **Listen on this device** in **Settings → Sound Choices**, to the left of Units to hear the
+complete soundscape, or **Mute this device** to stop only their own playback.
+Update and restart both Python and `supercollider/gaia-scape.scd` for this feature.
+The receiver routes Gaiascapes through a private stereo bus and copies completed
+512-frame blocks from an in-memory ring buffer over loopback OSC. Python relays
+framed float PCM through `/api/audio/stream`; the browser mixes this with the
+existing animal-recording playback. Other applications' audio is not captured.
+No extra Python dependency, virtual audio driver, or on-disk audio cache is used
+for synthesized audio. Browser playback uses Web Audio and works over LAN HTTP.
+
+Capture starts on the first listener, stops after the last disconnects, and
+expires in SuperCollider after six seconds without a relay heartbeat. Each
+listener has a bounded queue; slow clients drop old audio rather than delaying
+others. At 48 kHz the stream uses approximately 0.4 MB/s per listener, with a
+maximum of 16 simultaneous listeners. SuperCollider must run on the web server's
+host. If it is unavailable, the API reports a clear error and capture, history,
+and the UI remain available. With OSC disabled, browsers can still listen to
+animal recordings. Browser listening choices are never stored in installation
+settings. See the [listening guide](USER_GUIDE.md#listening-from-another-device).
+
 The included `supercollider/gaia-scape.scd` listens on UDP 57130 and provides
 earthquake, seismic-bell, Lightning R2D2, Thunder, ocean-swell, tidal-bell, and Storm Outlook
 voices. The
@@ -377,7 +397,8 @@ Settings menu selects capture sources, three independent event voices, and one c
 background, including Birdsong Atlas. Each musical role can also be set to None. The persisted Units setting
 displays swell and tide heights in meters or feet and earthquake depth in kilometers
 or miles. The Dashboard or Map selection is also stored with the installation and
-restored when Gaiascapes starts. Both views show a three-column status strip with the
+restored when Gaiascapes starts. Both views show three separate status tiles, side by side at the bottom on desktop
+and stacked on mobile, with the
 selected background's location and forecast characteristics, the latest event's type
 with its coordinates and event time, and a separately retained latest earthquake area
 followed by its magnitude, coordinates, and event time.

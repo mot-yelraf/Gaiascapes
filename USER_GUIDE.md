@@ -1,23 +1,51 @@
 # Gaiascapes user guide
 
-This guide explains the controls in Gaiascapes **v0.26.250.3**. Installation and system setup are covered separately in the [README](README.md).
+This guide explains the controls in Gaiascapes **v0.26.252.9**. The screenshots show v0.26.252.8; the interface is unchanged by the iPhone audio-session fix in v0.26.252.9. Installation and system setup are covered separately in the [README](README.md).
 
-The screenshots below were captured from the application in an isolated demonstration session. Example earthquakes are illustrative, not live observations. Credential fields are blank, and enabled switches in a screenshot demonstrate the controls rather than confirm access to a provider.
+The screenshots below were captured from this release on September 9, 2026, in an isolated demonstration session. Desktop screenshots use a 1,440-pixel-wide browser; mobile screenshots use a 390-pixel-wide browser simulation, not a physical iPhone. Settings screenshots focus on the dialog. Some lists scroll within the dialog, so only their visible rows are shown. Example earthquakes are illustrative, not live observations. Credential fields are blank, and enabled switches in a screenshot demonstrate the controls rather than confirm access to a provider.
 
 ## Contents
 
 - [Dashboard, playback, and history](#dashboard-playback-and-history)
 - [Map view](#map-view)
+- [Mobile and iPhone Home Screen](#mobile-and-iphone-home-screen)
 - [Sound sources](#sound-sources)
 - [Obtaining credentials](#obtaining-credentials)
 - [Sound Choices](#sound-choices)
 - [Sound locations](#sound-locations)
+- [Theme](#theme)
 - [Saving settings](#saving-settings)
 - [Status and troubleshooting](#status-and-troubleshooting)
+- [Location privacy](#location-privacy)
 
 ## Dashboard, playback, and history
 
-Use **Dashboard** for playback controls and history. **Settings** opens Sound sources, Sound Choices, and Sound locations. The version beside the application name identifies the running release.
+Use **Dashboard** for playback controls and history. Open Settings with the large, borderless **gear (⚙)**. On desktop, the gear and **Dashboard / Map** selector sit to the right of the title in a centered header. Settings contains **Sound sources**, **Sound Choices**, **Sound locations**, and **Theme**. The version appears above the Settings heading.
+
+### Listening from another device
+
+Open `http://<Gaiascapes-host-IP>:8768` from a device on the same LAN, then tap
+**Listen on this device** in **Settings → Sound Choices**, in the **This device** tile to the left of Units on desktop (above Units on a narrow screen). **Mute this device** stops playback
+in that browser without stopping the performance, the host speakers, or other
+listeners. New remote pages start silent; tap Listen again after reloading.
+**Start** and **Stop** still control the shared performance on the host.
+
+The host must be running and reachable from the listening device. Use the host’s LAN address, not `localhost` or `127.0.0.1`, on another device. The supplied launchers accept LAN connections on port **8768**; if the page will not open, check the host address, firewall, and whether the Wi-Fi network isolates clients. See [Ports and LAN access](README.md#ports) for host binding details. Listening uses the same web connection; no separate audio port needs to be opened on the LAN.
+
+The browser combines live SuperCollider audio with the animal recordings served
+by Gaiascapes. Only Gaiascapes audio is included. Update and restart both the
+Gaiascapes server and its SuperCollider receiver before using this feature.
+SuperCollider must run on the same host as the server. No loopback audio driver
+or microphone permission is required. With SuperCollider disabled, Listen plays
+animal recordings only and explains that limitation beside the button.
+
+Keep the page open while listening. If the browser suspends audio or the
+connection drops, the message beside Listen explains how to reconnect. Remote
+playback has a short buffer and may lag the host speakers. Each browser controls
+its own playback; listening locally as well as through host speakers can produce
+an echo. Remote listeners do not advance the host's recording rotation.
+
+Listening and muting take effect immediately and do not require **Save settings**. Closing Settings leaves device playback active. The relay supports up to **16 simultaneous listeners**; if it is full, mute an unused listener and retry.
 
 ![Dashboard in Capture mode, showing the history window, performance length, and Start and Stop controls](docs/images/user-guide/01-dashboard-capture.png)
 
@@ -36,7 +64,7 @@ Use **Dashboard** for playback controls and history. **Settings** opens Sound so
 
 Ocean Swells and Storm Outlook normally advance to another background location approximately every **23 seconds**. Wildlife recordings use their audio length instead. Network searches and downloads can take longer. Wildlife recordings are archived audio, even while the app is in Continuous mode.
 
-For **Birdsong, Frog Calls, Whale Song, and Dolphin Calls**, each location visit plays one complete recording once. Short recordings do not loop, and long recordings are not cut off after 23 seconds. The player requests the next location during the final **three seconds**, or final **10%** of a short clip, and fades between recordings while the outgoing clip finishes. A first-time download can leave a gap between clips. Keep the browser or desktop player open for the rotation to advance. **Preview** remains an eight-second sample; **Stop** or changing the background can interrupt a recording.
+For **Birdsong, Frog Calls, Whale Song, and Dolphin Calls**, each location visit plays one complete recording once. Short recordings do not loop, and long recordings are not cut off after 23 seconds. The player requests the next location during the final **three seconds**, or final **10%** of a short clip, and fades between recordings while the outgoing clip finishes. A first-time download can leave a gap between clips. Keep a browser opened locally on the host, or the host’s desktop player, open for the recording rotation to advance. A remote listening browser does not advance that rotation. **Preview** remains an eight-second sample; **Stop** or changing the background can interrupt a recording.
 
 With **Xeno-canto Birdsong** and **Frog Calls**, the first pass plays the first available recording at each of the 19 regions. The next pass selects the second recording at each region, and later passes continue through its available recordings before wrapping to the first. **Whale Song** and **Dolphin Calls** follow the same sequence across their included hydrophone sites, rather than 19 regions. A location with only one recording repeats that recording on each pass; **Wikimedia Commons Birdsong** has one curated recording per location.
 
@@ -46,9 +74,9 @@ Select **Event History** to inspect recent activity. Rows show the event type, p
 
 ![Event History with two clearly labeled demonstration earthquakes](docs/images/user-guide/02-event-history.png)
 
-### The status strip
+### Status tiles
 
-The same three status cards appear below Dashboard and Map:
+The same three separate status tiles appear below Dashboard and Map. On desktop they sit side by side along the bottom; on mobile they stack vertically:
 
 | Card | Meaning |
 | --- | --- |
@@ -62,9 +90,30 @@ A dash or **Not yet** means there is no matching event to display yet. A previou
 
 Select **Map** at the top of the window. Select **Dashboard** to return to the playback controls.
 
-![Map view showing demonstration event markers, the legend, and status cards](docs/images/user-guide/03-map.png)
+![Map view showing the world map, legend, and three separate status tiles](docs/images/user-guide/03-map.png)
 
-The legend distinguishes background locations, event locations, and **My location**. Moving the pointer over the map displays coordinates. The system-location marker, when available, is an approximate location derived from the public IP address; it does not select the background’s region. Background locations come from **Sound locations**. The chosen Dashboard/Map view is remembered.
+The legend distinguishes background locations, event locations, and **My location**. Moving the pointer over the map displays coordinates. The system-location marker, when available, shows the host’s approximate location derived from its public IP address. Background locations come from **Sound locations**; the host location can seed location 1 for Xeno-canto Birdsong and Storm Outlook at startup (see [Location privacy](#location-privacy)). The chosen Dashboard/Map view is remembered.
+
+## Mobile and iPhone Home Screen
+
+On narrow screens, the gear and Dashboard/Map selector appear in a centered row below the title. The status tiles stack beneath the main content. Scroll down to see all three tiles when they extend below the screen.
+
+![Mobile Dashboard with centered header controls and vertically stacked status tiles](docs/images/user-guide/15-mobile-dashboard.png)
+
+![Mobile Map with its legend and vertically stacked status tiles](docs/images/user-guide/16-mobile-map.png)
+
+In Settings, the section buttons move above the content. **This device** appears first in Sound Choices, followed by Units, Background, and the event tiles. Scroll inside the settings content to reach the lower controls. The **×** remains in the dialog header and **Save settings** in its footer.
+
+![Mobile Sound Choices with Listen on this device above Units](docs/images/user-guide/17-mobile-listening.png)
+
+To add Gaiascapes to an iPhone Home Screen:
+
+1. Open the running host’s LAN URL in **Safari**.
+2. Open Safari’s **Share** menu and choose **Add to Home Screen**. If it is missing, use **Edit Actions** to add it.
+3. Keep **Open as Web App** enabled if Safari offers that option, then tap **Add**. See [Apple’s Home Screen web-app instructions](https://support.apple.com/en-gb/guide/iphone/iphea86e5236/ios).
+4. Open the new Gaiascapes icon and use **Settings → Sound Choices → Listen on this device** to enable audio.
+
+Gaiascapes supplies its app artwork for the Home Screen icon. If an existing shortcut still shows a letter, remove that shortcut and add it again from the refreshed site after updating the host. The Home Screen app still connects to the running host; it is not an offline installation. Keeping the phone on the LAN is required, and backgrounding or locking the phone may interrupt audio.
 
 ## Sound sources
 
@@ -129,9 +178,9 @@ Blank credential fields preserve their saved values. The **Saved — enter only 
 
 ## Sound Choices
 
-Open **Settings → Sound Choices**. There is a Units tile, one Background tile, and three independent event tiles: **Event 1**, **Event 2**, and **Event 3**.
+Open **Settings → Sound Choices**. The first row contains **This device**, **Units**, and **Background**. Below it are three independent event tiles: **Event 1**, **Event 2**, and **Event 3**. The location-privacy checkbox is beneath the sound tiles. These controls stack on narrow screens.
 
-![Sound Choices showing units, Whale Song as the background, three event voices, volume sliders, and the Thunder sample-rate control](docs/images/user-guide/06-sound-choices.png)
+![Sound Choices showing Listen on this device, Units, Whale Song, three event voices, volume sliders, the Thunder sample-rate control, and location privacy](docs/images/user-guide/06-sound-choices.png)
 
 ### Selecting a sound
 
@@ -141,7 +190,7 @@ Each role has its own **volume slider**, from **0–100%**. Zero mutes that role
 
 Recorded birds, frogs, whales, and dolphins are automatically volume-normalized before playback, including previews. Louder recordings are reduced toward a quiet background level (−30 dBFS gated RMS); quiet recordings are never boosted. Peak protection also controls transitions without adding gain. The Background volume slider controls the listening level directly through Web Audio with a squared gain curve: 10% is −40 dB relative to full volume, 50% is −12 dB, and 100% is the full normalized level. Saving applies its new level immediately to the recording already playing, including during transitions. At zero volume, recordings continue advancing silently; saving a higher volume restores sound without waiting for the recording to finish. The browser analyzes each recording on first use, which can briefly delay playback, and remembers its level for the current page session. Original recordings are unchanged. This uses gated RMS loudness estimation, so recordings with very different frequency content may still sound somewhat different in loudness. A browser that cannot analyze a recording shows a playback error instead of playing it at an uncontrolled level.
 
-**Preview** tries the displayed sound at the displayed volume. Recorded wildlife previews last approximately eight seconds. Preview is disabled for None. Save source, credential, or region edits before previewing them; moving to another sound and previewing it does not itself save that sound as your normal selection.
+**Preview** tries the displayed sound at the displayed volume. On another device, enable **Listen on this device** first to hear previews there. Synthesized previews also play through the host renderer. Recorded wildlife previews last approximately eight seconds. Preview is disabled for None. Save source, credential, or region edits before previewing them; moving to another sound and previewing it does not itself save that sound as your normal selection.
 
 ### Units
 
@@ -239,26 +288,38 @@ Map points identify **hydrophones**, not the exact position of the animal. Site 
 
 Changing projection does not move stored geographic coordinates or change which region supplies sound. Save settings to retain the preference.
 
+## Theme
+
+Open **Settings → Theme** and choose **Earth** (light brown), **Wind** (light yellow), **Fire** (light red), or **Ocean** (light blue). The palette applies to the main view and dialogs immediately, and a **Theme applied.** notification confirms the change.
+
+![Theme settings with Earth, Wind, Fire, and Ocean palettes](docs/images/user-guide/13-theme.png)
+
+Theme is remembered in this browser’s local storage and does not require **Save settings**. Each browser can use its own theme. If browser storage is unavailable, the notification explains that the selection cannot be remembered after reload.
+
 ## Saving settings
 
-Click **Save settings** after editing Sound sources, Sound Choices, or Sound locations. The button saves changes across all three sections, not just the visible one. Look for **Settings saved.** before closing the dialog. If an error appears, resolve it and save again; earlier parts of a save may already have been applied.
+Click **Save settings** after editing Sound sources, Sound Choices, or Sound locations. The button saves changes across all three sections, not just the visible one. The button shows **Saving…** while the request is in progress. Look for the **Settings saved.** toast before closing the dialog. Success and failure notifications for saving, previewing, restoring defaults, and changing theme remain visible for **five seconds**. A newer result replaces the previous notification and starts a fresh five-second interval. Errors begin with **Error:**; resolve the reported problem and save again. Earlier parts of a save may already have been applied.
 
-**Close**, the **×** button, Escape, or clicking outside the dialog closes it. Closing is not a save action. Unsaved edits may remain visible when you reopen Settings in the same page, so they should not be treated as a saved configuration. Reloading the page restores the saved settings.
+![Settings saved notification above the dialog footer](docs/images/user-guide/14-settings-saved.png)
 
-Mode and Dashboard/Map view changes are applied and saved immediately through their own controls. History-window and performance-length values control the current replay request and are not saved by the Settings dialog.
+Use the **×** in the dialog header to close Settings; there is no Close button beside Save. Escape or clicking outside the dialog also closes it. Closing is not a save action. Unsaved edits may remain visible when you reopen Settings in the same page, so they should not be treated as a saved configuration. Reloading the page restores the saved settings.
+
+Mode and Dashboard/Map view changes are applied and saved immediately through their own controls. Theme is saved immediately in this browser. Listen/Mute applies only to the current page session. History-window and performance-length values control the current replay request and are not saved by the Settings dialog.
 
 ## Status and troubleshooting
 
 | What you see or hear | What it means and what to check |
 | --- | --- |
+| **Remote page will not open** | Verify the host is running, use its LAN IP with port 8768, and check firewall and Wi-Fi client isolation. |
+| **Listening stops after locking the phone or switching apps** | Return to Gaiascapes and follow the message beside Listen to reconnect. Browser audio can be suspended in the background. |
 | **No background selected** | Background is set to None. |
 | **Awaiting background** | No matching background cue is available yet. This alone does not identify a provider failure. Check that playback is running and the source is enabled. |
 | **Looking for … recordings…** | A recording lookup or download is underway. First-use requests can take longer than cached playback. |
 | **No suitable recordings … within 100 km …** | The lookup completed without a recording that meets the region and compatibility requirements. Continuous playback advances to the next region on a later cycle. Adjust a search center if needed; the app does not substitute another animal group or a recording outside the region. |
 | **Rejected key, denied access, or rate limit** | Check the credential instructions above. Respect a displayed retry delay. Replacing the shared Xeno-canto key affects both Birdsong and Frog Calls. |
 | **Preview reports a provider error** | Source selection, credentials, geography, or download availability prevented a preview. The error should explain the reason. |
-| **Recording is ready, but silent** | Check the Background volume, system volume, and browser/site audio permissions. Click Start or Preview to permit playback when requested by the browser. |
-| **Recordings work but synthesized sounds are silent** | Check the configured SuperCollider renderer and audio output. Renderer setup belongs in the README. |
+| **Recording is ready, but silent** | Check the Background volume, media volume, and browser/site audio permissions. On a remote device, tap Listen on this device to permit playback. Gaiascapes requests a media playback session on supported browsers so iPhone Silent Mode does not mute explicit listening. With an older browser or app version, try turning Silent Mode off, then reconnect. |
+| **Recordings work but synthesized sounds are silent** | For LAN listening, restart the updated SuperCollider receiver on the Gaiascapes host and tap Listen again. Check the configured renderer and audio output for host playback. |
 | **Event voices are quiet while the background plays** | Events are intermittent. Check the event slots, their volumes, and their corresponding source switches. Thunder requires observed lightning; Tidal Tone requires a modeled tide turn. |
 | **A saved sound has no effect** | Confirm the save succeeded and inspect the running version. The app can only show features present in that running release. |
 
@@ -268,6 +329,6 @@ Automatic source-recovery notices can appear when an environmental feed fails or
 
 In **Settings → Sound Choices**, clear **Show this host’s approximate location
 on the map** and save to stop IP-based location lookups. This hides the host
-marker without changing environmental events, audio, or LAN access. The setting
+marker without changing environmental events, audio, or LAN access. The marker refers to the Gaiascapes host, not the phone or other listening device. When enabled, IP location also sets the initial location 1 for Xeno-canto Birdsong and Storm Outlook at startup; Frog Calls retains its verified defaults or edited regions. The setting
 applies to the installation; other open browsers may need a refresh to remove
 a previously displayed marker. See [Privacy](PRIVACY.md) for details.

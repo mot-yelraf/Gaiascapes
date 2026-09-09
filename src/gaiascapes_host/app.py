@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -29,6 +29,7 @@ from .config import (
     locations_with_system_location,
     resolve_data_dir,
 )
+from .audio_stream import AUDIO_TIMEOUT, RendererAudioRelay
 from .sanctsound import MARINE_KINDS, available_locations
 from .geoip import GeoIpLocationResolver
 from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
@@ -78,6 +79,7 @@ def create_app(
         whale_song_client=whale_song_client,
         dolphin_calls_client=dolphin_calls_client,
     )
+    audio_relay = RendererAudioRelay(config)
     system_location = geoip_resolver or GeoIpLocationResolver()
     resolved_location = None
     sound_locations_initialized = False
@@ -128,12 +130,14 @@ def create_app(
                 await service.start_continuous()
             yield
         finally:
+            await audio_relay.close()
             await service.stop()
 
     app = FastAPI(title="Gaiascapes", version=_version(), lifespan=lifespan)
     app.state.config = config
     app.state.config_path = config_path
     app.state.service = service
+    app.state.audio_relay = audio_relay
     app.state.system_location = system_location
     app.mount("/static", StaticFiles(directory=PACKAGE_DIR / "static"), name="static")
     app.mount(
@@ -159,6 +163,7 @@ def create_app(
         return template.render(
             request=request,
             version=_version(),
+            local_playback=request.client is not None and request.client.host in {"127.0.0.1", "::1"},
             default_hours=config.replay_hours,
             default_duration=config.performance_seconds,
             live_mode=config.live_mode,
@@ -202,6 +207,37 @@ def create_app(
     async def healthz():
         """Report process health and the running application version."""
         return {"status": "ok", "version": _version()}
+
+    @app.get("/api/audio/status")
+    async def audio_status():
+        """Describe host audio availability without starting the renderer tap."""
+        return audio_relay.status()
+
+    @app.get("/api/audio/stream")
+    async def audio_stream():
+        """Stream framed stereo PCM to this listener until it disconnects."""
+        try:
+            queue, first = await audio_relay.subscribe()
+        except (RuntimeError, OSError) as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+        async def blocks():
+            try:
+                yield first
+                while True:
+                    try:
+                        block = await asyncio.wait_for(queue.get(), AUDIO_TIMEOUT)
+                    except asyncio.TimeoutError:
+                        break
+                    if block is None:
+                        break
+                    yield block
+            finally:
+                await asyncio.shield(audio_relay.unsubscribe(queue))
+
+        return StreamingResponse(blocks(), media_type="application/octet-stream", headers={
+            "Cache-Control": "no-store", "X-Accel-Buffering": "no",
+        })
 
     @app.get("/api/status")
     async def status():

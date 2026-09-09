@@ -4,10 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gaiascapes</title>
+  <meta name="apple-mobile-web-app-title" content="Gaiascapes">
+  <link rel="apple-touch-icon" href="/static/gaia-scape-icon.png?v={{ version }}">
   <link rel="stylesheet" href="/static/app.css?v={{ version }}">
   <link rel="icon" href="/static/gaia-scape-icon.png?v={{ version }}" type="image/png">
 </head>
-<body data-initial-app-view="{{ app_view }}">
+<body data-local-playback="{{ 'true' if local_playback else 'false' }}" data-initial-app-view="{{ app_view }}">
   <div class="event-pulse-layer" id="eventPulseLayer" aria-hidden="true"></div>
   <aside class="recovery-toast-stack" id="recoveryToasts" aria-live="polite" aria-label="Data source recovery status"></aside>
   <main>
@@ -17,15 +19,14 @@
         <p class="eyebrow">Live Terrestrial Sonification</p>
         <div class="title-line">
           <h1>Gaiascapes</h1>
-          <small class="project-version">{{ version }}</small>
         </div>
       </div>
       <div class="header-actions">
+        <button class="settings-trigger" type="button" data-open-settings aria-label="Settings" title="Settings"><span aria-hidden="true">⚙</span></button>
         <div class="view-selector" role="group" aria-label="Application view">
           <button class="view-option{% if app_view == 'dashboard' %} is-active{% endif %}" id="dashboardViewButton" type="button" aria-pressed="{{ 'true' if app_view == 'dashboard' else 'false' }}" data-app-view-button="dashboard">Dashboard</button>
           <button class="view-option{% if app_view == 'map' %} is-active{% endif %}" id="mapViewButton" type="button" aria-pressed="{{ 'true' if app_view == 'map' else 'false' }}" data-app-view-button="map">Map</button>
         </div>
-        <button class="settings-trigger" type="button" data-open-settings><span aria-hidden="true">⚙</span> Settings</button>
       </div>
     </header>
 
@@ -111,9 +112,10 @@
   </main>
 
   <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="dialog-toast-stack" id="settingsToasts" aria-live="polite" aria-atomic="true"></div>
     <form id="settingsForm">
       <header class="modal-header">
-        <div><p class="eyebrow">Gaia control room</p><h2 id="settingsTitle">Settings</h2></div>
+        <div><p class="eyebrow">Gaiascape {{ version }}</p><h2 id="settingsTitle">Settings</h2></div>
         <button class="icon-button" type="button" data-close-settings aria-label="Close Settings">×</button>
       </header>
       <div class="modal-layout">
@@ -126,7 +128,7 @@
         </nav>
         <div class="settings-content">
           <section class="settings-pane" data-pane="theme" hidden>
-            <div class="pane-heading"><span>04</span><div><h3>Theme</h3><p>Choose a light palette for Gaiascapes and its dialogs.</p></div></div>
+            <div class="pane-heading"><div><h3>Theme</h3><p>Choose a light palette for Gaiascapes and its dialogs.</p></div></div>
             <fieldset class="theme-options">
               <legend>Appearance</legend>
               <label class="theme-option" data-theme-swatch="earth"><input type="radio" name="theme" value="earth" checked><span><strong>Earth</strong><small>Light brown</small></span></label>
@@ -136,7 +138,7 @@
             </fieldset>
           </section>
           <section class="settings-pane is-active" data-pane="sources">
-            <div class="pane-heading"><span>01</span><div><h3>Captured sound sources</h3><p>Choose live Earth data feeds and archived animal recordings.</p></div></div>
+            <div class="pane-heading"><div><h3>Captured sound sources</h3><p>Choose live Earth data feeds and archived animal recordings.</p></div></div>
             {% macro marine_source_tile(kind, label, control, enabled) %}
               <article class="source-tile" aria-label="{{ label }}">
                 <div class="source-title">
@@ -216,7 +218,7 @@
             </div>
           </section>
           <section class="settings-pane" data-pane="instruments" hidden>
-            <div class="pane-heading"><span>02</span><div><h3>Sound Choices</h3><p>Choose a continuous background and three event voices. Each voice follows its own source.</p></div></div>
+            <div class="pane-heading"><div><h3>Sound Choices</h3><p>Choose a continuous background and three event voices. Each voice follows its own source.</p></div></div>
             {% macro sound_tile(label, prefix, slot, options, kind) %}
             <article class="sound-tile" aria-label="{{ label }} sound">
               <h4>{{ label }}</h4>
@@ -236,6 +238,12 @@
             </article>
             {% endmacro %}
             <div class="background-sound-row">
+              <article class="sound-tile device-listening" aria-label="Playback on this device">
+                <h4>This device</h4>
+                <button id="listenButton" type="button" aria-pressed="false">Listen on this device</button>
+                <p class="units-note">Listen or mute here without changing playback on other devices.</p>
+                <span id="listenStatus" role="status" aria-live="polite"></span>
+              </article>
               <article class="sound-tile units-tile" aria-label="Display units">
                 <h4>Units</h4>
                 <select id="displayUnits" hidden aria-label="Display units"><option value="metric" {% if units == "metric" %}selected{% endif %}>Metric</option><option value="imperial" {% if units == "imperial" %}selected{% endif %}>Imperial</option></select>
@@ -256,7 +264,7 @@
             <p class="units-note" id="systemLocationHint">Uses IP location services (ipapi.co, with ipwho.is as a fallback). Also sets location 1 for Xeno-canto Birdsong and Storm Outlook at startup. Frog Calls keeps its verified defaults or your edited locations. Turn off to stop location lookups.</p>
           </section>
           <section class="settings-pane location-settings-pane" data-pane="locations" hidden>
-            <div class="pane-heading"><span>03</span><div class="sound-location-heading"><h3>Sound locations</h3><span id="soundLocationCoordinates" aria-live="polite" hidden></span></div></div>
+            <div class="pane-heading"><div class="sound-location-heading"><h3>Sound locations</h3><span id="soundLocationCoordinates" aria-live="polite" hidden></span></div></div>
             <div class="location-editor-tabs" role="group" aria-label="Sound catalog">
               <button type="button" title="Choose Xeno-canto in Sound Sources to edit Birdsong regions. Recordings come from within 100 km of each point." data-location-catalog="birdsong">Birdsong</button>
               <button type="button" title="Choose verified SanctSound recording sites." data-location-catalog="dolphin_calls">Dolphin Calls</button>
@@ -293,11 +301,12 @@
           </section>
         </div>
       </div>
-      <footer class="modal-footer"><p id="settingsStatus" aria-live="polite">Changes are stored with this installation.</p><div><button type="button" data-close-settings>Close</button><button class="primary" type="submit">Save settings</button></div></footer>
+      <footer class="modal-footer"><p>Changes are stored with this installation.</p><div><button class="primary" type="submit">Save settings</button></div></footer>
     </form>
   </dialog>
   <script id="forecastLocationData" type="application/json">{{ {"current": forecast_location_catalogs, "defaults": default_forecast_location_catalogs} | tojson }}</script>
   <script src="/static/recording-audio.js?v={{ version }}"></script>
+  <script src="/static/live-audio.js?v={{ version }}"></script>
   <script src="/static/app.js?v={{ version }}"></script>
 </body>
 </html>
