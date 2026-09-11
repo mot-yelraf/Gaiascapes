@@ -6,11 +6,13 @@ health probing, and platform-specific desktop integration.
 
 import importlib.util
 import json
+import logging
 import os
 import plistlib
 import subprocess
 import sys
 import struct
+import time
 import zlib
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -31,6 +33,18 @@ def test_cli_disables_uvicorn_access_log(tmp_path, monkeypatch):
     assert calls[0]["access_log"] is False
     assert calls[0]["log_level"] == "info"
     assert calls[0]["timeout_graceful_shutdown"] == 4
+    config = calls[0]["log_config"]
+    formatter_config = config["formatters"]["default"]
+    formatter = cli.uvicorn.logging.DefaultFormatter(
+        fmt=formatter_config["fmt"], datefmt=formatter_config["datefmt"], use_colors=False,
+    )
+    record = logging.LogRecord("uvicorn.error", logging.INFO, __file__, 1,
+                               "NOAA GLM playback dispatched", (), None)
+    record.created = 1789056000.0
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(record.created))
+    assert formatter.format(record) == f"{timestamp} INFO:     NOAA GLM playback dispatched"
+    assert config["loggers"]["gaiascapes_host"]["handlers"] == ["default"]
+    assert "%(asctime)s" not in cli.uvicorn.config.LOGGING_CONFIG["formatters"]["default"]["fmt"]
 
 
 class FakeProcess:

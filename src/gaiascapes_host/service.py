@@ -148,6 +148,7 @@ class GaiascapesService:
             config.osc_enabled,
             config.background_mappings(),
         )
+        self._replay_lightning_counts = {}
         self._cue_sequence = 0
         self._emitted_cues = deque(maxlen=EMITTED_CUE_LIMIT)
         self._cue_event = asyncio.Event()
@@ -156,7 +157,7 @@ class GaiascapesService:
         self._published_background_state = {}
         self.player = PerformancePlayer(
             self.renderer,
-            self._record_emitted_cue,
+            self._record_replay_cue,
             lambda cue: self._voices_with_channels(cue.kind),
         )
         self._glm_sonification_task = None
@@ -600,20 +601,22 @@ class GaiascapesService:
                 sonification_events = tuple(
                     getattr(self.glm, "last_sonification_events", inserted_events)
                 )
-                LOGGER.info(
-                    "NOAA GLM update: %d granules, %d raw flashes, "
-                    "%d sampled, %d new, %d sonified",
-                    granule_count,
-                    raw_count,
-                    len(events),
-                    len(inserted_events),
-                    len(sonification_events),
+                selected_count = getattr(
+                    self.glm, "last_selected_flash_count", len(sonification_events)
+                )
+                limit_detail = (
+                    f" (safety limit: {selected_count} selected reduced to {len(sonification_events)})"
+                    if selected_count > len(sonification_events) else ""
+                )
+                report = (
+                    f"NOAA GLM update: {granule_count} granules, {raw_count} raw flashes, "
+                    f"{len(events)} sampled, {len(inserted_events)} new{limit_detail}"
                 )
                 if sonification_events:
                     self._last_glm_sonification_events = sonification_events
                     self._glm_replaying_cached_field = False
                     if self.playback.enabled and self.config.live_mode == "continuous":
-                        self._start_glm_sonification(sonification_events)
+                        self._start_glm_sonification(sonification_events, report=report)
                 else:
                     self._replay_last_glm_sonification()
                 return {
@@ -644,6 +647,11 @@ class GaiascapesService:
         window_start = now - window_seconds
         events = await asyncio.to_thread(self.store.events_since, window_start)
         score = build_score(events, window_start, window_seconds, duration)
+        self._replay_lightning_counts = {}
+        for cue in score:
+            if cue.kind == "lightning_flash" and self._voices_with_channels(cue.kind):
+                provider = cue.event.provider
+                self._replay_lightning_counts[provider] = self._replay_lightning_counts.get(provider, 0) + 1
         await self.player.start(score)
         return {
             "event_count": len(events),
@@ -1001,15 +1009,38 @@ class GaiascapesService:
                 return True
         return False
 
+    def _record_replay_cue(self, cue, instrument=None, volume=1.0) -> None:
+        """Report a lightning replay group when its first cue is dispatched."""
+        if cue.kind == "lightning_flash":
+            count = self._replay_lightning_counts.pop(cue.event.provider, 0)
+            if count:
+                LOGGER.info(
+                    "%s replay playback started: %d lightning flashes in score",
+                    cue.event.provider, count,
+                )
+        self._record_emitted_cue(
+            cue, instrument, volume, report_sonification=cue.kind != "lightning_flash",
+        )
+
     def _record_emitted_cue(
         self,
         cue,
         instrument: str | None = None,
         volume: float = 1.0,
         publish_background: bool = False,
+        report_sonification: bool = True,
     ) -> None:
         """Journal a cue only after it has been sent to SuperCollider."""
         instrument = instrument or next(iter(self._instruments_for_kind(cue.kind)), "none")
+        if report_sonification and volume > 0:
+            LOGGER.info(
+                "%s sonification: %s, %s, instrument=%s, channel=%s, playback dispatched, "
+                "volume=%.0f%%, duration=%.2fs, strength=%.3f, location=%.4f,%.4f",
+                cue.event.provider, cue.kind,
+                cue.event.traits.get("place") or cue.event.traits.get("title") or cue.event.event_id,
+                instrument, cue.output_channel, volume * 100, cue.duration,
+                cue.event.strength, cue.event.latitude, cue.event.longitude,
+            )
         emitted_at = time.time()
         event = cue.event.as_dict()
         location = {
@@ -1059,7 +1090,7 @@ class GaiascapesService:
             self._recording_sequences[cue.kind] = self._cue_sequence
         self._cue_event.set()
 
-    def _start_glm_sonification(self, events) -> None:
+    def _start_glm_sonification(self, events, report="NOAA GLM playback") -> None:
         """Replace an older flash field with the newest 20-second observation."""
         if (
             self._glm_sonification_task is not None
@@ -1067,7 +1098,7 @@ class GaiascapesService:
         ):
             self._glm_sonification_task.cancel()
         self._glm_sonification_task = self.playback.schedule(
-            self._run_glm_sonification(tuple(events)),
+            self._run_glm_sonification(tuple(events), report=report),
             name="gaiascapes-glm-sonification",
         )
 
@@ -1088,14 +1119,12 @@ class GaiascapesService:
         self._glm_replaying_cached_field = can_replay
         if not can_replay:
             return False
-        LOGGER.info(
-            "NOAA GLM unchanged: replaying previous field with %d sonified flashes",
-            len(events),
+        self._start_glm_sonification(
+            events, report="NOAA GLM replaying previous field; waiting for new granules",
         )
-        self._start_glm_sonification(events)
         return True
 
-    async def _run_glm_sonification(self, events) -> None:
+    async def _run_glm_sonification(self, events, report="NOAA GLM playback") -> None:
         """Replay observed flash timing as a dense but bounded glass-note field."""
         if not events or not self._instruments_for_kind("lightning_flash"):
             return
@@ -1103,15 +1132,21 @@ class GaiascapesService:
         first_timestamp = events[0].timestamp
         loop = asyncio.get_running_loop()
         origin = loop.time()
-        for event in events:
-            if not self.playback.enabled or "noaa_glm" not in self.config.enabled_sources:
-                break
-            observed_offset = max(0.0, event.timestamp - first_timestamp)
-            target = origin + (observed_offset * GLM_SONIFICATION_TIME_SCALE)
-            delay = target - loop.time()
-            if delay > 0:
-                await asyncio.sleep(delay)
-            await self._play_live_event(event)
+        played = 0
+        try:
+            for event in events:
+                if not self.playback.enabled or "noaa_glm" not in self.config.enabled_sources:
+                    break
+                observed_offset = max(0.0, event.timestamp - first_timestamp)
+                target = origin + (observed_offset * GLM_SONIFICATION_TIME_SCALE)
+                delay = target - loop.time()
+                if delay > 0:
+                    await asyncio.sleep(delay)
+                if await self._play_live_event(event):
+                    played += 1
+        finally:
+            if played:
+                LOGGER.info("%s; %d sonified, playback dispatched", report, played)
 
     async def _restore_mtg_schedule(self) -> None:
         """Resume the still-future portion of the latest stored MTG timeline."""
@@ -1150,11 +1185,6 @@ class GaiascapesService:
         )
         self._mtg_sonification_tasks.add(task)
         task.add_done_callback(self._finish_mtg_sonification)
-        LOGGER.info(
-            "EUMETSAT MTG LI update: %d flashes scheduled once at %.0f-minute delay",
-            len(scheduled_events),
-            MTG_PRESENTATION_DELAY_SECONDS / 60.0,
-        )
         return True
 
     def _finish_mtg_sonification(self, task) -> None:
@@ -1177,6 +1207,7 @@ class GaiascapesService:
 
     async def _run_mtg_sonification(self, events) -> None:
         """Present each MTG flash once at its observation time plus a fixed delay."""
+        reported = False
         for event in events:
             if (
                 not self.playback.enabled
@@ -1198,7 +1229,15 @@ class GaiascapesService:
                 or "eumetsat_mtg_li" not in self.config.enabled_sources
             ):
                 break
-            await self._play_live_event(event)
+            played = await self._play_live_event(event)
+            if played and not reported:
+                LOGGER.info(
+                    "EUMETSAT MTG LI playback started: %d sampled flashes in timeline, "
+                    "%.1fs observed span, %.0f-minute presentation delay",
+                    len(events), events[-1].timestamp - events[0].timestamp,
+                    MTG_PRESENTATION_DELAY_SECONDS / 60.0,
+                )
+                reported = True
             self.mtg_played_count += 1
 
     async def _continuous_loop(self) -> None:
@@ -1288,7 +1327,7 @@ class GaiascapesService:
         """Compatibility wrapper for one cycle of the layered ambient scheduler."""
         return bool(await self.play_next_ambient_layers())
 
-    async def _play_live_event(self, event: GaiaEvent) -> None:
+    async def _play_live_event(self, event: GaiaEvent) -> int:
         """Render one event now and journal it for synchronized visuals."""
         ambient_duration = self.config.continuous_interval_seconds + 1.5
         durations = {
@@ -1312,9 +1351,10 @@ class GaiascapesService:
             0, event, source.pitch, velocity,
             duration=durations.get(event.kind, source.duration), pan=source.pan,
         )
+        played = 0
         async with self._live_play_lock:
             if not self.playback.enabled:
-                return
+                return 0
             persistent_background = (
                 event.kind in BACKGROUND_HISTORY_KINDS
                 and self.config.background_mappings()[event.kind] == event.kind
@@ -1335,8 +1375,11 @@ class GaiascapesService:
                         instrument,
                         volume=gain,
                         publish_background=persistent_background,
+                        report_sonification=event.kind != "lightning_flash",
                     )
                     self.continuous_played_count += 1
+                    played += 1
+        return played
 
     def _instruments_for_kind(self, kind: str) -> tuple[str, ...]:
         """Resolve every configured slot that an environmental event triggers."""

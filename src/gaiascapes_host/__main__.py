@@ -7,6 +7,7 @@ serving to Uvicorn without enabling noisy access logs.
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 import os
 import signal
 import sys
@@ -16,6 +17,18 @@ import uvicorn
 
 from .config import AppConfig, resolve_data_dir
 from .desktop import DESKTOP_OWNER_PID_ENV
+
+
+def _console_log_config() -> dict:
+    """Timestamp server and provider logs in local time."""
+    config = deepcopy(uvicorn.config.LOGGING_CONFIG)
+    for formatter in config["formatters"].values():
+        formatter["fmt"] = "%(asctime)s " + formatter["fmt"]
+        formatter["datefmt"] = "%Y-%m-%d %H:%M:%S"
+    config["loggers"]["gaiascapes_host"] = {
+        "handlers": ["default"], "level": "INFO", "propagate": False,
+    }
+    return config
 
 
 def _watch_desktop_owner(
@@ -69,6 +82,7 @@ def main(argv=None) -> None:
             host=args.host,
             port=args.port,
             log_level="info",
+            log_config=_console_log_config(),
             access_log=False,
             timeout_graceful_shutdown=4,
         )

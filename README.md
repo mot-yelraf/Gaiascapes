@@ -188,9 +188,15 @@ a newer granule by the next polling cycle, Gaia replays the last non-empty flash
 field with the same relative timing until fresh lightning information replaces it. GLM
 flashes remain available for deduplication and replay but are intentionally omitted
 from Environmental Event History and its stored count. Live yellow-gold pulses still
-show their observed positions. The console and
-`/api/status` report granules, raw flashes, sampled flashes, inserts, and errors, for
-example: `NOAA GLM update: 2 granules, 534 raw flashes, 8 sampled, 8 new, 47 sonified`.
+show their observed positions. Console log entries include the local date and time
+(`YYYY-MM-DD HH:MM:SS`). The console reports each
+dispatched sonification with its source, instrument,
+channel, volume, duration, strength, and location. Lightning is grouped: each played
+NOAA field reports granules, raw flashes, samples, inserts, and the number actually
+sonified, with any safety reduction in the same line. Cached-field playback explains
+that it is waiting for new granules. MTG and history replay groups report when
+playback begins. Enabled sources and queued sounds alone do not produce playback
+reports; capture counts remain available through `/api/status`.
 Gaia also quarantines exceptionally dense tropical GOES-19 fields during NOAA's
 documented 15:00–19:00 UTC false-alarm window, active since July 17, 2026.
 
