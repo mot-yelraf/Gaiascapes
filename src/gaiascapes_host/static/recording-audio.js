@@ -37,7 +37,7 @@ const recordingNormalizer = (() => {
   }
 
   async function resume() {
-    if (!context) {
+    if (!context || context.state === "closed") {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass) throw new Error("This browser does not support recording normalization");
       context = new AudioContextClass();
@@ -48,12 +48,32 @@ const recordingNormalizer = (() => {
         Math.max(-0.95, Math.min(0.95, i / 2048 - 1)));
       output.connect(context.destination);
     }
-    await context.resume();
+    await withTimeout(context.resume());
     if (context.state !== "running") throw new Error("Select Start or Preview to allow normalized audio");
   }
 
-  // AudioBuffer playback uses the context unlocked by Listen, so every new
-  // animal recording does not require another iPhone media-element gesture.
+  async function withTimeout(operation) {
+    let timer;
+    try {
+      return await Promise.race([operation, new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Audio did not resume; select Start or Preview to retry")), 5000);
+      })]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /** Restore playback after an interruption without restarting decoded sources. */
+  async function recover() {
+    if (!context) return;
+    // WebKit can leave an apparently running context with a stopped clock.
+    // Cycling it preserves decoded sources and their playback positions.
+    if (context.state === "running") await withTimeout(context.suspend());
+    await resume();
+  }
+
+  // All recordings use the same unlocked context and the decoded buffer,
+  // avoiding per-recording media-element loads and autoplay decisions.
   function createPlayer() {
     const player = new EventTarget();
     player.webAudio = true;
@@ -142,5 +162,5 @@ const recordingNormalizer = (() => {
     };
   }
 
-  return {resume, prepare, measureGain, createPlayer};
+  return {resume, recover, prepare, measureGain, createPlayer};
 })();

@@ -1,6 +1,8 @@
 const byId = (id) => document.getElementById(id);
 let observedCueSequence = null;
 let cuePollInFlight = false;
+let cuePollController = null;
+let wakeRecoveryInFlight = false;
 let observedHistorySignature = null;
 const observedRecoveryTransitions = new Map();
 const LIGHTNING_INTENSITY_HOLD_MS = 3000;
@@ -142,7 +144,9 @@ async function playRecordingCue(cue) {
   recordingPreviewUntil = cueDuration > 0 && cueDuration <= 10
     ? Infinity : 0;
   const previous = recordingAudio;
-  const next = deviceListening ? recordingNormalizer.createPlayer() : new Audio(mediaUrl);
+  // Play the buffer already decoded for normalization on desktop as well.
+  // A second media-element load can stall independently of that successful load.
+  const next = recordingNormalizer.createPlayer();
   if (deviceListening && cue.emitted_at) {
     next.startOffset = Math.max(0, Date.now() / 1000 - cue.emitted_at);
   }
@@ -180,6 +184,10 @@ async function playRecordingCue(cue) {
     next.removeAttribute("src");
     if (generation !== recordingPlaybackGeneration) return;
     recordingPreviewUntil = 0;
+    if (error.recordingWake) {
+      lastPlayedRecordingSequence = null;
+      return;
+    }
     console.warn("Unable to play normalized recording", error);
     const recovery = next.rotationSequence && localRecordingPlayback
       ? "Advancing to the next recording." : "Select Start or Preview to retry.";
@@ -207,6 +215,7 @@ async function playRecordingCue(cue) {
     let reporting = false;
     let lastPosition = Number(next.currentTime) || 0;
     let lastProgressAt = performance.now();
+    let recoveredStall = false;
     const finish = (reason = "") => {
       if (advancing || generation !== recordingPlaybackGeneration) return;
       advancing = true;
@@ -228,13 +237,24 @@ async function playRecordingCue(cue) {
     };
     const checkProgress = async () => {
       if (advancing || generation !== recordingPlaybackGeneration) return;
+      if (wakeRecoveryInFlight) {
+        lastProgressAt = performance.now();
+        return;
+      }
       advanceAtEnd();
       if (advancing) return;
       const position = Number(next.currentTime) || 0;
       if (position > lastPosition) {
         lastPosition = position;
         lastProgressAt = performance.now();
+        recoveredStall = false;
       } else if (performance.now() - lastProgressAt >= 30000) {
+        if (!recoveredStall) {
+          recoveredStall = true;
+          lastProgressAt = performance.now();
+          recoverAfterWake();
+          return;
+        }
         finish("stalled");
         return;
       }
@@ -1151,15 +1171,23 @@ async function updateStatus() {
 }
 
 async function updateEmittedCues() {
-  if (cuePollInFlight) return;
+  if (cuePollInFlight || wakeRecoveryInFlight) return;
   cuePollInFlight = true;
+  const controller = new AbortController();
+  cuePollController = controller;
   let retryDelay = 0;
   try {
     const query = observedCueSequence === null ? "" : `?after=${observedCueSequence}`;
-    const payload = await request(`/api/cues${query}`);
+    const payload = await request(`/api/cues${query}`, {signal: controller.signal});
+    if (controller.signal.aborted) return;
+    const latestRecording = payload.cues.filter(cue => RECORDED_BACKGROUNDS.includes(cue.event?.kind)).at(-1);
+    const now = Date.now() / 1000;
     payload.cues.forEach((cue) => {
-      if (RECORDED_BACKGROUNDS.includes(cue.event?.kind)
+      if (cue === latestRecording && cue.sequence !== lastPlayedRecordingSequence
           && !deviceMuted && (deviceListening || localRecordingPlayback)) playRecordingCue(cue);
+      // Webviews may deliver a backlog after being hidden. Old event pulses
+      // should not appear together as if they were happening now.
+      if (cue.emitted_at && now - cue.emitted_at > Math.max(3.6, Number(cue.duration) || 0)) return;
       animateCapturedEvent(
         cue.event, cue.instrument, cueRole(cue), cue.duration, cue.volume ?? 1
       );
@@ -1171,14 +1199,44 @@ async function updateEmittedCues() {
     const earthquakeCue = payload.cues.filter((cue) => cue.event?.kind === "earthquake").at(-1);
     if (earthquakeCue) updateLastEarthquakeStatus(earthquakeCue.event);
     if (payload.cues.some((cue) => cue.history_updated !== false)) await updateEvents();
-    observedCueSequence = payload.latest_sequence;
+    if (!controller.signal.aborted) observedCueSequence = payload.latest_sequence;
   } catch (error) {
-    console.warn("Unable to synchronize emitted cues", error);
-    retryDelay = 1000;
+    if (!controller.signal.aborted) {
+      console.warn("Unable to synchronize emitted cues", error);
+      retryDelay = 1000;
+    }
   } finally {
     cuePollInFlight = false;
+    cuePollController = null;
+    setTimeout(updateEmittedCues, retryDelay);
   }
-  setTimeout(updateEmittedCues, retryDelay);
+}
+
+async function recoverAfterWake() {
+  if (wakeRecoveryInFlight || document.hidden) return;
+  wakeRecoveryInFlight = true;
+  observedCueSequence = null;
+  cuePollController?.abort();
+  try {
+    if (!deviceMuted && (localRecordingPlayback || deviceListening)) {
+      if (pendingRecordingAudio) {
+        recordingLoadController?.abort(Object.assign(new Error("Reload recording after wake"), {recordingWake: true}));
+      }
+      if (!recordingAudio || recordingAudio.ended) lastPlayedRecordingSequence = null;
+      const results = await Promise.allSettled([
+        recordingNormalizer.recover(),
+        deviceListening ? liveAudioPlayer.recover() : Promise.resolve(),
+      ]);
+      if (!deviceMuted) results.forEach(result => {
+        if (result.status === "rejected") message(`Unable to restore audio after wake: ${result.reason.message}`, true);
+      });
+    }
+  } finally {
+    wakeRecoveryInFlight = false;
+    updateEmittedCues();
+    updateStatus();
+    updateEvents();
+  }
 }
 
 async function updateEvents() {
@@ -1335,11 +1393,29 @@ listenButton.addEventListener("click", () => {
   else listenOnDevice();
 });
 window.addEventListener("pagehide", () => {
-  if (deviceListening) muteDevice();
+  // A cached page can return on wake/navigation; preserve the user's intent.
+  liveAudioPlayer.disconnect();
+  stopRecordingPlayback(1);
 });
+window.addEventListener("pageshow", recoverAfterWake);
+window.addEventListener("focus", recoverAfterWake);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) recoverAfterWake();
+});
+let lastWakeCheck = Date.now();
+setInterval(() => {
+  const now = Date.now();
+  const interrupted = now - lastWakeCheck > 15000;
+  lastWakeCheck = now;
+  if (interrupted) recoverAfterWake();
+}, 5000);
 
 byId("startButton").addEventListener("click", async () => {
   try {
+    if (!deviceMuted && (localRecordingPlayback || deviceListening)
+        && RECORDED_BACKGROUNDS.includes(byId("backgroundInstrument")?.value)) {
+      await recordingNormalizer.resume();
+    }
     if (byId("liveMode").value === "continuous") {
       await request("/api/live/start", {method: "POST", body: "{}"});
       message("Continuous environmental sound is running with the selected global background.");
@@ -1951,6 +2027,10 @@ if (settingsDialog && settingsForm) {
             : (["lightning_glass", "natural_thunder"].includes(instrument)
               ? "lightning_flash"
               : "earthquake"));
+        if (!deviceMuted && (localRecordingPlayback || deviceListening)
+            && RECORDED_BACKGROUNDS.includes(kind)) {
+          await recordingNormalizer.resume();
+        }
         const payload = await request("/api/instruments/preview", {
           method: "POST",
           body: JSON.stringify({
