@@ -13,14 +13,40 @@ class LiveAudioPlayer {
     this.wanted = false;
   }
 
-  async unlock() {
-    if (this.context) return this.context.resume();
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) throw new Error('This browser does not support audio playback.');
-    const context = new AudioContextClass();
-    this.context = context;
-    await context.resume();
+  async unlock(reset = false) {
+    if (!this.context || this.context.state === 'closed') {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error('This browser does not support audio playback.');
+      this.context = new AudioContextClass();
+    }
+    const context = this.context;
+    let timer;
+    try {
+      const operation = reset && context.state === 'running'
+        ? context.suspend().then(() => context.resume()) : context.resume();
+      await Promise.race([operation, new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Audio did not resume. Tap Listen to retry.')), 5000);
+      })]);
+    } finally {
+      clearTimeout(timer);
+    }
     if (context.state !== 'running') throw new Error('Tap Listen to allow audio playback.');
+  }
+
+  /** Resume the existing audio context and replace any pre-sleep stream. */
+  async recover() {
+    if (!this.wanted) return;
+    const context = this.context;
+    // Discard pre-sleep PCM and reconnect at the live edge after resuming.
+    clearTimeout(this.retryTimer);
+    this.disconnect();
+    try {
+      await this.unlock(true);
+    } catch (error) {
+      if (this.wanted && context === this.context) throw error;
+      return;
+    }
+    if (this.wanted && context === this.context) await this.start();
   }
 
   async start() {

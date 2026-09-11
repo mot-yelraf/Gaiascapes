@@ -194,7 +194,7 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .map-cue--provider-eumetsat_mtg_li .map-cue-pulse { stroke-width: 3.5; stroke-dasharray: 7 4; }
 .map-cue--provider-eumetsat_mtg_li .map-cue-core { stroke: #fff1a8; stroke-width: 2.4; filter: drop-shadow(0 0 5px #ffd15a); }
 @keyframes map-cue-pulse { 0% { opacity: 0; transform: scale(.3); } 12% { opacity: .95; } 50% { opacity: .62; transform: scale(var(--map-pulse-scale, 2.8)); } 90% { opacity: .5; transform: scale(.3); } 100% { opacity: 0; transform: scale(.3); } }
-.map-coordinate-readout { position: absolute; right: 16px; bottom: 12px; padding: 6px 9px; border-radius: 6px; color: var(--muted); background: rgba(6,14,12,.82); font-size: .72rem; font-variant-numeric: tabular-nums; pointer-events: none; }
+.map-coordinate-readout { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); text-align: center; padding: 6px 9px; border-radius: 6px; color: var(--muted); background: rgba(6,14,12,.82); font-size: .72rem; font-variant-numeric: tabular-nums; pointer-events: none; }
 
 
 .event-pulse-layer { position: fixed; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }

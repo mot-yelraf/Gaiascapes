@@ -98,13 +98,14 @@ const context = vm.createContext({
   recordingNormalizer: {resume: async () => {}, prepare: async () => {}},
   setInterval: () => 1, clearInterval: () => {},
   setTimeout: () => 1, clearTimeout: () => {},
-  Audio: class {
+  FakePlayer: class {
     constructor() { audio = this; this.paused = false; }
     play() { return new Promise(resolve => { finishLoading = resolve; }); }
     pause() { this.paused = true; }
     removeAttribute(name) { this.removedAttribute = name; }
   },
 });
+context.recordingNormalizer.createPlayer = () => new context.FakePlayer();
 vm.runInContext(source.slice(0, source.indexOf("\nlet mapProjection =")), context);
 context.cue = {duration: 8, volume: .4, event: {kind, traits: {media_url: "/test.wav"}}};
 (async () => {
@@ -222,7 +223,7 @@ const context = vm.createContext({
   request: async (url, options) => {
     if (url.endsWith("/advance")) requests.push(JSON.parse(options.body));
   },
-  Audio: class {
+  FakePlayer: class {
     constructor() {
       this.duration = duration; this.currentTime = 0; this.ended = false;
       this.listeners = {}; players.push(this);
@@ -233,6 +234,7 @@ const context = vm.createContext({
     addEventListener(name, fn) { this.listeners[name] = fn; }
   },
 });
+context.recordingNormalizer.createPlayer = () => new context.FakePlayer();
 vm.runInContext(source.slice(0, source.indexOf('\nlet mapProjection =')), context);
 context.cue = {sequence: 42, recording_rotation: true, duration: 24.5, volume: 1,
   event: {kind: process.argv[2], traits: {media_url: '/test.wav'}}};
@@ -329,10 +331,11 @@ function node() {
 }
 let fetches = 0, fail = false, audioClock, decodedSource;
 const context = vm.createContext({
-  EventTarget, Event, setInterval, clearInterval,
+  EventTarget, Event, setInterval, clearInterval, setTimeout, clearTimeout,
   window: {AudioContext: class {
     constructor() {this.state = 'running'; this.destination = {}; this.currentTime = 0; audioClock = this;}
-    async resume() {}
+    async resume() {this.state = 'running';}
+    async suspend() {this.state = 'suspended';}
     createDynamicsCompressor() {throw new Error("Automatic makeup gain must not amplify recordings");}
     createWaveShaper() {return node();}
     createGain() {return node();}
@@ -416,6 +419,9 @@ assert.throws(() => gain(invalid), /invalid audio/);
   audioClock.currentTime = 2;
   assert.equal(player.currentTime, 3);
   assert.equal(player.duration, 4);
+  await normalizer.recover();
+  assert.equal(audioClock.state, 'running');
+  assert.equal(player.currentTime, 3); // Recovery preserves source and position.
   player.pause();
   assert.ok(decodedSource.stopped);
   audioClock.currentTime = 5;
@@ -431,7 +437,7 @@ assert.throws(() => gain(invalid), /invalid audio/);
 
 
 @pytest.mark.parametrize('kind', ['birdsong', 'frog_calls', 'whale_song', 'dolphin_calls'])
-@pytest.mark.parametrize('failure', ['load', 'timeout', 'error', 'stall', 'missing', 'cancel'])
+@pytest.mark.parametrize('failure', ['load', 'timeout', 'error', 'stall', 'missing', 'cancel', 'wake'])
 def test_recording_failure_recovers_without_advancing_replacement(kind, failure):
     node = shutil.which('node')
     if node is None:
@@ -447,7 +453,7 @@ const context = vm.createContext({
   performance: {now: () => now}, console: {warn() {}},
   recordingNormalizer: {resume: async () => {}, prepare: async () => {
     if (failure === 'load') throw new Error('decode failed');
-    if (failure === 'timeout' || failure === 'cancel') await new Promise(() => {});
+    if (failure === 'timeout' || failure === 'cancel' || failure === 'wake') await new Promise(() => {});
   }},
   setTimeout: (fn, ms) => { const id = ++nextId; timers.set(id, {fn, ms}); return id; },
   clearTimeout: id => timers.delete(id),
@@ -460,7 +466,7 @@ const context = vm.createContext({
     if (attempts === 1) throw new Error('temporary network failure');
     return {advanced: true};
   },
-  Audio: class {
+  FakePlayer: class {
     constructor() { this.duration = 600; this.currentTime = 0; this.listeners = {}; players.push(this); }
     async play() {}
     pause() { this.paused = true; }
@@ -468,8 +474,11 @@ const context = vm.createContext({
     addEventListener(name, fn) { this.listeners[name] = fn; }
   },
 });
+context.recordingNormalizer.createPlayer = () => new context.FakePlayer();
 vm.runInContext(source.slice(0, source.indexOf('\nlet mapProjection =')), context);
 context.message = () => {};
+let wakeRecoveries = 0;
+context.recoverAfterWake = async () => {wakeRecoveries++;};
 context.cue = {sequence: 42, recording_rotation: true, duration: 24.5, volume: 1,
   event: {kind: process.argv[2], traits: {media_url: '/test.wav'}}};
 const flush = () => new Promise(resolve => setImmediate(resolve));
@@ -477,10 +486,12 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
   if (failure === 'missing') delete context.cue.event.traits.media_url;
   const pending = vm.runInContext('playRecordingCue(cue)', context);
   await flush();
-  if (failure === 'cancel') {
-    vm.runInContext('stopRecordingPlayback()', context);
+  if (failure === 'cancel' || failure === 'wake') {
+    if (failure === 'cancel') vm.runInContext('stopRecordingPlayback()', context);
+    else vm.runInContext('recordingLoadController.abort(Object.assign(new Error("wake"), {recordingWake: true}))', context);
     await pending; await flush();
     assert.equal(advances.length, 0);
+    if (failure === 'wake') assert.equal(vm.runInContext('lastPlayedRecordingSequence', context), null);
     return;
   }
   if (failure === 'timeout') [...timers.values()].find(t => t.ms === 30000).fn();
@@ -491,6 +502,9 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     // Healthy long recordings renew progress and are not cut off by cue duration.
     now = 120000; players[0].currentTime = 120;
     await watchdog(); assert.equal(advances.length, 0);
+    now += 30001; await watchdog();
+    assert.equal(wakeRecoveries, 1);
+    assert.equal(advances.length, 0); // Resume audio before abandoning a stalled source.
     now += 30001; await watchdog();
   }
   await flush();
