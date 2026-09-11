@@ -1,7 +1,7 @@
-"""Independent provider polling and bounded synchronous fetch dispatch.
+"""Independent provider polling with bounded fetch dispatch.
 
-Each source owns its cadence and overlap protection. Cancellation of an async
-wait never permits another fetch to overlap the still-running worker.
+Built-in providers use disposable processes with enforced deadlines. Custom
+in-process providers retain overlap protection while their synchronous calls drain.
 """
 
 import asyncio
@@ -9,6 +9,7 @@ import threading
 import time
 
 from .contracts import EventProvider
+from .worker import call_client, supports_isolation
 
 
 class PollingCoordinator:
@@ -21,6 +22,9 @@ class PollingCoordinator:
 
     async def fetch(self, source: str, client: EventProvider, timeout: float):
         """Bound the caller's wait while preserving worker overlap protection."""
+        if supports_isolation(client):
+            return await call_client(client, "fetch", timeout=timeout)
+
         def fetch_sync():
             lock = self._fetch_locks[source]
             if not lock.acquire(blocking=False):

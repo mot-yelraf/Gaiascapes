@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
 import tempfile
 import threading
 import time
@@ -99,7 +100,7 @@ class SanctSoundClient:
             return destination
         # Replacing settings can leave an older client downloading this clip.
         # Separate temporary files keep their atomic cache writes independent.
-        with tempfile.NamedTemporaryFile(dir=self.media_dir, suffix=".part", delete=False) as pending:
+        with tempfile.NamedTemporaryFile(dir=os.environ.get("GAIASCAPES_WORKER_TEMP_DIR", self.media_dir), suffix=".part", delete=False) as pending:
             temporary = Path(pending.name)
         request = urllib.request.Request(ARCHIVE_URL + clip["object"], headers={
             "User-Agent": "Gaiascapes (https://github.com/mot-yelraf/Gaiascapes)"

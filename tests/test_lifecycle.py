@@ -204,6 +204,8 @@ def test_failed_settings_save_leaves_config_clients_and_history_unchanged(tmp_pa
 
 
 def test_location_edit_discards_inflight_old_forecast(tmp_path, monkeypatch):
+    # The custom parser and transport below deliberately live in this process.
+    monkeypatch.setattr('gaiascapes_host.polling.supports_isolation', lambda client: False)
     started, release = threading.Event(), threading.Event()
     parsed_locations = []
 

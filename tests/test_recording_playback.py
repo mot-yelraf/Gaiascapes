@@ -144,7 +144,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
 const source = fs.readFileSync(process.argv[1], "utf8");
-const context = vm.createContext({fetch: async () => context.response});
+const context = vm.createContext({fetch: async () => context.response, AbortController, setTimeout, clearTimeout});
 vm.runInContext(source.slice(source.indexOf("async function request("), source.indexOf("\nfunction when(")), context);
 (async () => {
   context.response = {ok: false, status: 500, json: async () => {
@@ -219,7 +219,9 @@ const context = vm.createContext({
   performance: {now: () => now},
   setInterval: fn => { fade = fn; return 1; }, clearInterval: () => {},
   setTimeout: () => 1, clearTimeout: () => {},
-  request: async (url, options) => { requests.push(JSON.parse(options.body)); },
+  request: async (url, options) => {
+    if (url.endsWith("/advance")) requests.push(JSON.parse(options.body));
+  },
   Audio: class {
     constructor() {
       this.duration = duration; this.currentTime = 0; this.ended = false;
@@ -424,5 +426,114 @@ assert.throws(() => gain(invalid), /invalid audio/);
 })().catch(error => {console.error(error); process.exitCode = 1;});
 '''
     result = subprocess.run([node, "-e", script, str(source)],
+                            capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize('kind', ['birdsong', 'frog_calls', 'whale_song', 'dolphin_calls'])
+@pytest.mark.parametrize('failure', ['load', 'timeout', 'error', 'stall', 'missing', 'cancel'])
+def test_recording_failure_recovers_without_advancing_replacement(kind, failure):
+    node = shutil.which('node')
+    if node is None:
+        pytest.skip('Node.js is needed to exercise recording recovery')
+    source = Path(__file__).parents[1] / 'src/gaiascapes_host/static/app.js'
+    script = r'''
+const assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm');
+const source = fs.readFileSync(process.argv[1], 'utf8'), failure = process.argv[3];
+let now = 0, attempts = 0, nextId = 0;
+const timers = new Map(), intervals = new Map(), players = [], advances = [], progress = [];
+const context = vm.createContext({
+  document: {getElementById: () => null}, AbortController,
+  performance: {now: () => now}, console: {warn() {}},
+  recordingNormalizer: {resume: async () => {}, prepare: async () => {
+    if (failure === 'load') throw new Error('decode failed');
+    if (failure === 'timeout' || failure === 'cancel') await new Promise(() => {});
+  }},
+  setTimeout: (fn, ms) => { const id = ++nextId; timers.set(id, {fn, ms}); return id; },
+  clearTimeout: id => timers.delete(id),
+  setInterval: (fn, ms) => { const id = ++nextId; intervals.set(id, {fn, ms}); return id; },
+  clearInterval: id => intervals.delete(id),
+  request: async (url, options) => {
+    const body = JSON.parse(options.body);
+    if (url.endsWith('/progress')) { progress.push(body); return {accepted: true}; }
+    advances.push(body); attempts++;
+    if (attempts === 1) throw new Error('temporary network failure');
+    return {advanced: true};
+  },
+  Audio: class {
+    constructor() { this.duration = 600; this.currentTime = 0; this.listeners = {}; players.push(this); }
+    async play() {}
+    pause() { this.paused = true; }
+    removeAttribute() {}
+    addEventListener(name, fn) { this.listeners[name] = fn; }
+  },
+});
+vm.runInContext(source.slice(0, source.indexOf('\nlet mapProjection =')), context);
+context.message = () => {};
+context.cue = {sequence: 42, recording_rotation: true, duration: 24.5, volume: 1,
+  event: {kind: process.argv[2], traits: {media_url: '/test.wav'}}};
+const flush = () => new Promise(resolve => setImmediate(resolve));
+(async () => {
+  if (failure === 'missing') delete context.cue.event.traits.media_url;
+  const pending = vm.runInContext('playRecordingCue(cue)', context);
+  await flush();
+  if (failure === 'cancel') {
+    vm.runInContext('stopRecordingPlayback()', context);
+    await pending; await flush();
+    assert.equal(advances.length, 0);
+    return;
+  }
+  if (failure === 'timeout') [...timers.values()].find(t => t.ms === 30000).fn();
+  await pending;
+  if (failure === 'error') players[0].listeners.error();
+  if (failure === 'stall') {
+    const watchdog = [...intervals.values()].find(t => t.ms === 10000).fn;
+    // Healthy long recordings renew progress and are not cut off by cue duration.
+    now = 120000; players[0].currentTime = 120;
+    await watchdog(); assert.equal(advances.length, 0);
+    now += 30001; await watchdog();
+  }
+  await flush();
+  assert.equal(advances.length, 1);
+  const reasons = {load: 'load_failed', timeout: 'load_failed', error: 'playback_failed',
+    stall: 'stalled', missing: 'missing_media'};
+  assert.deepEqual(advances[0], {sequence: 42, reason: reasons[failure]});
+  const retry = [...timers.values()].find(t => t.ms === 1000).fn;
+  retry(); await flush(); assert.equal(advances.length, 2);
+  // A delayed retry from an obsolete player must never release a new recording.
+  vm.runInContext('recordingPlaybackGeneration += 1', context);
+  retry(); await flush(); assert.equal(advances.length, 2);
+})().catch(error => {console.error(error); process.exitCode = 1;});
+'''
+    result = subprocess.run([node, '-e', script, str(source), kind, failure],
+                            capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stderr
+
+
+def test_recording_completion_request_has_network_timeout():
+    node = shutil.which('node')
+    if node is None:
+        pytest.skip('Node.js is needed to exercise recording requests')
+    source = Path(__file__).parents[1] / 'src/gaiascapes_host/static/app.js'
+    script = r'''
+const assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm');
+let timeout, cleared = false;
+const context = vm.createContext({document: {getElementById: () => null}, AbortController,
+  setTimeout: (fn, ms) => {assert.equal(ms, 10000); timeout = fn; return 1;},
+  clearTimeout: () => {cleared = true;},
+  request: (url, options) => new Promise((resolve, reject) => {
+    options.signal.addEventListener('abort', () => reject(new Error('aborted')));
+  }),
+});
+const source = fs.readFileSync(process.argv[1], 'utf8');
+vm.runInContext(source.slice(0, source.indexOf('\nlet mapProjection =')), context);
+(async () => {
+  const pending = vm.runInContext('advanceRecording(42)', context);
+  timeout();
+  await assert.rejects(pending, /aborted/);
+  assert.equal(cleared, true);
+})().catch(error => {console.error(error); process.exitCode = 1;});
+'''
+    result = subprocess.run([node, '-e', script, str(source)],
                             capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stderr

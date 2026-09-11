@@ -25,6 +25,7 @@ let pendingRecordingAudio = null;
 let recordingFadeTimer = null;
 let recordingPreviewTimer = null;
 let recordingPreviewUntil = 0;
+let recordingWatchdog = null;
 const activeRecordingAudio = new Set();
 
 function setRecordingFade(audio, fraction) {
@@ -64,13 +65,38 @@ function updateRecordingCountdown() {
   });
 }
 
-async function advanceRecording(sequence) {
-  return request("/api/recordings/advance", {
-    method: "POST", body: JSON.stringify({sequence}),
+async function recordingRequest(path, body) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    return await request(path, {
+      method: "POST", body: JSON.stringify(body), signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function advanceRecording(sequence, reason = "") {
+  return recordingRequest("/api/recordings/advance", reason ? {sequence, reason} : {sequence});
+}
+
+function recoverRecording(sequence, generation, reason) {
+  if (!localRecordingPlayback || !sequence || generation !== recordingPlaybackGeneration) return;
+  advanceRecording(sequence, reason).catch(error => {
+    if (generation !== recordingPlaybackGeneration) return;
+    message(`Unable to advance recording: ${error.message}; retrying.`, true);
+    setTimeout(() => recoverRecording(sequence, generation, reason), 1000);
   });
 }
 
+function clearRecordingWatchdog() {
+  if (recordingWatchdog !== null) clearInterval(recordingWatchdog);
+  recordingWatchdog = null;
+}
+
 function stopRecordingPlayback(fadeMilliseconds = 700) {
+  clearRecordingWatchdog();
   recordingLoadController?.abort();
   recordingPlaybackGeneration += 1;
   recordingKind = null;
@@ -101,7 +127,11 @@ function stopRecordingPlayback(fadeMilliseconds = 700) {
 
 async function playRecordingCue(cue) {
   const mediaUrl = cue.event?.traits?.media_url;
-  if (!mediaUrl) return;
+  if (!mediaUrl) {
+    if (cue.recording_rotation) recoverRecording(cue.sequence, recordingPlaybackGeneration, "missing_media");
+    return;
+  }
+  clearRecordingWatchdog();
   recordingLoadController?.abort();
   const controller = new AbortController();
   recordingLoadController = controller;
@@ -141,6 +171,8 @@ async function playRecordingCue(cue) {
       await recordingNormalizer.prepare(next, mediaUrl, controller.signal);
       controller.signal.throwIfAborted();
       await next.play();
+      if (controller.signal.aborted) next.pause();
+      controller.signal.throwIfAborted();
     })()]);
   } catch (error) {
     next.pause();
@@ -149,7 +181,10 @@ async function playRecordingCue(cue) {
     if (generation !== recordingPlaybackGeneration) return;
     recordingPreviewUntil = 0;
     console.warn("Unable to play normalized recording", error);
-    message(`Unable to play recording: ${error.message}. Select Start or Preview to retry.`, true);
+    const recovery = next.rotationSequence && localRecordingPlayback
+      ? "Advancing to the next recording." : "Select Start or Preview to retry.";
+    message(`Unable to play recording: ${error.message}. ${recovery}`, true);
+    recoverRecording(next.rotationSequence, generation, error.recordingFailure || "load_failed");
     return;
   } finally {
     clearTimeout(loadTimeout);
@@ -167,24 +202,60 @@ async function playRecordingCue(cue) {
   if (byId("mapPulseLayer")) {
     animateMapEvent(cue.event, cue.instrument, cueRole(cue), cueDuration, next);
   }
-  if (cue.recording_rotation && localRecordingPlayback) {
+  if (cue.recording_rotation) {
     let advancing = false;
-    const advanceAtEnd = async () => {
+    let reporting = false;
+    let lastPosition = Number(next.currentTime) || 0;
+    let lastProgressAt = performance.now();
+    const finish = (reason = "") => {
       if (advancing || generation !== recordingPlaybackGeneration) return;
-      const transition = Math.min(3, next.duration * 0.1);
-      if (!next.ended && (!Number.isFinite(next.duration)
-          || next.duration - next.currentTime > transition)) return;
       advancing = true;
+      clearRecordingWatchdog();
+      if (reason) {
+        next.pause();
+        next.releaseNormalization?.();
+        next.removeAttribute("src");
+        activeRecordingAudio.delete(next);
+        if (recordingAudio === next) recordingAudio = null;
+        message(`Recording ${reason}; advancing to the next recording.`, true);
+      }
+      recoverRecording(cue.sequence, generation, reason);
+    };
+    const advanceAtEnd = () => {
+      const transition = Math.min(3, next.duration * 0.1);
+      if (next.ended || (Number.isFinite(next.duration)
+          && next.duration - next.currentTime <= transition)) finish();
+    };
+    const checkProgress = async () => {
+      if (advancing || generation !== recordingPlaybackGeneration) return;
+      advanceAtEnd();
+      if (advancing) return;
+      const position = Number(next.currentTime) || 0;
+      if (position > lastPosition) {
+        lastPosition = position;
+        lastProgressAt = performance.now();
+      } else if (performance.now() - lastProgressAt >= 30000) {
+        finish("stalled");
+        return;
+      }
+      if (!localRecordingPlayback || reporting) return;
+      reporting = true;
       try {
-        await advanceRecording(cue.sequence);
+        await recordingRequest("/api/recordings/progress", {sequence: cue.sequence, position});
       } catch (error) {
-        advancing = false;
-        message(`Unable to advance recording: ${error.message}`, true);
-        setTimeout(advanceAtEnd, 1000);
+        // Retry on the next tick. The server also expires abandoned recordings.
+        console.warn("Unable to report recording progress", error);
+      } finally {
+        reporting = false;
       }
     };
     next.addEventListener("timeupdate", advanceAtEnd);
     next.addEventListener("ended", advanceAtEnd);
+    next.addEventListener("error", () => finish(
+      next.error?.code === 3 || next.error?.code === 4 ? "decode_failed" : "playback_failed"
+    ));
+    recordingWatchdog = setInterval(checkProgress, 10000);
+    checkProgress();
   }
   if (recordingPreviewTimer) clearTimeout(recordingPreviewTimer);
   if (cueDuration > 0 && cueDuration <= 10) {
@@ -475,20 +546,31 @@ function applyLiveMode(mode) {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(path, {
-    headers: {"Content-Type": "application/json"},
-    ...options,
-  });
-  let payload;
+  const controller = new AbortController();
+  const externalSignal = options.signal;
+  const abort = () => controller.abort(externalSignal.reason);
+  if (externalSignal?.aborted) abort();
+  else externalSignal?.addEventListener("abort", abort, {once: true});
+  const timeout = setTimeout(() => controller.abort(new Error("Request timed out; please retry.")),
+    path.startsWith("/api/cues") ? 35000 : 20000);
   try {
-    payload = await response.json();
-  } catch {
-    throw new Error(response.ok
-      ? "The server returned an invalid response. Please try again."
-      : `The server could not complete the request (HTTP ${response.status}). Please try again.`);
+    const response = await fetch(path, {
+      headers: {"Content-Type": "application/json"}, ...options, signal: controller.signal,
+    });
+    let payload;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new Error(response.ok
+        ? "The server returned an invalid response. Please try again."
+        : `The server could not complete the request (HTTP ${response.status}). Please try again.`);
+    }
+    if (!response.ok) throw new Error(payload.detail || `Request failed (${response.status})`);
+    return payload;
+  } finally {
+    clearTimeout(timeout);
+    externalSignal?.removeEventListener("abort", abort);
   }
-  if (!response.ok) throw new Error(payload.detail || `Request failed (${response.status})`);
-  return payload;
 }
 
 function when(timestamp) {
@@ -1188,6 +1270,8 @@ const liveAudioPlayer = new LiveAudioPlayer((state, detail) => {
     muteDevice();
     listenStatus.textContent = detail;
     listenStatus.classList.add("error");
+  } else if (state === "reconnecting") {
+    listenStatus.textContent = `Recordings available; reconnecting host audio: ${detail}`;
   } else {
     listenStatus.textContent = "Listening on this device";
   }
@@ -1224,7 +1308,12 @@ async function listenOnDevice() {
     const availability = await request("/api/audio/status");
     if (attempt !== listeningAttempt) return;
     if (availability.enabled) {
-      await liveAudioPlayer.start();
+      try {
+        await liveAudioPlayer.start();
+      } catch (error) {
+        // Synthesized audio is optional; recordings use their own audio context.
+        listenStatus.textContent = `Recordings available; reconnecting host audio: ${error.message}`;
+      }
     } else {
       listenStatus.textContent = "Listening to recordings; host synthesized audio is disabled.";
     }

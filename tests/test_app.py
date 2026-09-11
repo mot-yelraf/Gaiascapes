@@ -1579,6 +1579,7 @@ def test_glm_capture_reports_raw_counts_and_sounds_each_satellite(
         ),
     )
     glm = FakeGlm(flashes, raw_count=389)
+    glm.last_selected_flash_count = 557
     app = create_app(
         tmp_path, auto_capture=False, usgs_client=FakeUsgs(), glm_client=glm
     )
@@ -1594,7 +1595,7 @@ def test_glm_capture_reports_raw_counts_and_sounds_each_satellite(
     async def capture_and_finish_sonification():
         with caplog.at_level("INFO", logger="uvicorn.error"):
             result = await app.state.service.capture_glm_once()
-        await app.state.service._glm_sonification_task
+            await app.state.service._glm_sonification_task
         return result, await app.state.service.status()
 
     result, status = asyncio.run(capture_and_finish_sonification())
@@ -1613,8 +1614,10 @@ def test_glm_capture_reports_raw_counts_and_sounds_each_satellite(
     assert history == ()
     assert (
         "NOAA GLM update: 2 granules, 389 raw flashes, 2 sampled, "
-        "2 new, 2 sonified"
+        "2 new (safety limit: 557 selected reduced to 2); 2 sonified"
     ) in caplog.text
+    assert len(caplog.records) == 1
+    assert "playback dispatched" in caplog.text
 
 
 def test_mtg_capture_schedules_each_flash_once_on_delayed_timeline(
@@ -1785,7 +1788,7 @@ def test_glm_replays_last_flash_field_when_no_new_granule_arrives(
         glm.last_granule_count = 0
         with caplog.at_level("INFO", logger="uvicorn.error"):
             result = await app.state.service.capture_glm_once()
-        await app.state.service._glm_sonification_task
+            await app.state.service._glm_sonification_task
         return result, await app.state.service.status()
 
     result, status = asyncio.run(capture_new_then_unchanged())
@@ -1795,7 +1798,7 @@ def test_glm_replays_last_flash_field_when_no_new_granule_arrives(
     assert status["glm"]["replaying_cached_field"] is True
     assert status["glm"]["cached_flash_count"] == 2
     assert (
-        "NOAA GLM unchanged: replaying previous field with 2 sonified flashes"
+        "replaying previous field; waiting for new granules; 2 sonified"
         in caplog.text
     )
 
@@ -2334,6 +2337,8 @@ def test_location_opt_out_persists_and_prevents_lookup(tmp_path):
 
 
 def test_eumetsat_failure_status_does_not_leak_sdk_secrets(tmp_path, monkeypatch):
+    # Keep the injected SDK double in this process; real clients use isolated workers.
+    monkeypatch.setattr('gaiascapes_host.polling.supports_isolation', lambda client: False)
     import sys
     from types import SimpleNamespace
     from gaiascapes_host.config import AppConfig
@@ -2495,3 +2500,236 @@ def test_preview_rejects_invalid_output_channel(tmp_path, channel):
             "instrument": "earthquake", "output_channel": channel,
         })
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("rendered", [True, False])
+def test_sonification_console_reports_only_emitted_previews(tmp_path, caplog, rendered):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.service.renderer.play = lambda *args: rendered
+    with caplog.at_level("INFO", logger="uvicorn.error"):
+        asyncio.run(app.state.service.preview_instrument("earthquake"))
+    reports = [record.message for record in caplog.records if "sonification:" in record.message]
+    assert len(reports) == int(rendered)
+    if rendered:
+        assert "preview sonification: earthquake, Earthquake preview" in reports[0]
+        assert "instrument=earthquake, channel=preview" in reports[0]
+        assert "location=18.0000,-35.0000" in reports[0]
+
+
+def test_glm_console_omits_paused_playback(tmp_path, caplog):
+    flash = GaiaEvent("noaa_glm", "paused", "lightning_flash", time.time(), 0, -75, 0.8)
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs(),
+                     glm_client=FakeGlm((flash,), raw_count=20))
+    with caplog.at_level("INFO", logger="uvicorn.error"):
+        asyncio.run(app.state.service.capture_glm_once())
+    assert not caplog.records
+
+
+@pytest.mark.parametrize("rendered", [True, False])
+def test_glm_console_reports_actual_playback_only(tmp_path, caplog, rendered):
+    flash = GaiaEvent("noaa_glm", "test", "lightning_flash", time.time(), 0, -75, 0.8)
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs(),
+                     glm_client=FakeGlm((flash,), raw_count=20))
+    svc = app.state.service
+    svc.playback.start()
+    svc.config.live_mode = "continuous"
+    svc.renderer.play = lambda *args: rendered
+
+    async def run():
+        await svc.capture_glm_once()
+        await svc._glm_sonification_task
+
+    with caplog.at_level("INFO", logger="uvicorn.error"):
+        asyncio.run(run())
+    assert len(caplog.records) == int(rendered)
+    if rendered:
+        assert "1 sonified, playback dispatched" in caplog.text
+
+
+@pytest.mark.parametrize('kind', ['birdsong', 'frog_calls', 'whale_song', 'dolphin_calls'])
+def test_recording_progress_expires_stalled_players_but_preserves_long_playback(tmp_path, monkeypatch, kind):
+    app = create_app(tmp_path, auto_capture=False)
+    svc = app.state.service
+    svc.playback.start()
+    svc.config.event_instruments['background'] = kind
+    setattr(svc.config, f'{kind}_enabled', True)
+    svc.config.xeno_canto_api_key = 'test-key'
+    now = [1000.0]
+    monkeypatch.setattr(service.time, 'monotonic', lambda: now[0])
+    event = GaiaEvent('test', 'recording', kind, time.time(), strength=.6)
+    svc._record_emitted_cue(ScoreCue(0, event, 60, 100, 24.5, 0), kind, publish_background=True)
+    sequence = svc._recording_sequences[kind]
+    for index in range(20):
+        now[0] += 60
+        assert svc.recording_progress(sequence, index * 60)
+        svc._expire_recordings()
+        assert svc._recording_sequences[kind] == sequence
+    now[0] += 60
+    assert svc.recording_progress(sequence, 19 * 60)  # Frozen position cannot extend the hold.
+    assert not svc.recording_progress(sequence + 1, 99999)
+    now[0] += 31
+    svc._expire_recordings()
+    assert kind not in svc._recording_sequences
+    assert not svc.recording_progress(sequence, 99999)
+    # A player which never started also expires.
+    svc._record_emitted_cue(ScoreCue(0, event, 60, 100, 24.5, 0), kind, publish_background=True)
+    now[0] += 91
+    svc._expire_recordings()
+    assert not svc._recording_sequences
+
+
+def test_recording_progress_api_validates_input(tmp_path):
+    with TestClient(create_app(tmp_path, auto_capture=False)) as client:
+        for position in (None, -1, '1', True, [], {}):
+            assert client.post('/api/recordings/progress', json={
+                'sequence': 1, 'position': position,
+            }).status_code == 422
+        assert client.post('/api/recordings/progress', json={
+            'sequence': 1, 'position': 0,
+        }).json() == {'accepted': False}
+        assert client.post('/api/recordings/advance', json={
+            'sequence': 1, 'reason': [],
+        }).status_code == 422
+
+
+@pytest.mark.parametrize('kind', ['birdsong', 'frog_calls', 'whale_song', 'dolphin_calls'])
+def test_recording_retrieval_failure_does_not_pin_rotation(tmp_path, kind):
+    app = create_app(tmp_path, auto_capture=False)
+    svc = app.state.service
+    svc.playback.start()
+    svc.config.event_instruments['background'] = kind
+    setattr(svc.config, f'{kind}_enabled', True)
+    svc.config.xeno_canto_api_key = 'test-key'
+    indices = []
+
+    class Recordings:
+        def event_at(self, index):
+            indices.append(index)
+            if index == 0:
+                raise RuntimeError('unreadable recording')
+            return GaiaEvent('test', 'good-recording', kind, time.time(), strength=.6)
+
+    setattr(svc, kind, Recordings())
+
+    async def run():
+        with pytest.raises(RuntimeError, match='unreadable recording'):
+            await svc.play_next_ambient_layers()
+        assert await svc.play_next_ambient_layers() == (kind,)
+        sequence = svc._recording_sequences[kind]
+        assert svc.advance_recording(sequence, 'load_failed')
+        assert not svc.advance_recording(sequence, 'load_failed')
+        assert await svc.play_next_ambient_layers() == (kind,)
+        assert indices == [0, 1, 2]
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("kind", ["birdsong", "frog_calls", "whale_song", "dolphin_calls"])
+def test_decode_failure_repairs_cache_once_then_quarantines(tmp_path, kind):
+    app = create_app(tmp_path, auto_capture=False, birdsong_client=FakeBirdsong())
+    svc = app.state.service
+    svc.playback.start()
+    svc.config.event_instruments['background'] = kind
+    setattr(svc.config, f'{kind}_enabled', True)
+    svc.config.xeno_canto_api_key = 'test-key'
+    client = FakeBirdsong()
+    setattr(svc, kind, client)
+    client.media_dir = tmp_path / 'media' / kind
+    audio = client.media_dir / 'broken.mp3'
+    audio.write_bytes(b'corrupt')
+    event = GaiaEvent('test', 'broken', kind, time.time(), strength=.5,
+                      traits={'media_url': '/birdsong-media/broken.mp3'})
+    for attempt in range(2):
+        svc._record_emitted_cue(ScoreCue(0, event, 60, 100, 24.5, 0), kind, publish_background=True)
+        seq = svc._recording_sequences[kind]
+        assert svc.advance_recording(seq, 'decode_failed')
+        if attempt == 0:
+            assert not audio.exists()
+            assert audio.with_suffix('.mp3.invalid').read_bytes() == b'corrupt'
+            assert not svc._quarantined_recordings
+            audio.write_bytes(b'still invalid')
+    assert event.traits['media_url'] in svc._quarantined_recordings
+    assert audio.exists()
+    client.event_at = lambda index: event
+    with pytest.raises(RuntimeError, match='quarantined'):
+        asyncio.run(svc._fetch_recording(client, 0))
+
+
+def test_mtg_transport_failure_retries_only_unplayed_flash(tmp_path, monkeypatch):
+    app = create_app(tmp_path, auto_capture=False)
+    svc = app.state.service
+    svc.playback.start()
+    svc.config.live_mode = 'continuous'
+    svc.config.enabled_sources = ['eumetsat_mtg_li']
+    now = time.time()
+    monkeypatch.setattr(service, 'MTG_PRESENTATION_DELAY_SECONDS', 0)
+    flashes = tuple(GaiaEvent('eumetsat_mtg_li', str(i), 'lightning_flash', now, strength=.5) for i in range(3))
+    attempts, played = [], []
+
+    async def play(event, **kwargs):
+        attempts.append(event.event_id)
+        if event.event_id == '1' and attempts.count('1') == 1:
+            raise OSError('temporary renderer failure')
+        played.append(event.event_id)
+        return 1
+
+    svc._play_live_event = play
+    asyncio.run(svc._run_mtg_sonification(flashes))
+    assert attempts == ['0', '1', '1', '2']
+    assert played == ['0', '1', '2']
+    assert svc.mtg_played_count == 3
+
+
+def test_mtg_retry_does_not_repeat_successful_voice(tmp_path, monkeypatch):
+    svc = create_app(tmp_path, auto_capture=False).state.service
+    svc.playback.start()
+    svc.config.live_mode = 'continuous'
+    svc.config.enabled_sources = ['eumetsat_mtg_li']
+    svc.config.event_instruments.update(event_1='lightning_glass', event_3='lightning_glass')
+    monkeypatch.setattr(service, 'MTG_PRESENTATION_DELAY_SECONDS', 0)
+    calls = []
+
+    def render(cue, instrument):
+        calls.append(cue.output_channel)
+        if cue.output_channel == 'event_3' and calls.count('event_3') == 1:
+            raise OSError('temporary channel failure')
+        return True
+
+    svc.renderer.play = render
+    event = GaiaEvent('eumetsat_mtg_li', 'flash', 'lightning_flash', time.time(), strength=.5)
+    asyncio.run(svc._run_mtg_sonification((event,)))
+    assert calls == ['event_1', 'event_3', 'event_3']
+    assert svc.mtg_played_count == 1
+
+
+def test_recording_watchdog_runs_while_retrieval_is_blocked(tmp_path):
+    svc = create_app(tmp_path, auto_capture=False, birdsong_client=FakeBirdsong()).state.service
+    svc.playback.start()
+    svc.config.event_instruments['background'] = 'birdsong'
+    svc.config.birdsong_enabled = True
+    event = FakeBirdsong().event_at(0)
+    svc._record_emitted_cue(ScoreCue(0, event, 60, 100, 24.5, 0), 'birdsong', publish_background=True)
+    svc._recording_progress['birdsong'] = (0, time.monotonic() - 1)
+    started, release = threading.Event(), threading.Event()
+
+    class BlockingRecording:
+        def event_at(self, index):
+            started.set()
+            release.wait(3)
+            return event
+
+    async def run():
+        retrieval = asyncio.create_task(svc._fetch_recording(BlockingRecording(), 0))
+        assert await asyncio.to_thread(started.wait, 1)
+        watchdog = asyncio.create_task(svc._watch_recordings())
+        try:
+            await asyncio.sleep(.01)
+            assert not svc._recording_sequences
+            assert not retrieval.done()
+        finally:
+            release.set()
+            watchdog.cancel()
+            await asyncio.gather(watchdog, return_exceptions=True)
+            await retrieval
+
+    asyncio.run(run())

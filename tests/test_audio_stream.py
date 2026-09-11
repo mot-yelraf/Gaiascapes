@@ -152,7 +152,7 @@ class AudioContext {
     nodes.push(source); return source;
   }
 }
-const scope=vm.createContext({window:{AudioContext},AbortController,Uint8Array,DataView});
+const scope=vm.createContext({window:{AudioContext},AbortController,Uint8Array,DataView,setTimeout,clearTimeout});
 vm.runInContext(fs.readFileSync(process.argv[1],'utf8'),scope);
 const Player=vm.runInContext('LiveAudioPlayer',scope);
 function packet(sequence, value=.2) {

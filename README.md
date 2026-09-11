@@ -82,7 +82,14 @@ per location. These recordings play to the end instead of being cut off by the
 23-second location interval. The browser requests the next location during the
 final three seconds (or final 10% of short clips), fading between recordings.
 First-use downloads can leave a gap. Keep the browser or desktop player open
-for the recording rotation to advance. Previews remain limited to eight seconds.
+to hear recordings. Failed loads and playback errors skip to the next selection;
+30 seconds without playback progress also triggers recovery. Completion requests
+time out after 10 seconds and retry while the player is current. The server
+releases a recording after 90 seconds without progress, checked independently
+every five seconds, so a disconnected player cannot hold rotation indefinitely.
+Healthy long recordings keep their place by reporting progress. Confirmed decoding
+failures cause one cache repair; a second failure quarantines that recording for
+the rest of the session. Previews remain limited to eight seconds.
 
 Whale Song and Dolphin Calls use NOAA NCEI / SanctSound recordings without an
 API key. Enable their tiles under Background sound sources, select one in
@@ -188,9 +195,15 @@ a newer granule by the next polling cycle, Gaia replays the last non-empty flash
 field with the same relative timing until fresh lightning information replaces it. GLM
 flashes remain available for deduplication and replay but are intentionally omitted
 from Environmental Event History and its stored count. Live yellow-gold pulses still
-show their observed positions. The console and
-`/api/status` report granules, raw flashes, sampled flashes, inserts, and errors, for
-example: `NOAA GLM update: 2 granules, 534 raw flashes, 8 sampled, 8 new, 47 sonified`.
+show their observed positions. Console log entries include the local date and time
+(`YYYY-MM-DD HH:MM:SS`). The console reports each
+dispatched sonification with its source, instrument,
+channel, volume, duration, strength, and location. Lightning is grouped: each played
+NOAA field reports granules, raw flashes, samples, inserts, and the number actually
+sonified, with any safety reduction in the same line. Cached-field playback explains
+that it is waiting for new granules. MTG and history replay groups report when
+playback begins. Enabled sources and queued sounds alone do not produce playback
+reports; capture counts remain available through `/api/status`.
 Gaia also quarantines exceptionally dense tropical GOES-19 fields during NOAA's
 documented 15:00–19:00 UTC false-alarm window, active since July 17, 2026.
 
@@ -200,7 +213,17 @@ Gaiascapes keeps capture, history, the web interface, and available audio layers
 running when an environmental provider becomes unavailable. Each source reports
 an online, degraded, offline, or recovering state through `/api/status`. Failed
 sources retry independently with bounded exponential backoff and jitter, so one
-outage does not interrupt healthy feeds.
+outage does not interrupt healthy feeds. Built-in capture operations have a
+45-second process deadline; recording retrieval has a 60-second deadline. Timed-out
+workers are terminated before retrying, so stuck network or native-library calls
+cannot permanently occupy a provider. Standalone NetCDF decoding has a 20-second
+process deadline.
+
+Browser requests time out instead of leaving cue polling stuck. Device listening
+reconnects synthesized audio with a delay capped at 30 seconds while recordings
+remain available; Mute cancels reconnection. MTG timelines retry transient transport
+failures up to three times per flash, within the existing lateness allowance,
+without repeating successful voices or abandoning the remaining timeline.
 
 Recent Open-Meteo forecasts can remain active for up to three hours, and a recent
 NOAA GLM field can replay for up to five minutes. EUMETSAT MTG LI observations

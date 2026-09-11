@@ -234,6 +234,7 @@ class NoaaGlmClient:
         self.last_raw_flash_count = 0
         self.last_sampled_flash_count = 0
         self.last_sonified_flash_count = 0
+        self.last_selected_flash_count = 0
         self.last_granules = []
         self.last_sonification_events = ()
         self.last_error = ""
@@ -280,12 +281,7 @@ class NoaaGlmClient:
         sonification_events = select_sonification_events(
             sonification_events, self.sonification_sample_stride
         )
-        if len(sonification_candidates) > len(sonification_events):
-            LOGGER.warning(
-                "NOAA GLM sonification safety limit: %d selected flashes reduced to %d",
-                len(sonification_candidates),
-                len(sonification_events),
-            )
+        self.last_selected_flash_count = len(sonification_candidates)
         self.last_sonification_events = tuple(sonification_events)
         self.last_sonified_flash_count = len(sonification_events)
         self.last_granules = [PurePosixPath(key).name for key in granules]
@@ -303,6 +299,7 @@ class NoaaGlmClient:
             "granule_count": self.last_granule_count,
             "raw_flash_count": self.last_raw_flash_count,
             "sampled_flash_count": self.last_sampled_flash_count,
+            "selected_flash_count": self.last_selected_flash_count,
             "sonified_flash_count": self.last_sonified_flash_count,
             "granules": list(self.last_granules),
             "last_error": self.last_error,

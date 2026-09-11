@@ -1,19 +1,31 @@
-"""Serialize native NetCDF decoding on one process-wide worker.
+"""Isolate native NetCDF decoding in deadline-bound processes.
 
-Provider downloads remain concurrent, but all native dataset operations run
-on the same thread because netcdf-c does not support concurrent threaded IO.
+Native libraries never run concurrently in one process. Standalone decodes use
+short-lived workers; provider workers already supply isolation and a deadline.
 """
 
-from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
+import subprocess
 
+from . import worker
 
-_DECODER = ThreadPoolExecutor(max_workers=1, thread_name_prefix="gaia-netcdf")
+DECODE_TIMEOUT_SECONDS = 20.0
 
 
 def netcdf_decoder(function):
-    """Run a synchronous decoding entry point on the shared native worker."""
+    """Decode natively in a process that can be terminated if it hangs."""
     @wraps(function)
     def decode(*args, **kwargs):
-        return _DECODER.submit(function, *args, **kwargs).result()
+        if worker.IN_WORKER:
+            return function(*args, **kwargs)
+        try:
+            result, _changes, error = worker.run_operation(
+                ('function', function.__module__, function.__name__, args, kwargs),
+                DECODE_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired:
+            raise TimeoutError("NetCDF decoding timed out; worker restarted") from None
+        if error is not None:
+            raise error
+        return result
     return decode

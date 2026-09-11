@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import mimetypes
 import re
 import time
@@ -161,7 +162,9 @@ class CommonsBirdsongClient:
         if not extension:
             extension = mimetypes.guess_extension(metadata.get("mime", "")) or ".audio"
         destination = self.media_dir / f"{slug}{extension.lower()}"
-        temporary = destination.with_suffix(destination.suffix + ".part")
+        pending_dir = os.environ.get("GAIASCAPES_WORKER_TEMP_DIR")
+        temporary = (Path(pending_dir) / (destination.name + ".part") if pending_dir
+                     else destination.with_suffix(destination.suffix + ".part"))
         request = urllib.request.Request(
             metadata["download_url"],
             headers={"User-Agent": COMMONS_USER_AGENT},
