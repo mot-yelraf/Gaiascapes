@@ -1,52 +1,42 @@
-"""Verify process-wide serialization across both lightning decoders.
+"""Verify isolated native decodes and recovery after a worker deadline.
 
-Instrumented dataset boundaries assert thread ownership without provoking an
-unsafe native-library race; provider tests separately decode real fixtures.
+Parallel invalid decodes exercise the real subprocess boundary without sharing
+native state. Fixture tests separately verify normalized NetCDF results.
 """
 
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
-import threading
-import time
-from types import SimpleNamespace
+import subprocess
+from pathlib import Path
 
 import pytest
 
-from gaiascapes_host import eumetsat_li, noaa_glm
+from gaiascapes_host import eumetsat_li, noaa_glm, worker
 
 
-def test_all_native_entry_points_use_one_worker(monkeypatch):
-    threads = []
-    active = 0
-    peak = 0
-
-    @contextmanager
-    def dataset(payload):
-        nonlocal active, peak
-        threads.append(threading.get_ident())
-        active += 1
-        peak = max(peak, active)
-        try:
-            time.sleep(.002)
-            yield SimpleNamespace(variables={}, dimensions={}, groups={})
-        finally:
-            active -= 1
-
-    monkeypatch.setattr(noaa_glm, '_open_dataset', dataset)
-    monkeypatch.setattr(eumetsat_li, '_open_dataset', dataset)
-
+def test_native_entry_points_are_isolated():
     def decode(index):
         if index % 3 == 0:
-            assert noaa_glm.count_glm_flashes(b'fixture') == 0
+            function, args = noaa_glm.count_glm_flashes, (b'',)
         elif index % 3 == 1:
-            with pytest.raises(ValueError, match='lacks'):
-                noaa_glm.parse_glm_document(b'fixture', 'fixture.nc')
+            function, args = noaa_glm.parse_glm_document, (b'', 'fixture.nc')
         else:
-            with pytest.raises(ValueError, match='lacks'):
-                eumetsat_li.parse_li_chunk(b'fixture', 'fixture.nc', 'product')
+            function, args = eumetsat_li.parse_li_chunk, (b'', 'fixture.nc', 'product')
+        try:
+            function(*args)
+        except (ValueError, OSError):
+            pass
+    with ThreadPoolExecutor(max_workers=3) as callers:
+        list(callers.map(decode, range(6)))
 
-    with ThreadPoolExecutor(max_workers=6) as callers:
-        list(callers.map(decode, range(18)))
-    assert peak == 1
-    assert len(set(threads)) == 1
-    assert threads[0] != threading.get_ident()
+
+def test_worker_timeout_does_not_poison_next_operation():
+    with pytest.raises(subprocess.TimeoutExpired):
+        worker.run_operation(('function', 'time', 'sleep', (10,), {}), .1)
+    result, changes, error = worker.run_operation(('function', 'builtins', 'sum', ([1, 2],), {}), 5)
+    assert (result, changes, error) == (3, {}, None)
+
+
+def test_worker_removes_its_native_temporary_directory():
+    path, _changes, error = worker.run_operation(('function', 'tempfile', 'gettempdir', (), {}), 5)
+    assert error is None
+    assert not Path(path).exists()

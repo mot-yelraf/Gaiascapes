@@ -276,7 +276,16 @@ def create_app(
         """Advance only the current continuous recording's location."""
         body = await _json_body(request)
         try:
-            return {"advanced": service.advance_recording(body.get("sequence"))}
+            return {"advanced": service.advance_recording(body.get("sequence"), body.get("reason", ""))}
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/recordings/progress")
+    async def recording_progress(request: Request):
+        """Keep a recording active only while its player makes progress."""
+        body = await _json_body(request)
+        try:
+            return {"accepted": service.recording_progress(body.get("sequence"), body.get("position"))}
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 

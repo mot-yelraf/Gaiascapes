@@ -82,7 +82,14 @@ per location. These recordings play to the end instead of being cut off by the
 23-second location interval. The browser requests the next location during the
 final three seconds (or final 10% of short clips), fading between recordings.
 First-use downloads can leave a gap. Keep the browser or desktop player open
-for the recording rotation to advance. Previews remain limited to eight seconds.
+to hear recordings. Failed loads and playback errors skip to the next selection;
+30 seconds without playback progress also triggers recovery. Completion requests
+time out after 10 seconds and retry while the player is current. The server
+releases a recording after 90 seconds without progress, checked independently
+every five seconds, so a disconnected player cannot hold rotation indefinitely.
+Healthy long recordings keep their place by reporting progress. Confirmed decoding
+failures cause one cache repair; a second failure quarantines that recording for
+the rest of the session. Previews remain limited to eight seconds.
 
 Whale Song and Dolphin Calls use NOAA NCEI / SanctSound recordings without an
 API key. Enable their tiles under Background sound sources, select one in
@@ -206,7 +213,17 @@ Gaiascapes keeps capture, history, the web interface, and available audio layers
 running when an environmental provider becomes unavailable. Each source reports
 an online, degraded, offline, or recovering state through `/api/status`. Failed
 sources retry independently with bounded exponential backoff and jitter, so one
-outage does not interrupt healthy feeds.
+outage does not interrupt healthy feeds. Built-in capture operations have a
+45-second process deadline; recording retrieval has a 60-second deadline. Timed-out
+workers are terminated before retrying, so stuck network or native-library calls
+cannot permanently occupy a provider. Standalone NetCDF decoding has a 20-second
+process deadline.
+
+Browser requests time out instead of leaving cue polling stuck. Device listening
+reconnects synthesized audio with a delay capped at 30 seconds while recordings
+remain available; Mute cancels reconnection. MTG timelines retry transient transport
+failures up to three times per flash, within the existing lateness allowance,
+without repeating successful voices or abandoning the remaining timeline.
 
 Recent Open-Meteo forecasts can remain active for up to three hours, and a recent
 NOAA GLM field can replay for up to five minutes. EUMETSAT MTG LI observations

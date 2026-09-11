@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import os
 import random
 import shutil
@@ -37,11 +38,13 @@ from .history import HistoryView, BACKGROUND_HISTORY_KINDS, HIDDEN_HISTORY_KINDS
 from .settings import settings_candidate, persist_settings
 from .polling import PollingCoordinator
 from .playback import PlaybackController, render_call
+from .worker import call_client, supports_isolation
 from .performance import PerformancePlayer, cue_with_gain
 from .usgs import UsgsClient
 
 
 CUE_LONG_POLL_SECONDS = 2.0
+RECORDING_PROGRESS_TIMEOUT_SECONDS = 90.0
 EMITTED_CUE_LIMIT = 10000
 LOGGER = logging.getLogger("uvicorn.error")
 GLM_SONIFICATION_TIME_SCALE = 1.0
@@ -179,6 +182,12 @@ class GaiascapesService:
             for kind in ("birdsong", "frog_calls", *MARINE_KINDS)
         }
         self._recording_sequences = {}
+        self._recording_progress = {}
+        self._recording_watchdog_task = None
+        self._recording_payloads = {}
+        self._recording_decode_failures = {}
+        self._quarantined_recordings = set()
+        self._recording_fetch_locks = {kind: asyncio.Lock() for kind in ("birdsong", "frog_calls", *MARINE_KINDS)}
         self._recording_advance = asyncio.Event()
         self._last_continuous_cycle_at = time.time()
         self.continuous_played_count = 0
@@ -447,7 +456,11 @@ class GaiascapesService:
         async with self._playback_lifecycle_lock:
             self.playback.start()
             if self._continuous_task is None or self._continuous_task.done():
+                self._recording_watchdog_task = self.playback.schedule(
+                    self._watch_recordings(), name="gaiascapes-recording-watchdog",
+                )
                 self._recording_sequences.clear()
+                self._recording_progress.clear()
                 self._last_continuous_cycle_at = time.time()
                 self._continuous_task = self.playback.schedule(
                     self._continuous_loop(), name="gaiascapes-continuous"
@@ -459,6 +472,7 @@ class GaiascapesService:
         async with self._playback_lifecycle_lock:
             await self.playback.stop()
             self._recording_sequences.clear()
+            self._recording_progress.clear()
             self._continuous_task = None
             self._glm_sonification_task = None
             self._glm_replaying_cached_field = False
@@ -872,7 +886,9 @@ class GaiascapesService:
             self._latest_background_location = None
             self._latest_sound_location = None
             for kind in changed_kinds:
+                self._recording_payloads.pop(kind, None)
                 self._recording_sequences.pop(kind, None)
+                self._recording_progress.pop(kind, None)
                 self._ambient_cursors[kind] = 0
                 if kind in self._recording_status:
                     self._recording_status[kind] = {"state": "idle", "error": ""}
@@ -936,7 +952,7 @@ class GaiascapesService:
                 raise ValueError(f"Enable {label} in Sound Sources before previewing")
             volume = _preview_volume(volume)
             recording_client = getattr(self, kind)
-            event = await asyncio.to_thread(recording_client.event_at, 0)
+            event = await self._fetch_recording(recording_client, 0)
             if getattr(self, kind) is not recording_client or not getattr(self.config, f"{kind}_enabled"):
                 raise ValueError(f"{label} settings changed; preview again")
             cue = cue_with_gain(
@@ -998,16 +1014,89 @@ class GaiascapesService:
             cues = tuple(cue for cue in self._emitted_cues if cue["sequence"] > cursor)
         return {"latest_sequence": self._cue_sequence, "cues": cues}
 
-    def advance_recording(self, sequence: int) -> bool:
-        """Release the current recording when its player reaches the transition."""
+    def advance_recording(self, sequence: int, reason: str = "") -> bool:
+        """Release the current recording after completion or a reported failure."""
         if type(sequence) is not int or sequence < 1:
             raise ValueError("A positive recording cue sequence is required")
+        if not isinstance(reason, str) or reason not in {"", "load_failed", "playback_failed", "stalled", "missing_media", "decode_failed"}:
+            raise ValueError("Unsupported recording failure reason")
         for kind, current in tuple(self._recording_sequences.items()):
             if current == sequence and self.playback.enabled and self._instruments_for_kind(kind):
+                if reason == "decode_failed":
+                    self._quarantine_recording(kind)
+                self._recording_payloads.pop(kind, None)
                 del self._recording_sequences[kind]
+                self._recording_progress.pop(kind, None)
+                if reason:
+                    LOGGER.warning("%s recording %d failed: %s; advancing rotation", kind, sequence, reason)
                 self._recording_advance.set()
                 return True
         return False
+
+    def recording_progress(self, sequence: int, position: float) -> bool:
+        """Renew the current recording only when its playback position advances."""
+        if type(sequence) is not int or sequence < 1:
+            raise ValueError("A positive recording cue sequence is required")
+        if type(position) not in {int, float} or not math.isfinite(position) or position < 0:
+            raise ValueError("A finite nonnegative playback position is required")
+        for kind, current in self._recording_sequences.items():
+            if current == sequence and self.playback.enabled:
+                previous, _deadline = self._recording_progress[kind]
+                if position > previous:
+                    self._recording_progress[kind] = (
+                        position, time.monotonic() + RECORDING_PROGRESS_TIMEOUT_SECONDS,
+                    )
+                return True
+        return False
+
+    def _quarantine_recording(self, kind) -> None:
+        """Repair a failed cached recording once, then skip repeated decode failures."""
+        payload = self._recording_payloads.get(kind)
+        if payload is None:
+            return
+        url = payload["event"]["traits"].get("media_url", "")
+        if not url:
+            return
+        failures = self._recording_decode_failures.get(url, 0) + 1
+        self._recording_decode_failures[url] = failures
+        client = getattr(self, kind)
+        media_dir = getattr(client, "media_dir", None)
+        if failures > 1 or media_dir is None:
+            self._quarantined_recordings.add(url)
+            LOGGER.warning("%s recording quarantined for this session: %s", kind, Path(url).name)
+            return
+        path = Path(media_dir) / Path(url).name
+        if path.is_file():
+            try:
+                path.replace(path.with_suffix(path.suffix + ".invalid"))
+            except OSError as exc:
+                self._quarantined_recordings.add(url)
+                LOGGER.warning("%s recording cache repair failed: %s", kind, exc)
+        LOGGER.warning("%s recording cache will be downloaded again: %s", kind, path.name)
+
+    async def _watch_recordings(self) -> None:
+        """Check abandoned players independently of slow downloads."""
+        while self.playback.enabled:
+            self._expire_recordings()
+            await asyncio.sleep(5)
+
+    async def _fetch_recording(self, client, index):
+        """Bound recording retrieval without pinning the ambient scheduler."""
+        async with self._recording_fetch_locks[getattr(client, "kind", "birdsong")]:
+            if supports_isolation(client):
+                event = await call_client(client, "event_at", (index,), timeout=60)
+            else:
+                event = await asyncio.wait_for(asyncio.to_thread(client.event_at, index), 60)
+            if event.traits.get("media_url") in self._quarantined_recordings:
+                raise RuntimeError("Recording repeatedly failed decoding; skipping quarantined selection")
+            return event
+
+    def _expire_recordings(self) -> None:
+        """Release recordings whose player stopped reporting forward progress."""
+        now = time.monotonic()
+        for kind, sequence in tuple(self._recording_sequences.items()):
+            if now >= self._recording_progress[kind][1]:
+                self.advance_recording(sequence, "stalled")
 
     def _record_replay_cue(self, cue, instrument=None, volume=1.0) -> None:
         """Report a lightning replay group when its first cue is dispatched."""
@@ -1087,7 +1176,11 @@ class GaiascapesService:
         self._emitted_cues.append(payload)
         if publish_background and cue.kind in self._recording_status:
             payload["recording_rotation"] = True
+            self._recording_payloads[cue.kind] = payload
             self._recording_sequences[cue.kind] = self._cue_sequence
+            self._recording_progress[cue.kind] = (
+                -1.0, time.monotonic() + RECORDING_PROGRESS_TIMEOUT_SECONDS,
+            )
         self._cue_event.set()
 
     def _start_glm_sonification(self, events, report="NOAA GLM playback") -> None:
@@ -1229,7 +1322,26 @@ class GaiascapesService:
                 or "eumetsat_mtg_li" not in self.config.enabled_sources
             ):
                 break
-            played = await self._play_live_event(event)
+            played = 0
+            completed_voices = set()
+            for attempt in range(3):
+                if not self.playback.enabled or "eumetsat_mtg_li" not in self.config.enabled_sources:
+                    return
+                if time.time() > target + MTG_LATE_EVENT_TOLERANCE_SECONDS:
+                    self.mtg_skipped_late_count += 1
+                    break
+                try:
+                    played = await self._play_live_event(event, completed_voices=completed_voices)
+                    break
+                except OSError as exc:
+                    if attempt == 0:
+                        LOGGER.warning("EUMETSAT MTG LI transport failed; retrying current flash: %s", exc)
+                    if attempt < 2:
+                        await asyncio.sleep(2 ** attempt)
+                except Exception as exc:
+                    LOGGER.warning("EUMETSAT MTG LI flash skipped: %s", exc)
+                    break
+            played = max(played, len(completed_voices))
             if played and not reported:
                 LOGGER.info(
                     "EUMETSAT MTG LI playback started: %d sampled flashes in timeline, "
@@ -1238,7 +1350,8 @@ class GaiascapesService:
                     MTG_PRESENTATION_DELAY_SECONDS / 60.0,
                 )
                 reported = True
-            self.mtg_played_count += 1
+            if played:
+                self.mtg_played_count += 1
 
     async def _continuous_loop(self) -> None:
         while True:
@@ -1258,6 +1371,7 @@ class GaiascapesService:
 
     async def play_next_ambient_layers(self) -> tuple[str, ...]:
         """Rotate the background and play Event 2 only when a tide turn is due."""
+        self._expire_recordings()
         cycle_at = time.time()
         background_events = await asyncio.to_thread(
             self.store.latest_events_by_kind_and_place,
@@ -1290,15 +1404,15 @@ class GaiascapesService:
             recording_client = getattr(self, kind)
             self._recording_status[kind] = {"state": "loading", "error": ""}
             try:
-                recording_event = await asyncio.to_thread(recording_client.event_at, cursor)
+                recording_event = await self._fetch_recording(recording_client, cursor)
             except Exception as exc:
                 if getattr(self, kind) is recording_client and self._instruments_for_kind(kind):
                     self._recording_status[kind] = {
                         "state": "unavailable" if isinstance(exc, NoRecordingsError) else "error",
                         "error": str(exc),
                     }
-                    if isinstance(exc, NoRecordingsError):
-                        self._ambient_cursors[kind] = cursor + 1
+                    self._ambient_cursors[kind] = cursor + 1
+                    LOGGER.warning("%s recording retrieval failed; trying next selection: %s", kind, exc)
                 raise
             if getattr(self, kind) is recording_client and self._instruments_for_kind(kind):
                 self._recording_status[kind] = {"state": "ready", "error": ""}
@@ -1327,7 +1441,7 @@ class GaiascapesService:
         """Compatibility wrapper for one cycle of the layered ambient scheduler."""
         return bool(await self.play_next_ambient_layers())
 
-    async def _play_live_event(self, event: GaiaEvent) -> int:
+    async def _play_live_event(self, event: GaiaEvent, *, completed_voices=None) -> int:
         """Render one event now and journal it for synchronized visuals."""
         ambient_duration = self.config.continuous_interval_seconds + 1.5
         durations = {
@@ -1363,6 +1477,8 @@ class GaiascapesService:
                 self.renderer.update_layer if persistent_background else self.renderer.play
             )
             for instrument, gain, channel in self._voices_with_channels(event.kind):
+                if completed_voices is not None and channel in completed_voices:
+                    continue
                 rendered_cue = cue_with_gain(cue, gain, channel)
                 rendered = (
                     True
@@ -1370,6 +1486,8 @@ class GaiascapesService:
                     else await render_call(render, rendered_cue, instrument)
                 )
                 if rendered is not False:
+                    if completed_voices is not None:
+                        completed_voices.add(channel)
                     self._record_emitted_cue(
                         rendered_cue,
                         instrument,

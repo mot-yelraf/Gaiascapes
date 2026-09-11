@@ -99,9 +99,21 @@ const recordingNormalizer = (() => {
     if (gain === undefined || audio.webAudio) {
       const response = await fetch(url, {signal});
       if (!response.ok) throw new Error(`Unable to load recording (HTTP ${response.status})`);
-      const buffer = await context.decodeAudioData(await response.arrayBuffer());
+      const bytes = await response.arrayBuffer();
+      let buffer;
+      try {
+        buffer = await context.decodeAudioData(bytes);
+      } catch (error) {
+        error.recordingFailure = "decode_failed";
+        throw error;
+      }
       signal.throwIfAborted();
-      gain = measureGain(buffer);
+      try {
+        gain = measureGain(buffer);
+      } catch (error) {
+        error.recordingFailure = "decode_failed";
+        throw error;
+      }
       if (audio.webAudio) { audio.decodedBuffer = buffer; audio.duration = buffer.duration; }
       if (gains.size >= 64) gains.delete(gains.keys().next().value);
       gains.set(url, gain);

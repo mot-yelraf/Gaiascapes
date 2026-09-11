@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import math
 import re
 import threading
@@ -194,7 +195,9 @@ class XenoCantoClient:
         return records
 
     def _download(self, record, destination):
-        temporary = destination.with_suffix(destination.suffix + ".part")
+        pending_dir = os.environ.get("GAIASCAPES_WORKER_TEMP_DIR")
+        temporary = (Path(pending_dir) / (destination.name + ".part") if pending_dir
+                     else destination.with_suffix(destination.suffix + ".part"))
         try:
             with self._open(record["download_url"]) as response, temporary.open("wb") as output:
                 content_type = response.headers.get("Content-Type", "").split(";")[0]

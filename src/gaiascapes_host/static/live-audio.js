@@ -8,6 +8,9 @@ class LiveAudioPlayer {
     this.context = null;
     this.controller = null;
     this.sources = new Set();
+    this.retryTimer = null;
+    this.retryDelay = 1000;
+    this.wanted = false;
   }
 
   async unlock() {
@@ -22,25 +25,38 @@ class LiveAudioPlayer {
 
   async start() {
     const context = this.context;
-    if (!context || context.state !== 'running') throw new Error('Tap Listen to allow audio playback.');
+    this.wanted = true;
+    clearTimeout(this.retryTimer);
+    this.disconnect();
     const controller = new AbortController();
     this.controller = controller;
     this.nextTime = 0;
     this.sequence = null;
-    const response = await fetch('/api/audio/stream', {signal: controller.signal, cache: 'no-store'});
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Host audio is unavailable.');
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      if (!context || context.state !== 'running') throw new Error('Tap Listen to allow audio playback.');
+      const response = await fetch('/api/audio/stream', {signal: controller.signal, cache: 'no-store'});
+      if (!response.ok) throw new Error(`Host audio unavailable (HTTP ${response.status}).`);
+      if (!response.body) throw new Error('This browser does not support live audio streaming.');
+      if (controller !== this.controller || !this.wanted) return;
+      this.onState('listening');
+      this.read(response.body.getReader(), controller).catch(error => this.reconnect(controller, error));
+    } catch (error) {
+      this.reconnect(controller, error);
+      throw error;
+    } finally {
+      clearTimeout(timeout);
     }
-    if (!response.body) throw new Error('This browser does not support live audio streaming.');
-    if (controller.signal.aborted) return;
-    this.onState('listening');
-    this.read(response.body.getReader(), controller).catch(error => {
-      if (!controller.signal.aborted) {
-        this.stop();
-        this.onState('error', error.message);
-      }
-    });
+  }
+
+  reconnect(controller, error) {
+    if (!this.wanted || controller !== this.controller) return;
+    this.disconnect();
+    this.onState('reconnecting', error.message);
+    this.retryTimer = setTimeout(() => {
+      if (this.wanted) this.start().catch(() => {});
+    }, this.retryDelay);
+    this.retryDelay = Math.min(30000, this.retryDelay * 2);
   }
 
   async read(reader, controller) {
@@ -48,7 +64,19 @@ class LiveAudioPlayer {
     const blockBytes = 12 + 512 * 2 * 4;
     try {
       while (!controller.signal.aborted) {
-        const {value, done} = await reader.read();
+        let timer;
+        let chunk;
+        try {
+          chunk = await Promise.race([
+            reader.read(),
+            new Promise((_, reject) => {
+              timer = setTimeout(() => reject(new Error('Host audio stalled.')), 10000);
+            }),
+          ]);
+        } finally {
+          clearTimeout(timer);
+        }
+        const {value, done} = chunk;
         if (done) throw new Error('Host audio disconnected. Tap Listen to reconnect.');
         const bytes = new Uint8Array(pending.length + value.length);
         bytes.set(pending);
@@ -61,7 +89,7 @@ class LiveAudioPlayer {
         pending = bytes.slice(offset);
       }
     } finally {
-      await reader.cancel().catch(() => {});
+      reader.cancel().catch(() => {});
     }
   }
 
@@ -78,6 +106,7 @@ class LiveAudioPlayer {
     const duration = 512 / rate;
     if (this.sequence !== null) this.nextTime += Math.min(0.25, (sequence - this.sequence - 1) * duration);
     this.sequence = sequence;
+    this.retryDelay = 1000;
     if (this.nextTime <= context.currentTime) this.nextTime = context.currentTime + 0.15;
     // Keep a slow/backgrounded browser from replaying an old backlog.
     if (this.nextTime > context.currentTime + 0.75) return;
@@ -99,11 +128,18 @@ class LiveAudioPlayer {
     this.nextTime += duration;
   }
 
-  stop() {
+  disconnect() {
     this.controller?.abort();
     this.controller = null;
     this.sources.forEach(source => { source.stop(); source.disconnect(); });
     this.sources.clear();
+  }
+
+  stop() {
+    this.wanted = false;
+    clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+    this.disconnect();
     if (this.context) this.context.close().catch(() => {});
     this.context = null;
   }

@@ -1,6 +1,7 @@
 # Architecture and compatibility contracts
 
-Gaiascapes is a single host process with optional desktop and audio components.
+Gaiascapes is a host service with bounded worker subprocesses and optional desktop
+and audio components.
 The domain package does not import providers, HTTP, SQLite, or SuperCollider.
 
 ## Responsibilities
@@ -10,7 +11,7 @@ The domain package does not import providers, HTTP, SQLite, or SuperCollider.
 | `gaiascapes.events`, `gaiascapes.score` | Normalized observations and deterministic score mapping |
 | `contracts` | Structural provider and renderer interfaces |
 | `polling` | Independent source cadence, timeout dispatch, overlap protection |
-| `netcdf_worker` | One process-wide thread for all native NetCDF decoding |
+| `worker`, `netcdf_worker` | Disposable provider processes and isolated native decoding |
 | `capture` | SQLite transactions, deduplication, retention, filtered queries |
 | `history` | Visible history assembled from observations and emitted cues |
 | `playback`, `performance` | Continuous task ownership and timed score playback |
@@ -19,12 +20,18 @@ The domain package does not import providers, HTTP, SQLite, or SuperCollider.
 | `app`, `desktop` | HTTP and native window adapters |
 
 Each provider has a polling task and an async capture lock. Manual captures
-share those locks. Synchronous network calls have a separate per-source lock
-that remains held if the async caller times out: a timeout does not terminate a
-Python worker thread. Source retry/backoff state remains independently visible.
-Every successful batch is persisted and made available for playback without
-waiting for other providers. Native NetCDF operations, including flash counts,
-are dispatched through the shared decoder thread; downloads can overlap.
+share those locks. Built-in clients run in disposable subprocesses: capture has
+an overall 45-second deadline and recording retrieval has a 60-second deadline.
+Timeouts and cancellations kill and reap the worker before returning. Completed
+operations return normalized events and changed client state; state is applied
+only if the original client snapshot remains current. Custom in-process provider
+adapters retain a lock until their synchronous call drains.
+
+Native NetCDF operations run directly inside provider workers, or in a separate
+20-second worker when called standalone. No process runs simultaneous native
+decodes. Provider failures retain independent retry/backoff state, and successful
+batches become available without waiting for other providers. Recording retrieval
+is serialized per kind; the playback-progress watchdog runs independently.
 
 Stop clears the playback-enabled state while leaving the selected mode and
 capture unchanged. Continuous tasks are cancelled and awaited. In-flight audio
