@@ -35,19 +35,30 @@
       </div>
       <div class="header-actions">
         <button class="settings-trigger" type="button" data-open-settings aria-label="Settings" title="Settings"><span aria-hidden="true">⚙</span></button>
+        <div class="view-playback-controls">
         <div class="view-selector" role="group" aria-label="Application view">
           <button class="view-option{% if app_view == 'dashboard' %} is-active{% endif %}" id="dashboardViewButton" type="button" aria-pressed="{{ 'true' if app_view == 'dashboard' else 'false' }}" data-app-view-button="dashboard">Dashboard</button>
           <button class="view-option{% if app_view == 'map' %} is-active{% endif %}" id="mapViewButton" type="button" aria-pressed="{{ 'true' if app_view == 'map' else 'false' }}" data-app-view-button="map">Map</button>
+        </div>
+        <div class="playback-selector" role="group" aria-label="Gaiascapes playback">
+          <button id="playButton" type="button" data-playback-action="play" aria-label="Play Gaiascapes" title="Play" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 4 L20 12 L7 20 Z"/></svg></button>
+          <button id="pauseButton" type="button" data-playback-action="pause" aria-label="Pause Gaiascapes" title="Pause" aria-pressed="true"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 4 H10 V20 H6 Z M14 4 H18 V20 H14 Z"/></svg></button>
+          <button id="nextButton" type="button" data-playback-action="next" aria-label="Next animal image and pause" title="Next animal image and pause" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 4 L16 12 L4 20 Z M17 4 H21 V20 H17 Z"/></svg></button>
+        </div>
+        <span id="playbackControlStatus" class="playback-control-status" role="status"></span>
         </div>
       </div>
     </header>
 
     <aside id="animalWikipedia" class="animal-wikipedia" aria-label="Currently playing animal" hidden>
+      <select id="animalImageVisibility" aria-label="Animal information visibility" aria-controls="animalImageDetails"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select>
       <button id="animalImageButton" type="button" aria-controls="animalArticle" aria-expanded="false" disabled>
         <img id="animalImage" alt="" hidden>
-        <span id="animalCaption" aria-live="polite"></span>
       </button>
+      <div id="animalImageDetails">
+        <span id="animalCaption" aria-live="polite"></span>
       <a id="animalImageCredit" target="_blank" rel="noopener noreferrer" hidden>Image credits and license</a>
+      </div>
     </aside>
 
     <div id="dashboardView" data-app-view="dashboard"{% if app_view != 'dashboard' %} hidden{% endif %}>
@@ -92,9 +103,9 @@
       </section>
 
       <section class="metrics" aria-label="Application status">
-        <article class="status-card status-card--background"><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "whale_song" %}Whale Song{% elif instrument_slots.background == "dolphin_calls" %}Dolphin Calls{% elif instrument_slots.background == "frog_calls" %}Frog Calls{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% else %}Background Sounds{% endif %}</span><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></article>
-        <article class="status-card status-card--event"><span>Last Event</span><strong id="lastEventType" data-status-field="last-event-type">—</strong><small id="lastEventTime" data-status-field="last-event-time">Not yet</small></article>
-        <article class="status-card status-card--earthquake"><span>Last Earthquake Event</span><strong id="lastEarthquakeLocation" data-status-field="last-earthquake-location">—</strong><small id="lastEarthquakeDetail" data-status-field="last-earthquake-detail">Not yet</small></article>
+        <article class="status-card status-card--background" data-status-card="background"><div class="status-card-heading"><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "whale_song" %}Whale Song{% elif instrument_slots.background == "dolphin_calls" %}Dolphin Calls{% elif instrument_slots.background == "frog_calls" %}Frog Calls{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% elif instrument_slots.background in mammal_labels %}{{ mammal_labels[instrument_slots.background] }}{% else %}Background Sounds{% endif %}</span><select data-status-visibility="background" aria-label="Background information" aria-controls="statusDetails1"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails1"><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></div></article>
+        <article class="status-card status-card--event" data-status-card="event"><div class="status-card-heading"><span>Last Event</span><select data-status-visibility="event" aria-label="Last event information" aria-controls="statusDetails2"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails2"><strong id="lastEventType" data-status-field="last-event-type">—</strong><small id="lastEventTime" data-status-field="last-event-time">Not yet</small></div></article>
+        <article class="status-card status-card--earthquake" data-status-card="earthquake"><div class="status-card-heading"><span>Last Earthquake Event</span><select data-status-visibility="earthquake" aria-label="Last earthquake information" aria-controls="statusDetails3"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails3"><strong id="lastEarthquakeLocation" data-status-field="last-earthquake-location">—</strong><small id="lastEarthquakeDetail" data-status-field="last-earthquake-detail">Not yet</small></div></article>
       </section>
     </div>
 
@@ -123,9 +134,9 @@
         <div class="map-legend" aria-label="Map marker legend"><span><i class="map-legend-background"></i>Background</span><span><i class="map-legend-event"></i>Event</span><span><b class="map-legend-system" aria-hidden="true"></b>My location</span></div>
       </div>
       <section class="metrics map-status" aria-label="Map application status">
-        <article class="status-card status-card--background"><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "whale_song" %}Whale Song{% elif instrument_slots.background == "dolphin_calls" %}Dolphin Calls{% elif instrument_slots.background == "frog_calls" %}Frog Calls{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% else %}Background Sounds{% endif %}</span><strong data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></article>
-        <article class="status-card status-card--event"><span>Last Event</span><strong data-status-field="last-event-type">—</strong><small data-status-field="last-event-time">Not yet</small></article>
-        <article class="status-card status-card--earthquake"><span>Last Earthquake Event</span><strong data-status-field="last-earthquake-location">—</strong><small data-status-field="last-earthquake-detail">Not yet</small></article>
+        <article class="status-card status-card--background" data-status-card="background"><div class="status-card-heading"><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "whale_song" %}Whale Song{% elif instrument_slots.background == "dolphin_calls" %}Dolphin Calls{% elif instrument_slots.background == "frog_calls" %}Frog Calls{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% elif instrument_slots.background in mammal_labels %}{{ mammal_labels[instrument_slots.background] }}{% else %}Background Sounds{% endif %}</span><select data-status-visibility="background" aria-label="Background information" aria-controls="statusDetails4"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails4"><strong data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></div></article>
+        <article class="status-card status-card--event" data-status-card="event"><div class="status-card-heading"><span>Last Event</span><select data-status-visibility="event" aria-label="Last event information" aria-controls="statusDetails5"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails5"><strong data-status-field="last-event-type">—</strong><small data-status-field="last-event-time">Not yet</small></div></article>
+        <article class="status-card status-card--earthquake" data-status-card="earthquake"><div class="status-card-heading"><span>Last Earthquake Event</span><select data-status-visibility="earthquake" aria-label="Last earthquake information" aria-controls="statusDetails6"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails6"><strong data-status-field="last-earthquake-location">—</strong><small data-status-field="last-earthquake-detail">Not yet</small></div></article>
       </section>
     </section>
 
@@ -215,6 +226,28 @@
                 <label class="source-art" for="sourceMarine" aria-label="Toggle Open-Meteo surf & tides"><img src="/static/sound-ocean_swell.svg" width="512" height="512" alt=""></label>
               </article>
               {{ marine_source_tile("whale_song", "Whale Song", "sourceWhaleSong", whale_song_enabled) }}
+              {% for kind, label in mammal_labels.items() %}
+              <article class="source-tile" aria-label="{{ label }}">
+                <div class="source-title"><label for="source_{{ kind }}"><input id="source_{{ kind }}" type="checkbox" {% if mammal_enabled[kind] %}checked{% endif %} aria-describedby="source_{{ kind }}Hint"><strong>{{ label }}</strong></label>
+                  <small class="source-hint" id="source_{{ kind }}Hint" role="tooltip">Bundled animal recordings from fixed sites, with source credits. Locations cannot be changed; zoo recordings retain their zoo location.</small>
+                </div>
+                <label class="source-art" for="source_{{ kind }}" aria-label="Toggle {{ label }}"><img src="/static/sound-{{ kind }}.svg" width="512" height="512" alt=""></label>
+              </article>
+              {% endfor %}
+            </div>
+            <div class="source-tile-grid announcement-source-row">
+              <article class="source-tile" aria-label="Announce Recording">
+                <h4>Announce Recording</h4>
+                <label class="announcement-toggle"><input id="announcementsEnabled" type="checkbox" {% if announcements_enabled %}checked{% endif %}> Enabled</label>
+                <label class="announcement-dialect" for="announcementSynthesizer">Synthesizer
+                  <select id="announcementSynthesizer">
+                    <option value="auto" {% if announcement_synthesizer == "auto" %}selected{% endif %}>Automatic</option>
+                    <option value="say" {% if announcement_synthesizer == "say" %}selected{% endif %}>Say quark (macOS)</option>
+                    <option value="espeak-ng" {% if announcement_synthesizer == "espeak-ng" %}selected{% endif %}>eSpeak NG</option>
+                  </select>
+                </label>
+                <p class="muted">Used for announcing background recorded sounds. Automatic prefers Say on supported Macs; eSpeak NG is the fallback.</p>
+              </article>
             </div>
             <h4 class="source-group-heading" id="eventSourcesHeading">Event sound sources</h4>
             <div class="source-tile-grid" role="group" aria-labelledby="eventSourcesHeading">
@@ -246,7 +279,12 @@
             </div>
           </section>
           <section class="settings-pane" data-pane="instruments" hidden>
-            <div class="pane-heading"><div><h3>Sound Choices</h3><p>Choose a continuous background and three event voices. Each voice follows its own source.</p></div></div>
+            <div class="pane-heading sound-choices-heading"><div><h3>Sound Choices</h3><p>Choose a continuous background and three event voices. Each voice follows its own source.</p></div>
+              <div class="device-listening" aria-label="Playback on this device">
+                <button id="listenButton" type="button" aria-pressed="false" title="Listen or mute here without changing playback on other devices">Listen on this device</button>
+                <span id="listenStatus" role="status" aria-live="polite"></span>
+              </div>
+            </div>
             {% macro sound_tile(label, prefix, slot, options, kind) %}
             <article class="sound-tile" aria-label="{{ label }} sound">
               <h4>{{ label }}</h4>
@@ -266,12 +304,6 @@
             </article>
             {% endmacro %}
             <div class="background-sound-row">
-              <article class="sound-tile device-listening" aria-label="Playback on this device">
-                <h4>This device</h4>
-                <button id="listenButton" type="button" aria-pressed="false">Listen on this device</button>
-                <p class="units-note">Listen or mute here without changing playback on other devices.</p>
-                <span id="listenStatus" role="status" aria-live="polite"></span>
-              </article>
               <article class="sound-tile units-tile" aria-label="Display units">
                 <h4>Units</h4>
                 <select id="displayUnits" hidden aria-label="Display units"><option value="metric" {% if units == "metric" %}selected{% endif %}>Metric</option><option value="imperial" {% if units == "imperial" %}selected{% endif %}>Imperial</option></select>
@@ -281,7 +313,18 @@
                 </div>
                 <p class="units-note">Distance · temperature · speed</p>
               </article>
-              {{ sound_tile("Background", "background", "background", [("birdsong", "Birdsong"), ("frog_calls", "Frog Calls"), ("whale_song", "Whale Song"), ("dolphin_calls", "Dolphin Calls"), ("ocean_swell", "Ocean Swells"), ("storm_potential", "Storm Outlook"), ("none", "None")], "background") }}
+              <article class="sound-tile announcement-tile" id="announcementTile" data-enabled="{{ 'true' if announcements_enabled else 'false' }}" data-voice="{{ announcement_voice }}" data-volume="{{ announcement_volume }}" aria-label="Announce recorded sounds">
+                <h4>Announce Recorded Sounds</h4>
+                <label class="announcement-dialect" for="announcementVoice">Dialect
+                  <select id="announcementVoice">{% for voice, label in announcement_voices.items() %}<option value="{{ voice }}" {% if announcement_voice == voice %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+                </label>
+                <label class="announcement-dialect" for="announcementVariant">Voice variant
+                  <select id="announcementVariant">{% for variant in announcement_variants %}<option value="{{ variant }}" {% if announcement_variant == variant %}selected{% endif %}>{{ variant | capitalize }}</option>{% endfor %}</select>
+                </label>
+                <label class="volume-control" for="announcementVolume"><input id="announcementVolume" type="range" min="0" max="100" step="1" value="{{ (announcement_volume * 100) | round | int }}" aria-label="Announcement volume"><output>{{ (announcement_volume * 100) | round | int }}%</output></label>
+                <span id="announcementStatus" role="status" aria-live="polite">{% if not announcement_available %}Install eSpeak NG on the host to enable announcements.{% endif %}</span>
+              </article>
+              {{ sound_tile("Background", "background", "background", [("feline_calls", "Feline Calls"), ("canine_calls", "Canine Calls"), ("elephant_calls", "Elephants"), ("primate_calls", "Primates"), ("birdsong", "Birdsong"), ("frog_calls", "Frog Calls"), ("whale_song", "Whale Song"), ("dolphin_calls", "Dolphin Calls"), ("ocean_swell", "Ocean Swells"), ("storm_potential", "Storm Outlook"), ("none", "None")], "background") }}
             </div>
             <div class="event-mapping-grid sound-event-grid">
               {% for number in range(1, 4) %}
@@ -293,6 +336,7 @@
           </section>
           <section class="settings-pane location-settings-pane" data-pane="locations" hidden>
             <div class="pane-heading"><div class="sound-location-heading"><h3>Sound locations</h3><span id="soundLocationCoordinates" aria-live="polite" hidden></span></div></div>
+            <p class="units-note">Feline Calls, Canine Calls, Elephants, and Primates use their curated recording sites. Their locations cannot be changed.</p>
             <div class="location-editor-tabs" role="group" aria-label="Sound catalog">
               <button type="button" title="Choose Xeno-canto in Sound Sources to edit Birdsong regions. Recordings come from within 100 km of each point." data-location-catalog="birdsong">Birdsong</button>
               <button type="button" title="Choose verified dolphin recording sites." data-location-catalog="dolphin_calls">Dolphin Calls</button>
@@ -322,6 +366,11 @@
               </div>
               <div class="forecast-location-list" id="forecastLocationList" aria-label="Editable sound locations"></div>
             </div>
+            <label class="settings-field" for="soundLocationOrder"><span>Sound location order</span><select id="soundLocationOrder">
+              <option value="sequential" {% if sound_location_order == "sequential" %}selected{% endif %}>Sequential</option>
+              <option value="random" {% if sound_location_order == "random" %}selected{% endif %}>Random</option>
+            </select></label>
+            <p class="location-order-note">Random shuffles background locations. Realtime volcano, seismic, thunder/lightning, and tidal events keep their timing and order.</p>
             <label class="settings-field" for="mapProjection"><span>Projection Model</span><select id="mapProjection">
               <option value="robinson" {% if map_projection == "robinson" %}selected{% endif %}>Robinson</option>
               <option value="eckert_iv" {% if map_projection == "eckert_iv" %}selected{% endif %}>Eckert IV</option>
@@ -336,6 +385,8 @@
   <script src="/static/recording-audio.js?v={{ version }}"></script>
   <script src="/static/live-audio.js?v={{ version }}"></script>
   <script src="/static/animal-wikipedia.js?v={{ version }}"></script>
+  <script src="/static/announcements.js?v={{ version }}"></script>
   <script src="/static/app.js?v={{ version }}"></script>
+  <script src="/static/game-controls.js?v={{ version }}"></script>
 </body>
 </html>

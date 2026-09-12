@@ -22,6 +22,7 @@ from gaiascapes.score import ScoreCue, build_score, event_duration
 
 from .capture import EventStore
 from .contracts import EventProvider
+from .mammals import MAMMAL_KINDS, MAMMAL_LABELS, MammalRecordingClient
 from .sanctsound import MARINE_KINDS, SanctSoundClient
 from .commons_birdsong import CommonsBirdsongClient
 from .xeno_canto import NoRecordingsError, XenoCantoClient
@@ -145,6 +146,8 @@ class GaiascapesService:
         self.dolphin_calls = dolphin_calls_client or SanctSoundClient(
             self.data_dir, "dolphin_calls", config.dolphin_calls_regions
         )
+        for kind in MAMMAL_KINDS:
+            setattr(self, kind, MammalRecordingClient(self.data_dir, kind))
         self.renderer = OscRenderer(
             config.osc_host,
             config.osc_port,
@@ -175,11 +178,13 @@ class GaiascapesService:
         self._glm_capture_lock = asyncio.Lock()
         self._live_play_lock = asyncio.Lock()
         self._ambient_cursors = {
-            kind: 0 for kind in ("ocean_swell", "storm_potential", "birdsong", "frog_calls", *MARINE_KINDS)
+            kind: 0 for kind in ("ocean_swell", "storm_potential", "birdsong", "frog_calls", *MARINE_KINDS, *MAMMAL_KINDS)
         }
+        self._location_orders = {}
+        self._staged_recording = None
         self._recording_status = {
             kind: {"state": "idle", "error": ""}
-            for kind in ("birdsong", "frog_calls", *MARINE_KINDS)
+            for kind in ("birdsong", "frog_calls", *MARINE_KINDS, *MAMMAL_KINDS)
         }
         self._recording_sequences = {}
         self._recording_progress = {}
@@ -187,7 +192,7 @@ class GaiascapesService:
         self._recording_payloads = {}
         self._recording_decode_failures = {}
         self._quarantined_recordings = set()
-        self._recording_fetch_locks = {kind: asyncio.Lock() for kind in ("birdsong", "frog_calls", *MARINE_KINDS)}
+        self._recording_fetch_locks = {kind: asyncio.Lock() for kind in ("birdsong", "frog_calls", *MARINE_KINDS, *MAMMAL_KINDS)}
         self._recording_advance = asyncio.Event()
         self._last_continuous_cycle_at = time.time()
         self.continuous_played_count = 0
@@ -719,7 +724,8 @@ class GaiascapesService:
                 "latest_sequence": self._cue_sequence,
                 "latest_location": self._latest_sound_location,
                 "latest_background_location": self._latest_background_location,
-                "latest_background_event": self._latest_emitted_event("background"),
+                "latest_background_event": (self._staged_recording[1].as_dict() if self._staged_recording
+                                            else self._latest_emitted_event("background")),
                 "latest_event": self._latest_emitted_event("event"),
                 "latest_earthquake_event": latest_earthquake,
                 "latest_event_sounds": self._latest_event_sounds(),
@@ -740,7 +746,7 @@ class GaiascapesService:
                 "birdsong_enabled": self.config.birdsong_enabled,
                 "frog_calls_enabled": self.config.frog_calls_enabled,
                 "recordings": {kind: dict(value) for kind, value in self._recording_status.items()},
-                **{f"{kind}_enabled": getattr(self.config, f"{kind}_enabled") for kind in MARINE_KINDS},
+                **{f"{kind}_enabled": getattr(self.config, f"{kind}_enabled") for kind in (*MARINE_KINDS, *MAMMAL_KINDS)},
                 "health": source_health,
                 "recovery": self._overall_recovery_status(source_health),
             },
@@ -818,7 +824,12 @@ class GaiascapesService:
 
     def _apply_config(self, candidate):
         previous_sources = set(self.config.enabled_sources)
+        if candidate.sound_location_order != self.config.sound_location_order:
+            self._location_orders.clear()
         changed_kinds = set()
+        for kind in MAMMAL_KINDS:
+            if getattr(candidate, f"{kind}_enabled") != getattr(self.config, f"{kind}_enabled"):
+                changed_kinds.add(kind)
         for kind in MARINE_KINDS:
             if getattr(candidate, f"{kind}_enabled") != getattr(self.config, f"{kind}_enabled"):
                 changed_kinds.add(kind)
@@ -875,6 +886,9 @@ class GaiascapesService:
             self._source_recovery[source] = _SourceRecovery(
                 last_data_at=self._source_recovery[source].last_data_at
             )
+        if self._staged_recording and (self._staged_recording[1].kind in changed_kinds
+                or candidate.instrument_slots()["background"] != self._staged_recording[1].kind):
+            self._staged_recording = None
         if changed_kinds:
             self._emitted_cues = deque(
                 (cue for cue in self._emitted_cues if cue["event"]["kind"] not in changed_kinds),
@@ -890,6 +904,7 @@ class GaiascapesService:
                 self._recording_sequences.pop(kind, None)
                 self._recording_progress.pop(kind, None)
                 self._ambient_cursors[kind] = 0
+                self._location_orders.pop(kind, None)
                 if kind in self._recording_status:
                     self._recording_status[kind] = {"state": "idle", "error": ""}
         return changed_kinds
@@ -945,9 +960,9 @@ class GaiascapesService:
             raise ValueError(f"Unsupported event kind: {kind}")
         if instrument not in EVENT_INSTRUMENT_OPTIONS[kind]:
             raise ValueError(f"Unsupported SuperCollider instrument for {kind}: {instrument}")
-        if kind in {"birdsong", "frog_calls", *MARINE_KINDS}:
+        if kind in {"birdsong", "frog_calls", *MARINE_KINDS, *MAMMAL_KINDS}:
             label = {"birdsong": "Birdsong", "frog_calls": "Frog Calls",
-                     "whale_song": "Whale Song", "dolphin_calls": "Dolphin Calls"}[kind]
+                     "whale_song": "Whale Song", "dolphin_calls": "Dolphin Calls", **MAMMAL_LABELS}[kind]
             if not getattr(self.config, f"{kind}_enabled"):
                 raise ValueError(f"Enable {label} in Sound Sources before previewing")
             volume = _preview_volume(volume)
@@ -994,6 +1009,11 @@ class GaiascapesService:
             self._record_emitted_cue(cue, instrument, volume=volume)
         return {"played": rendered is not False, "instrument": instrument, "kind": kind}
 
+    def recording_announcement_event(self, sequence: int) -> dict | None:
+        """Return retained recording metadata for a speech request without polling."""
+        return next((cue["event"] for cue in reversed(self._emitted_cues)
+                     if cue["sequence"] == sequence and cue["event"]["kind"] in {"birdsong", "frog_calls", "whale_song", "dolphin_calls", *MAMMAL_KINDS}), None)
+
     async def emitted_cues(self, after=None) -> dict:
         """Return cue events emitted after a browser.s sequence cursor."""
         if after is None:
@@ -1013,6 +1033,25 @@ class GaiascapesService:
                     break
             cues = tuple(cue for cue in self._emitted_cues if cue["sequence"] > cursor)
         return {"latest_sequence": self._cue_sequence, "cues": cues}
+
+    async def next_recording_image(self) -> dict:
+        """Pause playback and stage the next animal for image-only inspection."""
+        async with self._settings_lock:
+            kind = self.config.instrument_slots()["background"]
+            if self.config.live_mode != "continuous":
+                raise ValueError("Select Continuous mode to step through animal recordings")
+            if kind not in self._recording_status or not self._instruments_for_kind(kind):
+                raise ValueError("Select an enabled animal recording background to use Next")
+            await self.stop_continuous()
+            await self.player.stop()
+            async with self._playback_lifecycle_lock:
+                client = getattr(self, kind)
+                cursor = self._ambient_cursors[kind]
+                index = self._ambient_location_index(kind, client.location_count)
+                event = await self._fetch_recording(client, index)
+                self._ambient_cursors[kind] = cursor + 1
+                self._staged_recording = (client, event)
+                return event.as_dict()
 
     def advance_recording(self, sequence: int, reason: str = "") -> bool:
         """Release the current recording after completion or a reported failure."""
@@ -1369,6 +1408,23 @@ class GaiascapesService:
             except asyncio.TimeoutError:
                 pass
 
+    def _ambient_location_index(self, kind: str, count: int) -> int:
+        """Shuffle background visits while retaining the recording round number."""
+        cursor = self._ambient_cursors[kind]
+        if self.config.sound_location_order == "sequential" or count < 2:
+            return cursor
+        round_number, position = divmod(cursor, count)
+        previous = self._location_orders.get(kind)
+        if previous is None or previous[:2] != (round_number, count):
+            order = list(range(count))
+            random.shuffle(order)
+            # Avoid hearing the same site twice at a round boundary.
+            if previous and previous[1] == count and order[0] == previous[2][-1]:
+                order[0], order[1] = order[1], order[0]
+            previous = (round_number, count, order)
+            self._location_orders[kind] = previous
+        return round_number * count + previous[2][position]
+
     async def play_next_ambient_layers(self) -> tuple[str, ...]:
         """Rotate the background and play Event 2 only when a tide turn is due."""
         self._expire_recordings()
@@ -1395,16 +1451,23 @@ class GaiascapesService:
             if not choices or not self._instruments_for_kind(kind):
                 continue
             cursor = self._ambient_cursors[kind]
-            selected.append(choices[cursor % len(choices)])
+            selected.append(choices[self._ambient_location_index(kind, len(choices)) % len(choices)])
             self._ambient_cursors[kind] = cursor + 1
-        for kind in ("birdsong", "frog_calls", *MARINE_KINDS):
+        for kind in ("birdsong", "frog_calls", *MARINE_KINDS, *MAMMAL_KINDS):
             if not self._instruments_for_kind(kind) or kind in self._recording_sequences:
                 continue
             cursor = self._ambient_cursors[kind]
             recording_client = getattr(self, kind)
             self._recording_status[kind] = {"state": "loading", "error": ""}
             try:
-                recording_event = await self._fetch_recording(recording_client, cursor)
+                staged = self._staged_recording
+                if staged and staged[0] is recording_client:
+                    recording_event = staged[1]
+                    self._staged_recording = None
+                    cursor -= 1  # Next already advanced the cursor for this visit.
+                else:
+                    index = self._ambient_location_index(kind, getattr(recording_client, "location_count", 1))
+                    recording_event = await self._fetch_recording(recording_client, index)
             except Exception as exc:
                 if getattr(self, kind) is recording_client and self._instruments_for_kind(kind):
                     self._recording_status[kind] = {
@@ -1451,11 +1514,11 @@ class GaiascapesService:
             "storm_potential": ambient_duration,
             "birdsong": ambient_duration,
             "frog_calls": ambient_duration,
-            **{kind: ambient_duration for kind in MARINE_KINDS},
+            **{kind: ambient_duration for kind in (*MARINE_KINDS, *MAMMAL_KINDS)},
         }
         source = build_score((event,), event.timestamp, 1.0, 1.0)[0]
         velocity = source.velocity
-        if event.kind in {"ocean_swell", "tide_turn", "storm_potential", "birdsong", "frog_calls", *MARINE_KINDS}:
+        if event.kind in {"ocean_swell", "tide_turn", "storm_potential", "birdsong", "frog_calls", *MARINE_KINDS, *MAMMAL_KINDS}:
             # SuperCollider maps 20..127 to amplitude 0.08..0.58. Convert
             # through that mapping so 75% means amplitude, not MIDI velocity.
             current_amplitude = 0.08 + ((source.velocity - 20) / 107.0 * 0.5)
@@ -1482,7 +1545,7 @@ class GaiascapesService:
                 rendered_cue = cue_with_gain(cue, gain, channel)
                 rendered = (
                     True
-                    if event.kind in {"birdsong", "frog_calls", *MARINE_KINDS}
+                    if event.kind in {"birdsong", "frog_calls", *MARINE_KINDS, *MAMMAL_KINDS}
                     else await render_call(render, rendered_cue, instrument)
                 )
                 if rendered is not False:
@@ -1524,7 +1587,7 @@ class GaiascapesService:
         gain = self.config.instrument_volumes["background"]
         # Muted recordings still need a player and completion acknowledgements
         # so their rotation can continue and later unmuting cannot strand it.
-        recorded = kind in {"birdsong", "frog_calls", *MARINE_KINDS}
+        recorded = kind in {"birdsong", "frog_calls", *MARINE_KINDS, *MAMMAL_KINDS}
         return () if instrument == "none" or (gain <= 0 and not recorded) else ((instrument, gain),)
 
 
@@ -1581,7 +1644,7 @@ def _background_forecast_signature(event: GaiaEvent):
             "commons_page_id", "title", "creator", "license",
         ),
         "frog_calls": ("recording_id", "title", "creator", "license"),
-        **{kind: ("recording_id", "title", "creator", "license") for kind in MARINE_KINDS},
+        **{kind: ("recording_id", "title", "creator", "license") for kind in (*MARINE_KINDS, *MAMMAL_KINDS)},
     }[event.kind]
     return (
         round(event.strength, 6),

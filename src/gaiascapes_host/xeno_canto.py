@@ -67,6 +67,11 @@ class XenoCantoClient:
         self._lock = threading.Lock()
         self._retry_at = 0.0
 
+    @property
+    def location_count(self) -> int:
+        """Return the number of locations traversed by one recording round."""
+        return len(self.locations) if self.locations else len(COUNTRIES)
+
     def event_at(self, index: int) -> GaiaEvent:
         """Return a playback event at the recording's documented coordinates."""
         with self._lock:

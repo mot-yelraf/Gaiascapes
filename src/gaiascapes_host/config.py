@@ -7,11 +7,14 @@ applies supported environment overrides, and saves state beside runtime data.
 from __future__ import annotations
 
 import json
+import math
 import os
 import tempfile
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
+from .announcements import ANNOUNCEMENT_VARIANTS, ANNOUNCEMENT_VOICES
+from .mammals import MAMMAL_KINDS
 from .sanctsound import MARINE_KINDS, default_regions, validate_regions
 from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
 
@@ -36,9 +39,10 @@ EVENT_VOICE_OPTIONS = (
     "none",
 )
 BACKGROUND_INSTRUMENT_OPTIONS = (
-    "ocean_swell", "storm_potential", "birdsong", "frog_calls", "whale_song", "dolphin_calls", "none"
+    "ocean_swell", "storm_potential", "birdsong", "frog_calls", "whale_song", "dolphin_calls", *MAMMAL_KINDS, "none"
 )
 EVENT_INSTRUMENT_OPTIONS = {
+    **{kind: (kind, "none") for kind in MAMMAL_KINDS},
     "earthquake": ("earthquake", "seismic_bells", "test_tone", "none"),
     "ocean_swell": ("ocean_swell", "none"),
     "tide_turn": ("tidal_bell", "none"),
@@ -202,6 +206,7 @@ class AppConfig:
     performance_seconds: float = 120.0
     live_mode: str = "capture"
     app_view: str = "dashboard"
+    sound_location_order: str = "sequential"
     map_projection: str = "robinson"
     system_location_enabled: bool = True
     continuous_interval_seconds: float = 23.0
@@ -209,6 +214,11 @@ class AppConfig:
     osc_port: int = 57130
     osc_enabled: bool = True
     units: str = "metric"
+    announcements_enabled: bool = False
+    announcement_synthesizer: str = "auto"
+    announcement_voice: str = "en-us"
+    announcement_variant: str = "default"
+    announcement_volume: float = 0.7
     enabled_sources: list[str] = field(default_factory=lambda: ["usgs", "noaa_glm"])
     event_instruments: dict[str, str] = field(
         default_factory=lambda: dict(DEFAULT_INSTRUMENT_SLOTS)
@@ -223,6 +233,10 @@ class AppConfig:
     dolphin_calls_enabled: bool = False
     whale_song_regions: list[str] = field(default_factory=lambda: default_regions("whale_song"))
     dolphin_calls_regions: list[str] = field(default_factory=lambda: default_regions("dolphin_calls"))
+    feline_calls_enabled: bool = False
+    canine_calls_enabled: bool = False
+    elephant_calls_enabled: bool = False
+    primate_calls_enabled: bool = False
     frog_calls_enabled: bool = False
     frog_calls_locations: list[dict] = field(default_factory=default_frog_locations)
     birdsong_enabled: bool = True
@@ -340,6 +354,8 @@ class AppConfig:
         self.app_view = str(self.app_view).strip().lower()
         if self.app_view not in {"dashboard", "map"}:
             raise ValueError("App view must be dashboard or map")
+        if self.sound_location_order not in {"sequential", "random"}:
+            raise ValueError("Sound location order must be sequential or random")
         self.map_projection = str(self.map_projection).strip().lower()
         if self.map_projection not in {"robinson", "eckert_iv"}:
             raise ValueError("Projection model must be Robinson or Eckert IV")
@@ -347,6 +363,17 @@ class AppConfig:
             5.0, min(300.0, float(self.continuous_interval_seconds))
         )
         self.osc_enabled = bool(self.osc_enabled)
+        if type(self.announcements_enabled) is not bool:
+            raise ValueError("Announcement enabled setting must be a boolean")
+        if self.announcement_synthesizer not in {"auto", "say", "espeak-ng"}:
+            raise ValueError("Unsupported announcement synthesizer")
+        if self.announcement_voice not in ANNOUNCEMENT_VOICES:
+            raise ValueError("Unsupported announcement dialect")
+        if self.announcement_variant not in ANNOUNCEMENT_VARIANTS:
+            raise ValueError("Unsupported announcement voice variant")
+        self.announcement_volume = float(self.announcement_volume)
+        if not math.isfinite(self.announcement_volume) or not 0 <= self.announcement_volume <= 1:
+            raise ValueError("Announcement volume must be between 0 and 1")
         self.units = str(self.units).strip().lower()
         if self.units not in {"metric", "imperial"}:
             raise ValueError("Units must be metric or imperial")
@@ -372,6 +399,9 @@ class AppConfig:
             if not isinstance(getattr(self, f"{kind}_enabled"), bool):
                 raise ValueError(f"{kind} enabled must be a boolean")
             setattr(self, f"{kind}_regions", validate_regions(getattr(self, f"{kind}_regions"), kind))
+        for kind in MAMMAL_KINDS:
+            if type(getattr(self, f"{kind}_enabled")) is not bool:
+                raise ValueError(f"{kind} enabled setting must be a boolean")
         if not isinstance(self.frog_calls_enabled, bool):
             raise ValueError("Frog Calls enabled must be a boolean")
         if not isinstance(self.birdsong_enabled, bool):
@@ -435,7 +465,7 @@ class AppConfig:
             "birdsong": "birdsong" if background == "birdsong" and self.birdsong_enabled else "none",
             "frog_calls": "frog_calls" if background == "frog_calls" and self.frog_calls_enabled else "none",
             **{kind: kind if background == kind and getattr(self, f"{kind}_enabled") else "none"
-               for kind in MARINE_KINDS},
+               for kind in (*MARINE_KINDS, *MAMMAL_KINDS)},
         }
 
     def _migrate_legacy_instruments(self) -> None:

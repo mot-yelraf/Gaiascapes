@@ -7,7 +7,10 @@ cue journal to persisted observations without changing provider identities.
 import asyncio
 import time
 
-BACKGROUND_HISTORY_KINDS = frozenset({"ocean_swell", "storm_potential", "birdsong", "frog_calls", "whale_song", "dolphin_calls"})
+from .mammals import MAMMAL_KINDS
+
+
+BACKGROUND_HISTORY_KINDS = frozenset({"ocean_swell", "storm_potential", "birdsong", "frog_calls", "whale_song", "dolphin_calls", *MAMMAL_KINDS})
 HIDDEN_HISTORY_KINDS = frozenset({"lightning_flash"})
 
 

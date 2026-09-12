@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -29,7 +29,13 @@ from .config import (
     locations_with_system_location,
     resolve_data_dir,
 )
+from .announcements import (
+    ANNOUNCEMENT_VARIANTS, ANNOUNCEMENT_VOICES, INSTALL_MESSAGE, AnnouncementRenderer,
+    espeak_executable, recording_announcement,
+)
+from .macos_say import say_quark_paths
 from .audio_stream import AUDIO_TIMEOUT, RendererAudioRelay
+from .mammals import MAMMAL_KINDS, MAMMAL_LABELS
 from .sanctsound import MARINE_KINDS, available_locations
 from .commons_birdsong import BIRDSONG_LOCATIONS
 from .geoip import GeoIpLocationResolver
@@ -61,7 +67,7 @@ def create_app(
     """Create an isolated application, optionally disabling network polling."""
     runtime_data = Path(data_dir) if data_dir is not None else resolve_data_dir()
     runtime_data.mkdir(parents=True, exist_ok=True)
-    for kind in ("birdsong", "frog_calls", *MARINE_KINDS):
+    for kind in ("birdsong", "frog_calls", *MARINE_KINDS, *MAMMAL_KINDS):
         (runtime_data / "media" / kind).mkdir(parents=True, exist_ok=True)
     config_path = runtime_data / "config.json"
     config = AppConfig.load(config_path)
@@ -80,6 +86,8 @@ def create_app(
         whale_song_client=whale_song_client,
         dolphin_calls_client=dolphin_calls_client,
     )
+    announcements = AnnouncementRenderer(runtime_data)
+    announcement_lock = asyncio.Lock()
     audio_relay = RendererAudioRelay(config)
     system_location = geoip_resolver or GeoIpLocationResolver()
     resolved_location = None
@@ -153,7 +161,7 @@ def create_app(
         name="frog-calls-media",
     )
 
-    for kind in MARINE_KINDS:
+    for kind in (*MARINE_KINDS, *MAMMAL_KINDS):
         name = f'{kind.replace("_", "-")}-media'
         app.mount(f"/{name}", StaticFiles(directory=runtime_data / "media" / kind), name=name)
 
@@ -170,14 +178,25 @@ def create_app(
             live_mode=config.live_mode,
             app_view=config.app_view,
             map_projection=config.map_projection,
+            sound_location_order=config.sound_location_order,
             system_location_enabled=config.system_location_enabled,
             enabled_sources=set(config.enabled_sources),
             units=config.units,
+            announcements_enabled=config.announcements_enabled,
+            announcement_synthesizer=config.announcement_synthesizer,
+            announcement_voice=config.announcement_voice,
+            announcement_variant=config.announcement_variant,
+            announcement_variants=ANNOUNCEMENT_VARIANTS,
+            announcement_volume=config.announcement_volume,
+            announcement_voices=ANNOUNCEMENT_VOICES,
+            announcement_available=bool(espeak_executable() or say_quark_paths()),
             instrument_slots=config.instrument_slots(),
             instrument_volumes=config.volume_slots(),
             lightning_sample_rate=config.lightning_sample_rate,
             whale_song_enabled=config.whale_song_enabled,
             dolphin_calls_enabled=config.dolphin_calls_enabled,
+            mammal_labels=MAMMAL_LABELS,
+            mammal_enabled={kind: getattr(config, f"{kind}_enabled") for kind in MAMMAL_KINDS},
             frog_calls_enabled=config.frog_calls_enabled,
             birdsong_enabled=config.birdsong_enabled,
             birdsong_provider=config.birdsong_provider,
@@ -272,6 +291,30 @@ def create_app(
         """Long-poll for renderer cues emitted after an optional sequence."""
         return await service.emitted_cues(after=after)
 
+    @app.get("/api/announcements/{sequence}")
+    async def announcement_audio(sequence: int):
+        """Speak a retained recording cue using the installation's saved settings."""
+        if not config.announcements_enabled:
+            raise HTTPException(status_code=409, detail="Recorded sound announcements are disabled")
+        event = service.recording_announcement_event(sequence)
+        if event is None:
+            raise HTTPException(status_code=404, detail="Recording cue is no longer available")
+        text = recording_announcement(event)
+        if not text:
+            raise HTTPException(status_code=422, detail="No species name is available for this recording")
+        async with announcement_lock:
+            if not config.announcements_enabled:
+                raise HTTPException(status_code=409, detail="Recorded sound announcements are disabled")
+            try:
+                clip = await asyncio.to_thread(
+                    announcements.render, text, config.announcement_voice, config.announcement_variant, config.announcement_synthesizer,
+                )
+            except (ValueError, RuntimeError) as exc:
+                raise HTTPException(status_code=503, detail=str(exc)) from exc
+            headers = {"Cache-Control": "no-store", "X-Announcement-Engine": announcements.last_backend,
+                       "X-Announcement-Fallback": announcements.last_fallback}
+        return Response(clip, media_type="audio/wav", headers=headers)
+
     @app.post("/api/recordings/advance")
     async def advance_recording(request: Request):
         """Advance only the current continuous recording's location."""
@@ -280,6 +323,16 @@ def create_app(
             return {"advanced": service.advance_recording(body.get("sequence"), body.get("reason", ""))}
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/recordings/next-image")
+    async def next_recording_image():
+        """Stage the next animal without emitting an audible cue."""
+        try:
+            return {"event": await service.next_recording_image()}
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except (OSError, RuntimeError, asyncio.TimeoutError) as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     @app.post("/api/recordings/progress")
     async def recording_progress(request: Request):
@@ -389,11 +442,13 @@ def create_app(
             changes = {
                 "enabled_sources": sources, "event_instruments": mappings,
                 "units": body.get("units", config.units),
+                **{name: body.get(name, getattr(config, name)) for name in
+                   ("announcements_enabled", "announcement_synthesizer", "announcement_voice", "announcement_variant", "announcement_volume")},
                 "system_location_enabled": body.get("system_location_enabled", config.system_location_enabled),
                 "instrument_volumes": body.get("instrument_volumes", config.instrument_volumes),
                 "lightning_sample_rate": body.get("lightning_sample_rate", config.lightning_sample_rate),
                 **{f"{kind}_enabled": body.get(f"{kind}_enabled", getattr(config, f"{kind}_enabled"))
-                   for kind in MARINE_KINDS},
+                   for kind in (*MARINE_KINDS, *MAMMAL_KINDS)},
                 "frog_calls_enabled": body.get("frog_calls_enabled", config.frog_calls_enabled),
                 "birdsong_enabled": body.get("birdsong_enabled", config.birdsong_enabled),
                 "birdsong_provider": body.get("birdsong_provider", config.birdsong_provider),
@@ -401,6 +456,9 @@ def create_app(
             for name in ("eumetsat_consumer_key", "eumetsat_consumer_secret", "xeno_canto_api_key"):
                 if body.get(name):
                     changes[name] = body[name]
+            if changes["announcements_enabled"] and not (espeak_executable() or
+                    (changes["announcement_synthesizer"] != "espeak-ng" and say_quark_paths())):
+                raise RuntimeError(INSTALL_MESSAGE)
             await service.update_settings(changes, config_path)
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -408,12 +466,17 @@ def create_app(
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {
             "enabled_sources": list(config.enabled_sources),
-            **{f"{kind}_enabled": getattr(config, f"{kind}_enabled") for kind in MARINE_KINDS},
+            **{f"{kind}_enabled": getattr(config, f"{kind}_enabled") for kind in (*MARINE_KINDS, *MAMMAL_KINDS)},
             "frog_calls_enabled": config.frog_calls_enabled,
             "birdsong_enabled": config.birdsong_enabled,
             "birdsong_provider": config.birdsong_provider,
             "xeno_canto_credentials_configured": bool(config.xeno_canto_api_key),
             "units": config.units,
+            "announcements_enabled": config.announcements_enabled,
+            "announcement_synthesizer": config.announcement_synthesizer,
+            "announcement_voice": config.announcement_voice,
+            "announcement_variant": config.announcement_variant,
+            "announcement_volume": config.announcement_volume,
             "instrument_slots": config.instrument_slots(),
             "event_instruments": dict(config.event_instruments),
             "instrument_volumes": config.volume_slots(),
@@ -428,14 +491,18 @@ def create_app(
         """Persist sound locations and the shared map projection."""
         body = await _json_body(request)
         try:
+            if any(f"{kind}_{suffix}" in body for kind in MAMMAL_KINDS
+                   for suffix in ("locations", "regions")):
+                raise ValueError("Mammal sources use fixed curated recording sites; their locations cannot be changed")
             pruned = await service.update_settings({
                 **{f"{kind}_regions": body.get(f"{kind}_regions", getattr(config, f"{kind}_regions"))
                    for kind in MARINE_KINDS},
                 "frog_calls_locations": body.get("frog_calls_locations", config.frog_calls_locations),
                 "birdsong_locations": body.get("birdsong_locations", config.birdsong_locations),
                 "map_projection": body.get("map_projection", config.map_projection),
-                "ocean_swell_locations": body.get("ocean_swell_locations"),
-                "storm_outlook_locations": body.get("storm_outlook_locations"),
+                "sound_location_order": body.get("sound_location_order", config.sound_location_order),
+                "ocean_swell_locations": body.get("ocean_swell_locations", config.ocean_swell_locations),
+                "storm_outlook_locations": body.get("storm_outlook_locations", config.storm_outlook_locations),
             }, config_path)
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -443,6 +510,7 @@ def create_app(
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {
             "map_projection": config.map_projection,
+            "sound_location_order": config.sound_location_order,
             **{f"{kind}_regions": getattr(config, f"{kind}_regions") for kind in MARINE_KINDS},
             "frog_calls_locations": config.frog_calls_locations,
             "birdsong_locations": config.birdsong_locations,

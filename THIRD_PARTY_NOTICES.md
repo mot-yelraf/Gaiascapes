@@ -203,3 +203,25 @@ No remote data provider, dependency author, model contributor, or platform
 vendor endorses Gaiascapes. Provider data can be delayed, incomplete, revised,
 or unavailable and should not be relied upon for emergency response, safety,
 marine navigation, or other high-stakes decisions.
+
+## Optional eSpeak NG announcements
+
+[eSpeak NG](https://github.com/espeak-ng/espeak-ng) is separately installed and
+invoked as a command-line program to render recorded-sound labels. It is licensed
+under GPL version 3 or later; see its [license information](https://github.com/espeak-ng/espeak-ng#license-information).
+Gaiascapes does not bundle the executable or voice data. Preserve upstream
+licenses when distributing eSpeak NG with an assembled installation.
+
+## Optional SuperCollider Say quark
+
+[Say](https://github.com/adcxyz/say) is separately installed and wraps the macOS
+`say` utility. Gaiascapes loads the installed quark in an isolated language worker;
+its source and Apple voices are not bundled with Gaiascapes. Consult upstream
+terms before redistributing either dependency.
+
+## Bundled mammal recordings
+
+Nine Freesound MP3 derivatives are redistributed under CC0 or CC BY 4.0.
+Per-file creators, source links, licenses, recording context, and processing
+notes are in [MAMMAL_CREDITS.md](src/gaiascapes_host/recordings/MAMMAL_CREDITS.md).
+Checksums and provenance are retained in `src/gaiascapes_host/mammal_catalog.json`.

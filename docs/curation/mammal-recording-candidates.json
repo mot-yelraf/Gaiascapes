@@ -1,0 +1,611 @@
+{
+  "checked_at": "2026-09-12",
+  "status": "research_draft_not_runtime_catalog",
+  "location_basis": "Existing Commons birdsong 19 terrestrial locations; other sound types have different site catalogs.",
+  "radius_km": 100,
+  "audio_reviewed": false,
+  "notes": [
+    "Original Freesound downloads require login; no account was created or used.",
+    "Captive candidates retained separately for review; user preference pending.",
+    "Unassigned candidates must not be shown at the existing anchors.",
+    "Free license and recording identity are separate checks."
+  ],
+  "locations": [
+    {
+      "id": "canada-churchill",
+      "name": "Churchill, Manitoba, Canada",
+      "latitude": 58.6624,
+      "longitude": -93.834,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "canada-goulds",
+      "name": "Goulds, Newfoundland, Canada",
+      "latitude": 47.4793,
+      "longitude": -52.8036,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "costa-rica-rancho-naturalista",
+      "name": "Rancho Naturalista, Costa Rica",
+      "latitude": 9.8333,
+      "longitude": -83.5629,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "ecuador-tapichalaca-reserve",
+      "name": "Tapichalaca Reserve, Ecuador",
+      "latitude": -4.496,
+      "longitude": -79.132,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "ecuador-napo-galeras",
+      "name": "Napo Galeras, Ecuador",
+      "latitude": -0.833,
+      "longitude": -77.567,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "brazil-atlantic-forest",
+      "name": "Atlantic Forest, São Paulo, Brazil",
+      "latitude": -24.2667,
+      "longitude": -47.4267,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "brazil-almeirim",
+      "name": "Almeirim, Pará, Brazil",
+      "latitude": -0.5719,
+      "longitude": -52.662,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "argentina-finca-el-candado",
+      "name": "Finca El Candado, Salta, Argentina",
+      "latitude": -25.2001,
+      "longitude": -65.8167,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "poland-wroc-aw",
+      "name": "Wrocław, Poland",
+      "latitude": 51.0785,
+      "longitude": 17.0284,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "scotland-ballochbuie",
+      "name": "Ballochbuie, Scotland",
+      "latitude": 56.9959,
+      "longitude": -3.3315,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "morocco-oujda",
+      "name": "Oujda, Morocco",
+      "latitude": 34.6795,
+      "longitude": -1.8997,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "kenya-nairobi",
+      "name": "Nairobi, Kenya",
+      "latitude": -1.2639,
+      "longitude": 36.7684,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "kenya-kilifi",
+      "name": "Kilifi, Kenya",
+      "latitude": -3.8054,
+      "longitude": 39.833,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "india-chikballapur",
+      "name": "Chikballapur, Karnataka, India",
+      "latitude": 13.3614,
+      "longitude": 77.6721,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "india-molem-national-park",
+      "name": "Molem National Park, Goa, India",
+      "latitude": 15.399,
+      "longitude": 74.176,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": [
+          "macaque-goa"
+        ]
+      },
+      "status": "regional_candidate_pending_audio_review"
+    },
+    {
+      "id": "south-africa-kruger-national-park",
+      "name": "Kruger National Park, South Africa",
+      "latitude": -24.0073,
+      "longitude": 31.2225,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "australia-sydney",
+      "name": "Sydney, New South Wales, Australia",
+      "latitude": -33.8732,
+      "longitude": 151.2068,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "australia-cooya-pooya",
+      "name": "Cooya Pooya, Pilbara, Australia",
+      "latitude": -20.9466,
+      "longitude": 117.0578,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    },
+    {
+      "id": "new-zealand-ocean-beach",
+      "name": "Ocean Beach, Stewart Island, New Zealand",
+      "latitude": -46.9705,
+      "longitude": 168.1768,
+      "candidates": {
+        "feline": [],
+        "canine": [],
+        "elephant": [],
+        "primate": []
+      },
+      "status": "no_verified_match_in_initial_search"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "lion-ukutula-1",
+      "group": "feline",
+      "species_label": "Lion",
+      "title": "Lion roars 1.wav",
+      "creator": "eardeer",
+      "license": "CC BY 4.0",
+      "recording_location": "Ukutula Game Reserve, South Africa",
+      "source_url": "https://freesound.org/people/eardeer/sounds/458903/",
+      "duration_seconds": 93.573,
+      "recording_context": "unknown",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Reserve recording; confirm captive/managed status. Not Kruger."
+    },
+    {
+      "id": "lion-ukutula-2",
+      "group": "feline",
+      "species_label": "Lion",
+      "title": "Lion roars 2.wav",
+      "creator": "eardeer",
+      "license": "CC BY 4.0",
+      "recording_location": "Ukutula Game Reserve, South Africa",
+      "source_url": "https://freesound.org/people/eardeer/sounds/458902/",
+      "duration_seconds": 78.126,
+      "recording_context": "unknown",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Alternate clip at same site; confirm captive/managed status."
+    },
+    {
+      "id": "tiger-louisville",
+      "group": "feline",
+      "species_label": "Tiger",
+      "title": "Tiger Roar",
+      "creator": "lauramellis",
+      "license": "CC0",
+      "recording_location": "Louisville Zoo, Kentucky, USA",
+      "source_url": "https://freesound.org/people/lauramellis/sounds/263115/",
+      "duration_seconds": 11.354,
+      "recording_context": "captive",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Must be mapped to the zoo, not Asia. Subspecies not verified."
+    },
+    {
+      "id": "lion-tamil",
+      "group": "feline",
+      "species_label": "Lion",
+      "title": "Lion raring-sound1TamilNadu178.ogg",
+      "creator": "த*உழவன்",
+      "license": "Public domain",
+      "recording_location": null,
+      "source_url": "https://commons.wikimedia.org/wiki/File:Lion_raring-sound1TamilNadu178.ogg",
+      "duration_seconds": 9.1,
+      "recording_context": "captive",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Filename mentions Tamil Nadu, but no verified recording coordinates/site. Do not assign to Goa or Karnataka."
+    },
+    {
+      "id": "cougar-nps",
+      "group": "feline",
+      "species_label": "Mountain lion",
+      "title": "Mountain lion growl",
+      "creator": "NPS Natural Sounds & Night Skies Division",
+      "license": "NPS-authored; file rights verification pending",
+      "recording_location": null,
+      "source_url": "https://www.nps.gov/subjects/sound/clips.htm",
+      "duration_seconds": null,
+      "recording_context": "unknown",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Download listed on official NPS page. Educational program context alone does not establish the recording location."
+    },
+    {
+      "id": "wolf-fws",
+      "group": "canine",
+      "species_label": "Gray wolf",
+      "title": "Wolf howls.ogg",
+      "creator": "U.S. Fish and Wildlife Service",
+      "license": "Public domain (US federal work)",
+      "recording_location": null,
+      "source_url": "https://commons.wikimedia.org/wiki/File:Wolf_howls.ogg",
+      "duration_seconds": 28.32,
+      "recording_context": "unknown",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Recording locality and captive/wild context are not specified."
+    },
+    {
+      "id": "dingo-yuendumu",
+      "group": "canine",
+      "species_label": "Dingo",
+      "title": "Dingo’s in Yuendumu",
+      "creator": "kangaroovindaloo",
+      "license": "CC BY 4.0",
+      "recording_location": "Yuendumu, Northern Territory, Australia",
+      "source_url": "https://freesound.org/people/kangaroovindaloo/sounds/517552/",
+      "duration_seconds": 77.985,
+      "recording_context": "unknown",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Pack near recordist bungalow; no claim of wild status. Not Sydney or Cooya Pooya."
+    },
+    {
+      "id": "fox-kilkenny",
+      "group": "canine",
+      "species_label": "Fox",
+      "title": "vixen calling",
+      "creator": "AndrewJonesFoto",
+      "license": "CC BY 4.0",
+      "recording_location": "The Rower, Kilkenny, Ireland",
+      "source_url": "https://freesound.org/people/AndrewJonesFoto/sounds/362127/",
+      "duration_seconds": 18.733,
+      "recording_context": "unknown",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Recordist identifies fox, tentatively a vixen; species and caller sex not independently verified."
+    },
+    {
+      "id": "coyote-davenport",
+      "group": "canine",
+      "species_label": "Coyote",
+      "title": "coyotes howling",
+      "creator": "SamsterBirdies",
+      "license": "CC0",
+      "recording_location": "Davenport, Washington, USA",
+      "source_url": "https://freesound.org/people/SamsterBirdies/sounds/640060/",
+      "duration_seconds": 49.133,
+      "recording_context": "field",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Recordist reports post-processing in Audacity."
+    },
+    {
+      "id": "coyote-banff",
+      "group": "canine",
+      "species_label": "Coyote",
+      "title": "Coyotes 2.mp3",
+      "creator": "robertjd",
+      "license": "CC0",
+      "recording_location": "Banff, Alberta, Canada",
+      "source_url": "https://freesound.org/people/robertjd/sounds/69584/",
+      "duration_seconds": 120,
+      "recording_context": "field",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Howling at a train; assess train contamination before selecting an excerpt."
+    },
+    {
+      "id": "elephant-serengeti",
+      "group": "elephant",
+      "species_label": "Elephant (African species needs confirmation)",
+      "title": "Night in the Serengeti with elephant rumble",
+      "creator": "zachrau",
+      "license": "CC0",
+      "recording_location": "Mara, Tanzania / Serengeti",
+      "source_url": "https://freesound.org/people/zachrau/sounds/818986/",
+      "duration_seconds": 29.036,
+      "recording_context": "field",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Rumble described at about 5 seconds; crickets and birds also present. Not Nairobi/Kilifi."
+    },
+    {
+      "id": "elephant-samburu",
+      "group": "elephant",
+      "species_label": "African savanna elephant",
+      "title": "Animal-borne acoustic recordings of African elephant vocalizations from Samburu National Reserve, Kenya",
+      "creator": "Jesse Turner; George Wittemyer; Ákos Lédeczi; Will Hedgecock; Gabriel Barnard; György Kalmár",
+      "license": "CC0 (Dryad publication terms)",
+      "recording_location": "Samburu National Reserve, Kenya",
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.xd2547dz3",
+      "duration_seconds": null,
+      "recording_context": "wild",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Dataset, not a selected clip. 1,123 extracted WAV clips; select a high-quality example and retain file ID. License policy: https://datadryad.org/terms . No GPS fixes verified; do not invent precise coordinates."
+    },
+    {
+      "id": "elephant-commons",
+      "group": "elephant",
+      "species_label": "Elephant (Asian category; identity needs confirmation)",
+      "title": "Elephant voice - trumpeting.ogg",
+      "creator": "தகவலுழவன்",
+      "license": "CC0",
+      "recording_location": null,
+      "source_url": "https://commons.wikimedia.org/wiki/File:Elephant_voice_-_trumpeting.ogg",
+      "duration_seconds": 1.4,
+      "recording_context": "unknown",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Page categorized Elephas maximus, but no verified locality or Indian subspecies. Hold for identity/location verification."
+    },
+    {
+      "id": "macaque-goa",
+      "group": "primate",
+      "species_label": "Bonnet macaque",
+      "title": "Bonnet Macaque Alarm Call @ GoaMarch 9 2013",
+      "creator": "Calcuttan",
+      "license": "CC BY 4.0",
+      "recording_location": "Forest near Tambdi Surla, Bhagwan Mahavir Wildlife Sanctuary, Goa, India",
+      "source_url": "https://freesound.org/people/Calcuttan/sounds/187587/",
+      "duration_seconds": 20.271,
+      "recording_context": "field",
+      "existing_region_id": "india-molem-national-park",
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Single-sound map center 15.3886461578622, 74.17522430419922; approximately 1.2 km from existing Molem anchor. Map center precision is not GPS accuracy. Needs audio review and original acquisition."
+    },
+    {
+      "id": "howler-monteverde",
+      "group": "primate",
+      "species_label": "Howler monkey (species unresolved)",
+      "title": "Howler monkey howling in the evening jungle",
+      "creator": "zachrau",
+      "license": "CC0",
+      "recording_location": "Near Monteverde, Costa Rica",
+      "source_url": "https://freesound.org/people/zachrau/sounds/812933/",
+      "duration_seconds": 29.407,
+      "recording_context": "field",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Not the existing Rancho Naturalista region; retain actual site."
+    },
+    {
+      "id": "howler-osa",
+      "group": "primate",
+      "species_label": "Howler monkey (species unresolved)",
+      "title": "Howler monkey and other monkey or bird.wav",
+      "creator": "sethlind",
+      "license": "CC0",
+      "recording_location": "Osa Peninsula, Costa Rica",
+      "source_url": "https://freesound.org/people/sethlind/sounds/332718/",
+      "duration_seconds": 17.949,
+      "recording_context": "field",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Secondary caller unresolved. Not Rancho Naturalista."
+    },
+    {
+      "id": "howler-palenque",
+      "group": "primate",
+      "species_label": "Howler monkey (species unresolved)",
+      "title": "howler_monkey_jungle_4.wav",
+      "creator": "itsmrjack",
+      "license": "CC0",
+      "recording_location": "Palenque, Chiapas, Mexico (source spells Polenque)",
+      "source_url": "https://freesound.org/people/itsmrjack/sounds/123044/",
+      "duration_seconds": 68.006,
+      "recording_context": "field",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": ""
+    },
+    {
+      "id": "howler-guatemala",
+      "group": "primate",
+      "species_label": "Howler monkey (species unresolved)",
+      "title": "Howler Monkeys",
+      "creator": "Lenguaverde",
+      "license": "CC0",
+      "recording_location": "San José, Petén, Guatemala",
+      "source_url": "https://freesound.org/people/Lenguaverde/sounds/490315/",
+      "duration_seconds": 168.836,
+      "recording_context": "field",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": ""
+    },
+    {
+      "id": "howler-belize",
+      "group": "primate",
+      "species_label": "Howler monkey (species unresolved)",
+      "title": "Howler Monkeys",
+      "creator": "FlyingMarmot",
+      "license": "CC0",
+      "recording_location": "Lamanai ruins, Belize",
+      "source_url": "https://freesound.org/people/FlyingMarmot/sounds/414248/",
+      "duration_seconds": 82.905,
+      "recording_context": "field",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": ""
+    },
+    {
+      "id": "gibbon-bidone",
+      "group": "primate",
+      "species_label": "Gibbon (species unresolved)",
+      "title": "Gibbon Monkey.mp3",
+      "creator": "Bidone",
+      "license": "CC0",
+      "recording_location": null,
+      "source_url": "https://freesound.org/people/Bidone/sounds/67355/",
+      "duration_seconds": 7.432,
+      "recording_context": "unknown",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Gibbons are apes. Site and species require confirmation; do not infer a recording location from species range."
+    },
+    {
+      "id": "primate-leipzig",
+      "group": "primate",
+      "species_label": "Primate (identity unresolved)",
+      "title": "Affen schreit.mp3",
+      "creator": "Bidone",
+      "license": "CC0",
+      "recording_location": "Leipzig Zoo, Germany",
+      "source_url": "https://freesound.org/people/Bidone/sounds/67361/",
+      "duration_seconds": 3.331,
+      "recording_context": "captive",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Tags suggest chimpanzee, but description only identifies monkey; hold species label pending verification."
+    },
+    {
+      "id": "monkey-jaipur",
+      "group": "primate",
+      "species_label": "Monkey (species unresolved)",
+      "title": "monkeys-1.wav",
+      "creator": "xserra",
+      "license": "CC BY 4.0",
+      "recording_location": "Galta hill, Jaipur, Rajasthan, India",
+      "source_url": "https://freesound.org/people/xserra/sounds/93993/",
+      "duration_seconds": 4.837,
+      "recording_context": "field",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Not either existing India region."
+    },
+    {
+      "id": "monkey-thekkady",
+      "group": "primate",
+      "species_label": "Monkey (species unresolved)",
+      "title": "kerala-4.wav",
+      "creator": "xserra",
+      "license": "CC BY 4.0",
+      "recording_location": "Thekkady, Kerala, India",
+      "source_url": "https://freesound.org/people/xserra/sounds/320507/",
+      "duration_seconds": 40.942,
+      "recording_context": "field",
+      "existing_region_id": null,
+      "review_status": "metadata_candidate_not_audio_reviewed",
+      "notes": "Mixed monkeys and birds; identify a suitable segment. Not either existing India region."
+    }
+  ]
+}

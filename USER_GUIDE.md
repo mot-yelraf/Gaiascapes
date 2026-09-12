@@ -25,7 +25,7 @@ Use **Dashboard** for playback controls and history. Open Settings with the larg
 ### Listening from another device
 
 Open `http://<Gaiascapes-host-IP>:8768` from a device on the same LAN, then tap
-**Listen on this device** in **Settings → Sound Choices**, in the **This device** tile to the left of Units on desktop (above Units on a narrow screen). **Mute this device** stops playback
+**Listen on this device** in **Settings → Sound Choices**, at the right of the Sound Choices heading. **Mute this device** stops playback
 in that browser without stopping the performance, the host speakers, or other
 listeners. New remote pages start silent; tap Listen again after reloading.
 **Start** and **Stop** still control the shared performance on the host.
@@ -102,7 +102,7 @@ On narrow screens, the gear and Dashboard/Map selector appear in a centered row 
 
 ![Mobile Map with its legend and vertically stacked status tiles](docs/images/user-guide/16-mobile-map.png)
 
-In Settings, the section buttons move above the content. **This device** appears first in Sound Choices, followed by Units, Background, and the event tiles. Scroll inside the settings content to reach the lower controls. The **×** remains in the dialog header and **Save settings** in its footer.
+In Settings, the section buttons move above the content. The listening button is in the Sound Choices heading. Units, Announce Recorded Sounds, Background, and the event tiles stack below it. Scroll inside the settings content to reach the lower controls. The **×** remains in the dialog header and **Save settings** in its footer.
 
 ![Mobile Sound Choices with Listen on this device above Units](docs/images/user-guide/17-mobile-listening.png)
 
@@ -122,6 +122,25 @@ Open **Settings → Sound sources**. Background sources appear above event sourc
 ![Sound sources with Xeno-canto credential fields and enabled demonstration source tiles](docs/images/user-guide/05-sound-sources.png)
 
 **Sound sources** determines which providers are available. **Sound Choices** determines which of their sounds play. Enabling several background sources does not mix them together: there is one Background sound selection. Save source changes before using Preview.
+
+**Feline Calls, Canine Calls, Elephants, and Primates** each have an animal tile
+with an enable checkbox in Background sound sources and an entry in the Sound
+Choices Background selector. They are disabled initially. The bundled starter pack contains nine recordings:
+lion and tiger; dingo, fox, and coyote; one elephant soundscape; bonnet macaque
+and two howler monkey recordings. Enable the desired source and select it as
+Background to play it. No key or recording download is needed.
+
+**Proof-of-concept limitation:** the current elephant clip has been reported as
+dominated by other wildlife rather than a usable elephant call. It needs
+replacement and is not an approved elephant example; the source remains
+disabled by default.
+
+These groups use only fixed recording sites, with no user-selectable locations.
+Sequential/Random, Preview, Next, images, and announcements use those sites.
+Zoo and other recording context appears in the status information. Broader
+animal labels are used where species identification is unresolved. See the
+[recording credits and curation notes](src/gaiascapes_host/recordings/MAMMAL_CREDITS.md).
+**Announce Recording** is the last background source tile.
 
 ### Background sources
 
@@ -178,7 +197,7 @@ Blank credential fields preserve their saved values. The **Saved — enter only 
 
 ## Sound Choices
 
-Open **Settings → Sound Choices**. The first row contains **This device**, **Units**, and **Background**. Below it are three independent event tiles: **Event 1**, **Event 2**, and **Event 3**. The location-privacy checkbox is beneath the sound tiles. These controls stack on narrow screens.
+Open **Settings → Sound Choices**. The listening button is on the right of the heading. The first row contains **Units**, **Announce Recorded Sounds**, and **Background**. Below it are three independent event tiles: **Event 1**, **Event 2**, and **Event 3**. The location-privacy checkbox is beneath the sound tiles. These controls stack on narrow screens.
 
 ![Sound Choices showing Listen on this device, Units, Whale Song, three event voices, volume sliders, the Thunder sample-rate control, and location privacy](docs/images/user-guide/06-sound-choices.png)
 
@@ -195,6 +214,27 @@ Recorded birds, frogs, whales, and dolphins are automatically volume-normalized 
 ### Units
 
 Choose **Imperial** or **Metric** to control displayed measurements, such as distance, swell height, wind speed, and temperature where shown. The Units tile is a display preference, not an audio layer. Latitude and longitude remain geographic coordinates in either setting.
+
+### Recorded sound announcements
+
+In **Sound Sources**, enable **Announce Recording** below the Background sources
+and choose its **Synthesizer**. Automatic prefers Say on supported Macs; Say also
+falls back to eSpeak NG when the chosen native voice is unavailable. Select
+eSpeak NG to always use that engine. In **Sound Choices → Announce Recorded Sounds**,
+choose a **Dialect** and **Voice variant** (Default, Male, or Female), set the volume
+at the bottom, and save settings. Each newly played bird, frog, whale, or dolphin
+recording announces its species and named location before the animal audio starts.
+The previous animal sound stops before speech, so speech and animal audio do not
+overlap. Disabled announcements retain the usual recording transitions. If speech
+fails, its error is shown and the animal recording still plays. Coordinate-only locations
+are skipped. Dialects change pronunciation; names use the original recording
+metadata and are not translated. The default is disabled, US English, 70% volume.
+
+Announcements use Say or eSpeak NG on the host; see the [installation instructions](README.md).
+No speech service or network API is required. SuperCollider is needed only for Say. Muting this device,
+stopping playback, or moving to another recording cancels its current announcement.
+The tile reports a missing engine, missing voice, or synthesis failure while
+recorded sound playback remains available.
 
 ### Background choices
 
@@ -298,7 +338,7 @@ Theme is remembered in this browser’s local storage and does not require **Sav
 
 ## Saving settings
 
-Click **Save settings** after editing Sound sources, Sound Choices, or Sound locations. The button saves changes across all three sections, not just the visible one. The button shows **Saving…** while the request is in progress. Look for the **Settings saved.** toast before closing the dialog. Success and failure notifications for saving, previewing, restoring defaults, and changing theme remain visible for **five seconds**. A newer result replaces the previous notification and starts a fresh five-second interval. Errors begin with **Error:**; resolve the reported problem and save again. Earlier parts of a save may already have been applied.
+Click **Save settings** after editing Sound sources, Sound Choices, or Sound locations. The button saves changes across all three sections, not just the visible one. The button shows **Saving…** while the request is in progress. Look for the **Settings saved.** toast before closing the dialog. Success and failure notifications for saving, previewing, restoring defaults, and changing theme dismiss automatically after **five seconds**, or immediately when clicked. Source recovery toasts follow the same behavior. A newer result replaces the previous notification and starts a fresh five-second interval. Errors begin with **Error:**; resolve the reported problem and save again. Earlier parts of a save may already have been applied.
 
 ![Settings saved notification above the dialog footer](docs/images/user-guide/14-settings-saved.png)
 
@@ -332,3 +372,34 @@ on the map** and save to stop IP-based location lookups. This hides the host
 marker without changing environmental events, audio, or LAN access. The marker refers to the Gaiascapes host, not the phone or other listening device. When enabled, IP location also sets the initial location 1 for Xeno-canto Birdsong and Storm Outlook at startup; Frog Calls retains its verified defaults or edited regions. The setting
 applies to the installation; other open browsers may need a refresh to remove
 a previously displayed marker. See [Privacy](PRIVACY.md) for details.
+
+### Game controls
+
+Use the Play, Pause, and Next icons beneath Dashboard/Map to start or pause the selected
+Gaiascapes session from either view. It follows the existing mode: Continuous
+starts/stops the live soundscape; Capture starts a history replay and Pause stops
+it (Play starts a new replay). Device listening remains a separate setting.
+
+Each status tile has a **Reveal / Hide** selector beside its title. Reveal is the
+default. Hide conceals its information, links, and detail tooltip while keeping
+the title and equal-sized tile visible. Choices stay synchronized between Map
+and Dashboard for the current page; reloading returns to Reveal. New status
+updates remain hidden until the player selects Reveal.
+
+### Sound location order
+
+In **Sound locations**, choose **Sequential** (the default) or **Random** above
+Projection Model, then save settings. Random visits each background location once
+per shuffled round, then reshuffles; recordings continue to the next clip at each
+site on subsequent rounds. It applies to birds, frogs, whales, dolphins, ocean
+swell, and storm outlook. Actual recording coordinates remain unchanged.
+Realtime volcano, seismic, thunder/lightning, and tidal events are not randomized.
+Changes take effect on the next background visit without interrupting a recording.
+
+The animal image tile has its own top-center **Reveal / Hide** selector, initially
+Reveal. Hide conceals the caption and credits while keeping the image and its
+map pointer visible; it stays selected
+as animals change. **Next** stages the next animal in the configured Sequential
+or Random order and pauses without playing its announcement or recording. Once
+the image is ready, Pause is highlighted. **Play** plays that staged animal.
+Next requires Continuous mode and an enabled animal recording background.

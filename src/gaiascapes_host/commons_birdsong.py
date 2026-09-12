@@ -60,6 +60,11 @@ class CommonsBirdsongClient:
         self.media_dir.mkdir(parents=True, exist_ok=True)
         self._opener = opener or urllib.request.urlopen
 
+    @property
+    def location_count(self) -> int:
+        """Return the number of locations traversed by one recording round."""
+        return len(COMMONS_CATALOG)
+
     def event_at(self, index: int) -> GaiaEvent:
         """Return a normalized birdsong event, downloading its audio once."""
         index = int(index)

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title id="title">Primates</title>
+<defs><radialGradient id="forest" cx="55%" cy="30%" r="85%"><stop stop-color="#95b97d" stop-opacity=".24"/><stop offset="1" stop-color="#0c1b19"/></radialGradient></defs>
+<path fill="#10221f" d="M0 0H512V512H0Z"/><path fill="url(#forest)" d="M0 0H512V512H0Z"/>
+<circle cx="365" cy="117" r="45" fill="#d2c48c" opacity=".72"/>
+<path d="M65 415Q256 393 447 415" fill="none" stroke="#587e58" stroke-width="7" stroke-linecap="round"/>
+<path d="M324 349Q416 379 415 281Q413 236 383 248Q363 260 385 275" fill="none" stroke="#859c70" stroke-width="20" stroke-linecap="round"/>
+<ellipse cx="257" cy="309" rx="67" ry="76" fill="#859c70"/>
+<path d="M206 293L168 352L142 372M309 293L339 353L359 372M231 359L205 401L177 404M282 359L307 401L335 404" fill="none" stroke="#859c70" stroke-width="26" stroke-linecap="round"/>
+<ellipse cx="257" cy="317" rx="38" ry="50" fill="#b4b88a"/>
+<circle cx="192" cy="224" r="27" fill="#859c70"/><circle cx="322" cy="224" r="27" fill="#859c70"/>
+<circle cx="192" cy="224" r="15" fill="#c9c297"/><circle cx="322" cy="224" r="15" fill="#c9c297"/>
+<circle cx="257" cy="224" r="67" fill="#859c70"/>
+<path d="M206 230Q195 181 237 192L257 205L277 192Q319 181 308 230L292 267Q257 292 222 267Z" fill="#c9c297"/>
+<circle cx="232" cy="220" r="6" fill="#263b2f"/><circle cx="282" cy="220" r="6" fill="#263b2f"/>
+<path d="M250 241H264M238 258Q257 271 276 258" fill="none" stroke="#596b48" stroke-width="5" stroke-linecap="round"/>
+<path d="M119 205Q98 230 111 256M95 188Q62 226 83 275" fill="none" stroke="#abc989" stroke-width="5" stroke-linecap="round"/>
+</svg>

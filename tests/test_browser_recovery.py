@@ -154,7 +154,7 @@ const scope=vm.createContext({
  recordingNormalizer:{resume:async()=>{order.push('resume')}},
  request:async()=>{order.push('request')},message(){},updateStatus:async()=>{},
 });
-vm.runInContext(source.slice(source.indexOf('byId("startButton").addEventListener'),
+vm.runInContext(source.slice(source.indexOf('async function startPlayback()'),
  source.indexOf('byId("stopButton").addEventListener')),scope);
 (async()=>{
  const pending=click();
