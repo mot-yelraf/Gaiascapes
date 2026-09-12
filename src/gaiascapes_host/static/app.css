@@ -500,3 +500,46 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 #listenButton[aria-pressed="true"] { border-color: var(--moss); }
 
 [data-theme] .settings-trigger, [data-theme] .settings-trigger:hover { border: 0; background: transparent; }
+
+/* A recording companion occupies its own column beside either application view. */
+main.has-animal {
+  width: min(1680px, calc(100% - 32px));
+  display: grid;
+  grid-template-columns: minmax(120px, 220px) minmax(0, 1180px) minmax(120px, 220px);
+  grid-template-rows: auto minmax(0, 1fr);
+  column-gap: 18px;
+}
+main.has-animal > .app-header { grid-column: 2; grid-row: 1; }
+main.has-animal > [data-app-view] { grid-column: 2; grid-row: 2; min-width: 0; }
+.animal-wikipedia { grid-column: 1; grid-row: 2; align-self: center; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); text-align: center; }
+.animal-wikipedia[data-hemisphere="east"] { grid-column: 3; }
+#animalImageButton { display: block; width: 100%; padding: 0; border: 0; background: transparent; }
+#animalImage { display: block; width: 100%; height: auto; max-height: min(38vh, 340px); object-fit: contain; border-radius: 8px; }
+#animalCaption { display: block; margin-top: 6px; font-size: .82rem; line-height: 1.4; }
+#animalImageCredit { display: inline-block; margin-top: 8px; font-size: .7rem; cursor: pointer; }
+#animalImageCredit[hidden] { display: none; }
+.animal-article { width: min(900px, calc(100vw - 32px)); max-height: 88dvh; padding: 24px; border: 1px solid var(--line); border-radius: 14px; color: var(--ink); background: var(--panel); }
+.animal-article::backdrop { background: rgba(0, 0, 0, .7); }
+.animal-article-hint { margin-block: 12px; color: var(--muted); font-size: .8rem; }
+#animalArticleText { max-height: 62dvh; overflow-y: auto; white-space: pre-wrap; line-height: 1.65; cursor: zoom-out; }
+.animal-article footer { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; font-size: .75rem; }
+@media (max-width: 1100px) {
+  main.has-animal { grid-template-columns: minmax(110px, 22%) minmax(0, 1fr); }
+  main.has-animal[data-animal-side="east"] { grid-template-columns: minmax(0, 1fr) minmax(110px, 22%); }
+  main.has-animal > .app-header { grid-column: 1 / -1; }
+  main.has-animal[data-animal-side="east"] > [data-app-view] { grid-column: 1; }
+  .animal-wikipedia[data-hemisphere="east"] { grid-column: 2; }
+}
+@media (max-width: 600px) {
+  main.has-animal, main.has-animal[data-animal-side="east"] { display: flex; height: auto; }
+  .animal-wikipedia { width: min(180px, 46%); align-self: flex-start; margin-top: 18px; }
+  .animal-wikipedia[data-hemisphere="east"] { align-self: flex-end; }
+  #animalImage { max-height: 140px; }
+}
+.animal-location-pointer { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; overflow: visible; }
+#animalLocationOutline { fill: none; stroke: var(--panel); stroke-width: 5; stroke-linecap: round; }
+#animalLocationLine { fill: none; stroke: var(--earth); stroke-width: 2.5; stroke-linecap: round; }
+#animalLocationArrow path { fill: var(--earth); stroke: var(--panel); stroke-width: 1; stroke-linejoin: round; }
+#animalLocationDot { fill: var(--earth); stroke: var(--panel); stroke-width: 2; }
+
+.animal-wikipedia a, .animal-article a { color: var(--moss); }

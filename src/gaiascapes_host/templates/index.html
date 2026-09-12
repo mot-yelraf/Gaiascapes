@@ -14,6 +14,16 @@
 <body data-local-playback="{{ 'true' if local_playback else 'false' }}" data-initial-app-view="{{ app_view }}">
   <div class="event-pulse-layer" id="eventPulseLayer" aria-hidden="true"></div>
   <aside class="recovery-toast-stack" id="recoveryToasts" aria-live="polite" aria-label="Data source recovery status"></aside>
+  <svg id="animalLocationPointer" class="animal-location-pointer" aria-hidden="true" hidden>
+    <defs>
+      <marker id="animalLocationArrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto">
+        <path d="M 1 1 L 11 6 L 1 11 Z"/>
+      </marker>
+    </defs>
+    <path id="animalLocationOutline"/>
+    <circle id="animalLocationDot" r="5"/>
+    <path id="animalLocationLine" marker-end="url(#animalLocationArrow)"/>
+  </svg>
   <main>
     <header class="app-header">
       <div class="heading-block">
@@ -31,6 +41,14 @@
         </div>
       </div>
     </header>
+
+    <aside id="animalWikipedia" class="animal-wikipedia" aria-label="Currently playing animal" hidden>
+      <button id="animalImageButton" type="button" aria-controls="animalArticle" aria-expanded="false" disabled>
+        <img id="animalImage" alt="" hidden>
+        <span id="animalCaption" aria-live="polite"></span>
+      </button>
+      <a id="animalImageCredit" target="_blank" rel="noopener noreferrer" hidden>Image credits and license</a>
+    </aside>
 
     <div id="dashboardView" data-app-view="dashboard"{% if app_view != 'dashboard' %} hidden{% endif %}>
       <section class="workspace">
@@ -112,6 +130,14 @@
     </section>
 
   </main>
+
+  <dialog id="animalArticle" class="animal-article" aria-labelledby="animalArticleTitle">
+    <header><h2 id="animalArticleTitle"></h2><button type="button" aria-label="Collapse article">×</button></header>
+    <p class="animal-article-hint">Click the article or press Escape to return to the image.</p>
+    <div id="animalArticleText" tabindex="0"></div>
+    <footer><a id="animalArticleSource" target="_blank" rel="noopener noreferrer">Wikipedia contributors · Original article and attribution</a>
+      <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a></footer>
+  </dialog>
 
   <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
     <div class="dialog-toast-stack" id="settingsToasts" aria-live="polite" aria-atomic="true"></div>
@@ -309,6 +335,7 @@
   <script id="forecastLocationData" type="application/json">{{ {"current": forecast_location_catalogs, "defaults": default_forecast_location_catalogs} | tojson }}</script>
   <script src="/static/recording-audio.js?v={{ version }}"></script>
   <script src="/static/live-audio.js?v={{ version }}"></script>
+  <script src="/static/animal-wikipedia.js?v={{ version }}"></script>
   <script src="/static/app.js?v={{ version }}"></script>
 </body>
 </html>

@@ -102,6 +102,7 @@ function stopRecordingPlayback(fadeMilliseconds = 700) {
   recordingLoadController?.abort();
   recordingPlaybackGeneration += 1;
   recordingKind = null;
+  globalThis.animalWikipedia?.update(null);
   if (recordingFadeTimer) clearInterval(recordingFadeTimer);
   if (recordingPreviewTimer) clearTimeout(recordingPreviewTimer);
   recordingFadeTimer = null;
@@ -206,6 +207,10 @@ async function playRecordingCue(cue) {
     return;
   }
   recordingAudio = next;
+  globalThis.animalWikipedia?.update(cue.event);
+  next.addEventListener("ended", () => {
+    if (recordingAudio === next) globalThis.animalWikipedia?.update(null);
+  }, {once: true});
   activeRecordingAudio.add(next);
   if (byId("mapPulseLayer")) {
     animateMapEvent(cue.event, cue.instrument, cueRole(cue), cueDuration, next);
@@ -394,6 +399,7 @@ function mapProjectionBoundary() {
 }
 
 function renderMapProjection() {
+  globalThis.animalWikipedia?.refreshPointer();
   const boundary = mapProjectionBoundary();
   ["mapGlobeClipPath", "mapGlowPath", "mapOceanPath", "forecastMapClipPath", "forecastMapOceanPath"].forEach((id) => {
     byId(id)?.setAttribute("d", boundary);
@@ -1490,6 +1496,7 @@ function saveAppView(name) {
 }
 
 function activateAppView(name, persist = false) {
+  globalThis.animalWikipedia?.refreshPointer();
   const selectedName = appViews.some((view) => view.dataset.appView === name)
     ? name
     : "dashboard";
