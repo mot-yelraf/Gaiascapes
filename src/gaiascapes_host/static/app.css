@@ -531,7 +531,7 @@ main.has-animal > [data-app-view] { grid-column: 2; grid-row: 2; min-width: 0; }
   .animal-wikipedia[data-hemisphere="east"] { grid-column: 2; }
 }
 @media (max-width: 600px) {
-  main.has-animal, main.has-animal[data-animal-side="east"] { display: flex; height: auto; }
+  main.has-animal, main.has-animal[data-animal-side="east"] { display: flex; flex-direction: column; height: auto; }
   .animal-wikipedia { width: min(180px, 46%); align-self: flex-start; margin-top: 18px; }
   .animal-wikipedia[data-hemisphere="east"] { align-self: flex-end; }
   #animalImage { max-height: 140px; }

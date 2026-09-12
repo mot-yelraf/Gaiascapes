@@ -1,8 +1,8 @@
 # Gaiascapes user guide
 
-This guide explains the controls in Gaiascapes **v0.26.252.9**. The screenshots show v0.26.252.8; the interface is unchanged by the iPhone audio-session fix in v0.26.252.9. Installation and system setup are covered separately in the [README](README.md).
+This guide explains the controls in Gaiascapes **v0.26.255.22**. Installation and system setup are covered separately in the [README](README.md).
 
-The screenshots below were captured from this release on September 9, 2026, in an isolated demonstration session. Desktop screenshots use a 1,440-pixel-wide browser; mobile screenshots use a 390-pixel-wide browser simulation, not a physical iPhone. Settings screenshots focus on the dialog. Some lists scroll within the dialog, so only their visible rows are shown. Example earthquakes are illustrative, not live observations. Credential fields are blank, and enabled switches in a screenshot demonstrate the controls rather than confirm access to a provider.
+The screenshots below were captured from this release on September 12, 2026, in an isolated demonstration session. Desktop screenshots use a 1,440-pixel-wide browser (1,920 pixels for the bird map views); mobile screenshots use a 390-pixel-wide browser simulation, not a physical iPhone. Settings screenshots focus on the dialog. Some lists scroll within the dialog, so only their visible rows are shown. Example earthquakes and the selected bird recording location are illustrative, not live observations. The bird views show a paused, image-only selection using Next. Credential fields are blank, and enabled switches in a screenshot demonstrate the controls rather than confirm access to a provider.
 
 ## Contents
 
@@ -15,6 +15,7 @@ The screenshots below were captured from this release on September 9, 2026, in a
 - [Sound locations](#sound-locations)
 - [Theme](#theme)
 - [Saving settings](#saving-settings)
+- [Gaiascapes Game](#gaiascapes-game)
 - [Status and troubleshooting](#status-and-troubleshooting)
 - [Location privacy](#location-privacy)
 
@@ -90,7 +91,7 @@ A dash or **Not yet** means there is no matching event to display yet. A previou
 
 Select **Map** at the top of the window. Select **Dashboard** to return to the playback controls.
 
-![Map view showing the world map, legend, and three separate status tiles](docs/images/user-guide/03-map.png)
+![Map view with a greater roadrunner image, recording-location pointer, Play/Pause/Next controls, and status tiles](docs/images/user-guide/03-map.png)
 
 The legend distinguishes background locations, event locations, and **My location**. Moving the pointer over the map displays coordinates. The system-location marker, when available, shows the host’s approximate location derived from its public IP address. Background locations come from **Sound locations**; the host location can seed location 1 for Xeno-canto Birdsong and Storm Outlook at startup (see [Location privacy](#location-privacy)). The chosen Dashboard/Map view is remembered.
 
@@ -104,7 +105,7 @@ On narrow screens, the gear and Dashboard/Map selector appear in a centered row 
 
 In Settings, the section buttons move above the content. The listening button is in the Sound Choices heading. Units, Announce Recorded Sounds, Background, and the event tiles stack below it. Scroll inside the settings content to reach the lower controls. The **×** remains in the dialog header and **Save settings** in its footer.
 
-![Mobile Sound Choices with Listen on this device above Units](docs/images/user-guide/17-mobile-listening.png)
+![Mobile Sound Choices with the listening button in its heading and Units below](docs/images/user-guide/17-mobile-listening.png)
 
 To add Gaiascapes to an iPhone Home Screen:
 
@@ -141,6 +142,8 @@ Zoo and other recording context appears in the status information. Broader
 animal labels are used where species identification is unresolved. See the
 [recording credits and curation notes](src/gaiascapes_host/recordings/MAMMAL_CREDITS.md).
 **Announce Recording** is the last background source tile.
+
+![Mammal source tiles followed by Announce Recording and its synthesizer selector](docs/images/user-guide/18-mammal-announcement-sources.png)
 
 ### Background sources
 
@@ -199,7 +202,7 @@ Blank credential fields preserve their saved values. The **Saved — enter only 
 
 Open **Settings → Sound Choices**. The listening button is on the right of the heading. The first row contains **Units**, **Announce Recorded Sounds**, and **Background**. Below it are three independent event tiles: **Event 1**, **Event 2**, and **Event 3**. The location-privacy checkbox is beneath the sound tiles. These controls stack on narrow screens.
 
-![Sound Choices showing Listen on this device, Units, Whale Song, three event voices, volume sliders, the Thunder sample-rate control, and location privacy](docs/images/user-guide/06-sound-choices.png)
+![Sound Choices showing listening controls, Units, announcement dialect and voice variant, Birdsong, and three event voices](docs/images/user-guide/06-sound-choices.png)
 
 ### Selecting a sound
 
@@ -222,7 +225,7 @@ and choose its **Synthesizer**. Automatic prefers Say on supported Macs; Say als
 falls back to eSpeak NG when the chosen native voice is unavailable. Select
 eSpeak NG to always use that engine. In **Sound Choices → Announce Recorded Sounds**,
 choose a **Dialect** and **Voice variant** (Default, Male, or Female), set the volume
-at the bottom, and save settings. Each newly played bird, frog, whale, or dolphin
+at the bottom, and save settings. Each newly played animal
 recording announces its species and named location before the animal audio starts.
 The previous animal sound stops before speech, so speech and animal audio do not
 overlap. Disabled announcements retain the usual recording transitions. If speech
@@ -235,6 +238,12 @@ No speech service or network API is required. SuperCollider is needed only for S
 stopping playback, or moving to another recording cancels its current announcement.
 The tile reports a missing engine, missing voice, or synthesis failure while
 recorded sound playback remains available.
+
+On macOS, Say starts a short-lived SuperCollider language (`sclang`) worker for
+each uncached announcement. A second SuperCollider Dock icon may appear briefly
+while it generates speech; it is not loading the animal recording. Choosing
+**eSpeak NG** in **Sound sources → Announce Recording → Synthesizer** avoids that
+extra process. Repeated announcements may use the in-memory speech cache.
 
 ### Background choices
 
@@ -302,7 +311,7 @@ Commons uses **68 recordings across 19 curated locations**, with multiple record
 
 ### Whale Song and Dolphin Calls
 
-![Whale Song’s recording-site selection (earlier catalog shown)](docs/images/user-guide/09-whale-locations.png)
+![Whale Song’s current recording-site selection](docs/images/user-guide/09-whale-locations.png)
 
 These tabs list verified archive sites, not movable search centers. Use **Include in playback** to include or exclude a site from the rotation. Keep at least one site selected. The count shows how many sites are included. The numbered button or map marker identifies the site; the checkbox controls whether it plays. Names and coordinates are read-only.
 
@@ -346,6 +355,92 @@ Use the **×** in the dialog header to close Settings; there is no Close button 
 
 Mode and Dashboard/Map view changes are applied and saved immediately through their own controls. Theme is saved immediately in this browser. Listen/Mute applies only to the current page session. History-window and performance-length values control the current replay request and are not saved by the Settings dialog.
 
+## Gaiascapes Game
+
+Turn an animal background into an identification quiz: show the picture first,
+offer the recording as a second clue, then reveal the answer. One person hosts
+the game and controls when clues and answers appear.
+
+### Set up the quiz
+
+Complete setup before showing the screen to the players.
+
+1. In **Settings → Sound sources**, enable the animal recording source you want
+   to use. Clear **Enabled** under **Announce Recording** so spoken names will
+   not give away the answer.
+2. In **Sound Choices**, select that animal source as **Background**. Set
+   **Event 1**, **Event 2**, and **Event 3** to **None** to avoid unrelated sounds
+   during the quiz. Set a comfortable Background volume and save settings.
+   If needed, select **Listen on this device** for the browser presenting the quiz.
+3. In **Sound locations**, set **Sound location order** to **Random**, then save.
+   Random changes the order of sites within the selected background collection;
+   it does not mix different background sound choices. Mammal sources keep their
+   fixed recording sites.
+4. On the Dashboard, select **Continuous** mode, then **Pause**. Switch to
+   **Map** if you want the recording location to be a visual clue.
+5. Set the background status tile’s **Reveal / Hide** selector to **Hide**.
+6. Press **Next** to prepare the first animal without playing its sound. Once
+   the picture card appears, set its selector to **Hide** too. The picture and
+   location pointer stay visible, but its caption and credits are concealed.
+
+The screen is now ready for the players. Keep the picture card’s Wikipedia
+article closed until you are ready to reveal the answer.
+
+### Play a round
+
+1. **Guess from the picture.** Next displays the animal picture and pauses.
+   Give everyone a chance to identify it without hearing the recording.
+2. **Offer the sound if needed.** If nobody knows, press **Play** to hear the
+   same animal. Announcements are disabled, so players hear the animal rather
+   than its name. Press **Pause** after a useful clue; Play resumes continuous
+   playback, which can otherwise advance to another recording automatically.
+3. **Reveal the answer.** When someone identifies the animal correctly—or no
+   one can identify it—select **Reveal** on the picture card and background
+   status tile. Read the displayed animal name and recording location together.
+   Some recordings identify only a broad animal group; use the displayed name
+   as the answer rather than requiring an unsupported exact species.
+4. **Prepare the next round.** Return both selectors to **Hide**, then press
+   **Next**. The next animal appears silently, with its information still hidden.
+   Repeat the picture, sound, and reveal sequence.
+
+Reveal/Hide choices remain in effect as animals change, but reloading the page
+resets them to Reveal. If you reload, hide both sets of information again before
+continuing. To change the animal category, choose another enabled Background
+in Sound Choices, save, and prepare the next round with Next.
+
+### Game controls
+
+Use the Play, Pause, and Next icons beneath Dashboard/Map to start or pause the selected
+Gaiascapes session from either view. It follows the existing mode: Continuous
+starts/stops the live soundscape; Capture starts a history replay and Pause stops
+it (Play starts a new replay). Device listening remains a separate setting.
+
+Each status tile has a **Reveal / Hide** selector beside its title. Reveal is the
+default. Hide conceals its information, links, and detail tooltip while keeping
+the title and equal-sized tile visible. Choices stay synchronized between Map
+and Dashboard for the current page; reloading returns to Reveal. New status
+updates remain hidden until the player selects Reveal.
+
+### Sound location order
+
+In **Sound locations**, choose **Sequential** (the default) or **Random** above
+Projection Model, then save settings. Random visits each background location once
+per shuffled round, then reshuffles; recordings continue to the next clip at each
+site on subsequent rounds. It applies to birds, frogs, whales, dolphins, the mammal collections, ocean
+swell, and storm outlook. Actual recording coordinates remain unchanged.
+Realtime volcano, seismic, thunder/lightning, and tidal events are not randomized.
+Changes take effect on the next background visit without interrupting a recording.
+
+The animal image tile has its own top-center **Reveal / Hide** selector, initially
+Reveal. Hide conceals the caption and credits while keeping the image and its
+map pointer visible; it stays selected
+as animals change. **Next** stages the next animal in the configured Sequential
+or Random order and pauses without playing its announcement or recording. Once
+the image is ready, Pause is highlighted. **Play** plays that staged animal.
+Next requires Continuous mode and an enabled animal recording background.
+
+![Game map with the bird image and pointer visible while its caption, credits, and background status information are hidden](docs/images/user-guide/19-map-hidden-information.png)
+
 ## Status and troubleshooting
 
 | What you see or hear | What it means and what to check |
@@ -373,33 +468,12 @@ marker without changing environmental events, audio, or LAN access. The marker r
 applies to the installation; other open browsers may need a refresh to remove
 a previously displayed marker. See [Privacy](PRIVACY.md) for details.
 
-### Game controls
+## Screenshot image credit
 
-Use the Play, Pause, and Next icons beneath Dashboard/Map to start or pause the selected
-Gaiascapes session from either view. It follows the existing mode: Continuous
-starts/stops the live soundscape; Capture starts a history replay and Pause stops
-it (Play starts a new replay). Device listening remains a separate setting.
-
-Each status tile has a **Reveal / Hide** selector beside its title. Reveal is the
-default. Hide conceals its information, links, and detail tooltip while keeping
-the title and equal-sized tile visible. Choices stay synchronized between Map
-and Dashboard for the current page; reloading returns to Reveal. New status
-updates remain hidden until the player selects Reveal.
-
-### Sound location order
-
-In **Sound locations**, choose **Sequential** (the default) or **Random** above
-Projection Model, then save settings. Random visits each background location once
-per shuffled round, then reshuffles; recordings continue to the next clip at each
-site on subsequent rounds. It applies to birds, frogs, whales, dolphins, ocean
-swell, and storm outlook. Actual recording coordinates remain unchanged.
-Realtime volcano, seismic, thunder/lightning, and tidal events are not randomized.
-Changes take effect on the next background visit without interrupting a recording.
-
-The animal image tile has its own top-center **Reveal / Hide** selector, initially
-Reveal. Hide conceals the caption and credits while keeping the image and its
-map pointer visible; it stays selected
-as animals change. **Next** stages the next animal in the configured Sequential
-or Random order and pauses without playing its announcement or recording. Once
-the image is ready, Pause is highlighted. **Play** plays that staged animal.
-Next requires Continuous mode and an enabled animal recording background.
+The bird image visible in the map screenshots is
+[Greater Roadrunner Tingley Beach](https://commons.wikimedia.org/wiki/File:Greater_Roadrunner_Tingley_Beach.jpg)
+by Polinova (Daniel Polin), licensed under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+It is shown scaled within the application without other photographic edits.
+The photograph retains its license; the demonstration map location does not
+identify the location of a verified sound recording.
