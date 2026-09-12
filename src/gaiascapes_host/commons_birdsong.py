@@ -40,28 +40,15 @@ SUPPORTED_LICENSES = frozenset(
     }
 )
 
-# Exact Commons titles keep the rotation deterministic and make each attribution
-# auditable. The API still supplies the current file URL and license at runtime.
-BIRDSONG_LOCATIONS = (
-    ("canada", "Boreal Canada", 53.0, -106.0, "Gavia immer - Common Loon XC139388.mp3"),
-    ("costa-rica", "Costa Rican Cloud Forest", 10.30, -84.80, "Resplendent Quetzal song (Pharomachrus mocinno).ogg"),
-    ("ecuador", "Ecuadorian Andes", -0.70, -78.60, "Myadestes ralloides - Andean Solitaire XC251141.mp3"),
-    ("brazil", "Brazilian Atlantic Forest", -24.0, -47.5, "Cyanocorax caeruleus - Azure Jay XC433994.mp3"),
-    ("argentina", "Northwestern Argentina", -25.2, -65.8, "Nothoprocta pentlandii - Andean Tinamou XC112728.mp3"),
-    ("poland", "Eastern Poland", 52.7, 23.8, "Sylvia atricapilla - Eurasian Blackcap XC316851.mp3"),
-    ("romania", "Danube Delta, Romania", 45.1, 29.3, "Acrocephalus arundinaceus 1.ogg"),
-    ("scotland", "Scottish Highlands", 57.0, -3.4, "Phylloscopus trochilus - Willow Warbler XC468919.mp3"),
-    ("morocco", "Northern Morocco", 35.0, -5.4, "European robin (Erithacus rubecula) singing in northern Morocco.wav"),
-    ("kenya", "Central Kenya", -0.9, 36.7, "Pogoniulus bilineatus - Yellow-rumped Tinkerbird XC371859.mp3"),
-    ("botswana", "Okavango Delta, Botswana", -19.3, 22.9, "CapeTurtleDove.ogg"),
-    ("madagascar", "Eastern Madagascar", -18.8, 48.4, "Roep Indri Indri.ogg"),
-    ("india", "Western Ghats, India", 11.7, 76.1, "Malabar Whistling-thrush mawt Record-024.wav"),
-    ("malaysia", "Borneo, Malaysia", 5.0, 117.7, "ShamaJavadi.ogg"),
-    ("japan", "Central Japan", 36.2, 138.2, "Japanese nightingale note01.ogg"),
-    ("bangladesh", "Sundarbans, Bangladesh", 22.0, 89.5, "Oriental magpie robin.wav"),
-    ("south-africa", "South African Bushveld", -25.7, 28.2, "Ploceus velatus velatus, wintersang, Pta NBT, 2022-07-23 15h52, a.mp3"),
-    ("australia", "Eastern Australia", -27.9, 153.2, "Eastern Whipbird (Psophodes olivaceus) (W PSOPHODES OLIVACEUS R1 C2).ogg"),
-    ("new-zealand", "North Island, New Zealand", -38.5, 175.4, "Kiwi Male North Island brown kiwi song.ogg"),
+# Each location has an explicit, geographically verified recording list.
+# The API supplies current download URLs and licenses for these exact titles.
+COMMONS_CATALOG = tuple(json.loads(
+    Path(__file__).with_name("commons_birdsong_catalog.json").read_text(encoding="utf-8")
+)["locations"])
+BIRDSONG_LOCATIONS = tuple(
+    (location["id"], location["name"], location["latitude"], location["longitude"],
+     location["recordings"][0]["title"])
+    for location in COMMONS_CATALOG
 )
 
 
@@ -75,9 +62,12 @@ class CommonsBirdsongClient:
 
     def event_at(self, index: int) -> GaiaEvent:
         """Return a normalized birdsong event, downloading its audio once."""
-        slug, place, latitude, longitude, file_title = BIRDSONG_LOCATIONS[
-            int(index) % len(BIRDSONG_LOCATIONS)
-        ]
+        index = int(index)
+        location = COMMONS_CATALOG[index % len(COMMONS_CATALOG)]
+        recordings = location["recordings"]
+        recording = recordings[(index // len(COMMONS_CATALOG)) % len(recordings)]
+        slug = f"{location['id']}-XC{recording['recording_id']}"
+        file_title = recording["title"]
         metadata_path = self.media_dir / f"{slug}.json"
         metadata = self._read_cached_metadata(metadata_path)
         if metadata is None:
@@ -96,11 +86,11 @@ class CommonsBirdsongClient:
             event_id=f"{slug}-{time.time_ns()}",
             kind="birdsong",
             timestamp=now,
-            latitude=latitude,
-            longitude=longitude,
+            latitude=recording["latitude"],
+            longitude=recording["longitude"],
             strength=0.6,
             traits={
-                "place": place,
+                "place": location["name"],
                 "magnitude": 1.0,
                 "media_url": f"/birdsong-media/{urllib.parse.quote(media_path.name)}",
                 "title": metadata["title"],
@@ -109,6 +99,12 @@ class CommonsBirdsongClient:
                 "license_url": metadata["license_url"],
                 "source_url": metadata["source_url"],
                 "commons_page_id": metadata["page_id"],
+                "recording_id": recording["recording_id"],
+                "location_kind": "recording",
+                "region_id": location["id"],
+                "region_name": location["name"],
+                "region_latitude": location["latitude"],
+                "region_longitude": location["longitude"],
             },
         )
 

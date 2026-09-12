@@ -13,7 +13,6 @@ from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
 from .sanctsound import MARINE_KINDS, default_regions, validate_regions
-from .commons_birdsong import BIRDSONG_LOCATIONS
 from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
 
 
@@ -86,7 +85,30 @@ def default_forecast_locations(locations) -> list[dict]:
 
 def default_birdsong_locations() -> list[dict]:
     """Return the nineteen editable Birdsong region centers."""
-    return default_forecast_locations(location[:4] for location in BIRDSONG_LOCATIONS)
+    return [
+        {"name": name, "latitude": latitude, "longitude": longitude}
+        for name, latitude, longitude in (
+            ('Boreal Canada', 53.0, -106.0),
+            ('Costa Rican Cloud Forest', 10.3, -84.8),
+            ('Ecuadorian Andes', -0.7, -78.6),
+            ('Brazilian Atlantic Forest', -24.0, -47.5),
+            ('Northwestern Argentina', -25.2, -65.8),
+            ('Eastern Poland', 52.7, 23.8),
+            ('Danube Delta, Romania', 45.1, 29.3),
+            ('Scottish Highlands', 57.0, -3.4),
+            ('Northern Morocco', 35.0, -5.4),
+            ('Central Kenya', -0.9, 36.7),
+            ('Okavango Delta, Botswana', -19.3, 22.9),
+            ('Eastern Madagascar', -18.8, 48.4),
+            ('Western Ghats, India', 11.7, 76.1),
+            ('Borneo, Malaysia', 5.0, 117.7),
+            ('Central Japan', 36.2, 138.2),
+            ('Sundarbans, Bangladesh', 22.0, 89.5),
+            ('South African Bushveld', -25.7, 28.2),
+            ('Eastern Australia', -27.9, 153.2),
+            ('North Island, New Zealand', -38.5, 175.4),
+        )
+    ]
 
 
 def locations_with_system_location(locations: list[dict], location: dict | None) -> list[dict]:
@@ -170,7 +192,7 @@ def default_frog_locations() -> list[dict]:
 class AppConfig:
     """Validated runtime settings stored alongside application data."""
 
-    config_revision: int = 7
+    config_revision: int = 8
     http_host: str = "0.0.0.0"
     http_port: int = 8768
     usgs_url: str = DEFAULT_USGS_URL
@@ -234,6 +256,9 @@ class AppConfig:
             if int(document.get("config_revision", 0)) < 7:
                 config._migrate_frog_locations()
                 config.config_revision = 7
+            if int(document.get("config_revision", 0)) < 8:
+                config._migrate_marine_regions()
+                config.config_revision = 8
             config._migrate_legacy_instruments()
             # v0.26.236.36 lengthened the original, non-user-facing default.
             if document.get("continuous_interval_seconds") in {12, 12.0}:
@@ -241,6 +266,16 @@ class AppConfig:
         config.apply_environment()
         config.validate()
         return config
+
+    def _migrate_marine_regions(self) -> None:
+        """Expand old complete marine defaults while preserving custom subsets."""
+        legacy = {
+            "whale_song": ["ci02", "ci04", "hi01", "hi03", "hi05", "oc02"],
+            "dolphin_calls": ["ci01", "ci04", "fk03", "gr01", "hi03", "hi04", "mb02", "oc02", "pm01", "pm05", "sb03"],
+        }
+        for kind, regions in legacy.items():
+            if getattr(self, f"{kind}_regions") == regions:
+                setattr(self, f"{kind}_regions", default_regions(kind))
 
     def _migrate_frog_locations(self) -> None:
         """Replace untouched legacy frog centers while preserving custom entries."""
@@ -286,7 +321,7 @@ class AppConfig:
     def validate(self) -> None:
         """Normalize values and reject unsafe ranges."""
         self.http_host = str(self.http_host).strip() or "0.0.0.0"
-        self.config_revision = max(7, int(self.config_revision))
+        self.config_revision = max(8, int(self.config_revision))
         self.osc_host = str(self.osc_host).strip() or "127.0.0.1"
         self.usgs_url = str(self.usgs_url).strip()
         if not self.usgs_url.startswith("https://"):
