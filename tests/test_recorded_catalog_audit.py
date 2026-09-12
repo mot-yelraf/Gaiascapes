@@ -30,7 +30,7 @@ def test_curated_birds_have_unique_recordings_within_their_documented_regions():
 
 
 def test_all_default_catalogs_have_nineteen_verified_locations():
-    report = json.loads((ROOT / "docs/recorded-catalogs-audit.json").read_text())
+    report = json.loads((ROOT / "docs/recorded-catalogs-audit.json").read_text(encoding="utf-8"))
     assert len(report["catalogs"]) == 5
     for catalog in report["catalogs"]:
         rows = catalog["locations"]

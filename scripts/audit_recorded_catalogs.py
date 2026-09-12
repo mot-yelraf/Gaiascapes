@@ -66,7 +66,7 @@ def main():
         parser.error("--request-interval must not be negative")
     if args.config and args.output.resolve() == args.config.resolve():
         parser.error("The report must not overwrite the configuration")
-    key = json.loads(args.config.read_text()).get("xeno_canto_api_key", "") if args.config else ""
+    key = json.loads(args.config.read_text(encoding="utf-8")).get("xeno_canto_api_key", "") if args.config else ""
     catalogs = []
     selected = set(args.catalog or ("commons", "whales", "dolphins", "birds", "frogs"))
     last_request = 0.0
@@ -117,7 +117,7 @@ def main():
         catalog["single_recording_locations"] = [row["name"] for row in catalog["locations"] if row["status"] == "single"]
     report = {"checked_at": datetime.now(timezone.utc).isoformat(), "target_locations": 19,
               "samples_per_location": args.samples, "catalogs": catalogs}
-    args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
+    args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return 0 if all(catalog["location_count"] == 19 and all(row["status"] != "error" for row in catalog["locations"])
                     for catalog in catalogs) else 1
 
