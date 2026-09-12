@@ -430,8 +430,8 @@ function renderMapGrid() {
     for (let latitude = -90; latitude <= 90; latitude += 3) points.push(projectCoordinates(longitude, latitude));
     layer.append(createSvgElement("path", {d: mapPath(points), class: `map-grid-line${longitude === 0 ? " map-grid-prime" : ""}`}));
     if (longitude % 60 === 0) {
-      const position = projectCoordinates(longitude, 0);
-      const label = createSvgElement("text", {x: position.x, y: 826, class: "map-coordinate-label", "text-anchor": "middle"});
+      const position = projectCoordinates(longitude, -90);
+      const label = createSvgElement("text", {x: position.x, y: position.y + 24, class: "map-coordinate-label", "text-anchor": "middle"});
       label.textContent = longitude === 0 ? "0°" : `${Math.abs(longitude)}°${longitude > 0 ? "E" : "W"}`;
       labels.append(label);
     }
@@ -810,6 +810,9 @@ function updateBackgroundCharacteristics(event, fallbackText = null) {
         noaa_sanctsound: "NOAA/Navy SanctSound",
         xeno_canto: "Xeno-canto",
         wikimedia_commons: "Wikimedia Commons",
+        figshare: "Figshare",
+        zenodo: "Zenodo",
+        freesound: "Freesound",
       }[event.provider] || event.provider || "Unknown source";
       provenance.textContent = `${sourceName} · ${traits.license || "License unavailable"}`;
       element.classList.add("forecast-characteristics");
@@ -1753,7 +1756,8 @@ if (settingsDialog && settingsForm) {
           location.selected = include.checked;
           renderForecastLocationEditor();
         });
-        includeLabel.append(include, document.createTextNode("Include in playback"));
+        const recordingCount = Number(location.recording_count || 0);
+        includeLabel.append(include, document.createTextNode(`Include in playback · ${recordingCount} recording${recordingCount === 1 ? "" : "s"}`));
         fields.prepend(includeLabel);
       }
       row.append(selector, fields);
@@ -1771,7 +1775,7 @@ if (settingsDialog && settingsForm) {
       : `${catalog.length} / 19 locations`;
     byId("restoreForecastLocations").disabled = birdsongLocationsReadOnly();
     byId("forecastLocationReadout").textContent = marineLocationsReadOnly()
-      ? "Choose at least one recording site. Map points mark hydrophones; recordings are archived, not live."
+      ? "Choose recording sites. Each return to a site plays its next recording. Map points mark documented recording locations or regions."
       : birdsongLocationsReadOnly()
       ? "Commons uses curated locations. Select Xeno-canto in Sound Sources to edit regions."
       : `Location ${selectedForecastLocation + 1} selected. Click the map to move it.${RECORDED_BACKGROUNDS.includes(activeForecastCatalog) ? ` ${forecastCatalogLabel()} searches within 100 km.` : ""}`;

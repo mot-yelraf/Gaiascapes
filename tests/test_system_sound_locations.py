@@ -81,7 +81,11 @@ def test_startup_initializes_clients_and_persisted_lists_before_polling(tmp_path
         data = json.loads(re.search(r'<script[^>]+id="forecastLocationData"[^>]*>(.*?)</script>', home, re.S)[1])
         assert data['current']['birdsong'][0] == expected
         assert data['defaults']['storm_outlook'][0] == expected
-        assert data['current']['commons_birdsong'] == original.birdsong_locations
+        from gaiascapes_host.commons_birdsong import BIRDSONG_LOCATIONS
+        assert data['current']['commons_birdsong'] == [
+            {'name': name, 'latitude': lat, 'longitude': lon}
+            for _slug, name, lat, lon, _file in BIRDSONG_LOCATIONS
+        ]
     saved = json.loads((tmp_path / 'config.json').read_text())
     assert saved['http_port'] == 8768 and saved['osc_port'] == 57130
     assert saved['birdsong_locations'][0] == expected

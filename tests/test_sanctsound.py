@@ -86,13 +86,68 @@ def test_invalid_regions_are_rejected(kind, selection):
         config.validate()
 
 
-def test_catalog_contains_only_verified_unshifted_target_recordings():
+def test_catalog_contains_verified_target_recordings_and_nineteen_sites():
+    for kind in sanctsound.MARINE_KINDS:
+        assert len(sanctsound.available_locations(kind)) == 19
+        assert len(set(sanctsound.default_regions(kind))) == 19
     for clip in sanctsound.CATALOG:
         name = clip["object"].rsplit("/", 1)[-1]
         assert "Speed" not in name
-        assert "humpbackwhalesong" in name if clip["kind"] == "whale_song" else "dolphin" in name
+        assert clip["title"] and clip["creator"] and clip["citation"]
+        if clip.get("provider"):
+            assert clip["source_url"].startswith("https://")
+            assert clip["license_url"].startswith("https://creativecommons.org/")
         assert -90 <= clip["latitude"] <= 90 and -180 <= clip["longitude"] <= 180
         assert 0 < clip["size"] < sanctsound.MAX_AUDIO_BYTES
+
+
+@pytest.mark.parametrize("kind", sanctsound.MARINE_KINDS)
+def test_complete_marine_cycles_advance_each_sites_recordings(tmp_path, monkeypatch, kind):
+    from pathlib import Path
+
+    client = sanctsound.SanctSoundClient(tmp_path, kind)
+    monkeypatch.setattr(client, "_download", lambda clip: tmp_path / Path(clip["object"]).name)
+    sites = sanctsound.default_regions(kind)
+    for cycle in range(3):
+        for index, site in enumerate(sites):
+            choices = [clip for clip in sanctsound.CATALOG if clip["kind"] == kind and clip["site"] == site]
+            expected = choices[cycle % len(choices)]
+            event = client.event_at(cycle * len(sites) + index)
+            assert event.traits["region_id"] == site
+            assert event.traits["recording_id"] == Path(expected["object"]).stem
+            assert event.traits["title"] == expected["title"]
+            assert event.provider == expected.get("provider", "noaa_sanctsound")
+
+
+def test_bundled_recordings_keep_source_attribution_and_copy_to_runtime_data(tmp_path):
+    client = sanctsound.SanctSoundClient(tmp_path, "dolphin_calls", ["xiamen"],
+                                       lambda *_a, **_kw: pytest.fail("Bundled audio must not access the network"))
+    events = [client.event_at(index) for index in range(4)]
+    assert len({event.traits["recording_id"] for event in events}) == 4
+    for event in events:
+        path = client.media_dir / event.traits["media_url"].rsplit("/", 1)[-1]
+        with wave.open(str(path)) as audio:
+            assert audio.getframerate() == 48000
+            assert audio.getnframes() > 0
+        assert event.provider == "figshare"
+        assert event.traits["license"] == "CC BY 4.0"
+        assert "original speed" in event.traits["processing"]
+
+
+def test_external_mp3_is_verified_and_cached(tmp_path):
+    calls = []
+    payload = b"ID3" + b"audio" * 10
+    clip = dict(object="external.mp3", size=len(payload), md5=base64.b64encode(
+        hashlib.md5(payload, usedforsecurity=False).digest()).decode(), download_url="https://example.org/dolphin.mp3")
+
+    def opener(request, timeout):
+        calls.append(request.full_url)
+        return io.BytesIO(payload)
+
+    client = sanctsound.SanctSoundClient(tmp_path, "dolphin_calls", opener=opener)
+    assert client._download(clip).read_bytes() == payload
+    client._download(clip)
+    assert calls == [clip["download_url"]]
 
 
 def test_interrupted_download_cleans_temporary_file(tmp_path, archive):

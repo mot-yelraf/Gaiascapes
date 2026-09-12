@@ -164,7 +164,37 @@ project.
 
 ## Gaiascapes visual and audio assets
 
-Except for the Natural Earth geometry identified above, Gaiascapes's icons,
+### Supplementary dolphin recordings
+
+The marine catalog retains per-recording source URLs, creators, license URLs,
+and checksums. These source licenses apply independently of the application:
+
+- Sarah Marley, Christine Erbe, and Chandra Salgado Kent: Fremantle dolphin
+  whistles, CC BY 4.0, <https://doi.org/10.6084/m9.figshare.5011637>.
+- Rocco De Marco and colleagues: Adriatic dolphin whistles, CC BY 4.0,
+  <https://doi.org/10.6084/m9.figshare.21621345>.
+- Lydia Chaparro Elias and colleagues (ICM-CSIC and Associació Cetàcea):
+  Catalan dolphin recordings, CC BY 4.0,
+  <https://doi.org/10.5281/zenodo.15658353>.
+- Félix Blume: Rio Tefé and Punta Allen dolphin recordings, CC0,
+  <https://freesound.org/people/felix.blume/sounds/408555/> and
+  <https://freesound.org/people/felix.blume/sounds/161691/>.
+- August Sandberg: dolphins recorded above water off Portugal, CC BY-NC 4.0,
+  <https://freesound.org/people/AugustSandberg/sounds/202489/>.
+- Monterey Bay Aquarium Research Institute: Pacific white-sided dolphin calls,
+  CC BY-NC 4.0, <https://freesound.org/people/MBARI_MARS/sounds/404148/>.
+- Weijie Fu and colleagues: Xiamen dolphin whistles, CC BY 4.0,
+  <https://doi.org/10.6084/m9.figshare.29143727>. Four converted samples are
+  distributed with the application; their complete attribution, source filenames,
+  and conversion details are in `src/gaiascapes_host/recordings/README.md`.
+
+CC BY-NC recordings are restricted to noncommercial use. Freesound MP3 previews
+retain their source licenses. Conversion to a browser-compatible format does
+not change the source recording's license.
+
+### Project assets
+
+Except for the Natural Earth geometry and attributed recordings identified above, Gaiascapes's icons,
 styles, templates, and SuperCollider synth definitions are project assets
 distributed under the repository's `LICENSE`. The PNG and ICO desktop icons are
 derived from the Gaiascapes SVG artwork.

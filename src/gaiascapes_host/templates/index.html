@@ -145,7 +145,7 @@
               <article class="source-tile" aria-label="{{ label }}">
                 <div class="source-title">
                   <label for="{{ control }}"><input id="{{ control }}" type="checkbox" aria-describedby="{{ control }}Hint" {% if enabled %}checked{% endif %}><strong>{{ label }}</strong></label>
-                  <small class="source-hint" id="{{ control }}Hint" role="tooltip">NOAA NCEI / SanctSound recordings. No API key required. Choose recording sites in Sound locations.</small>
+                  <small class="source-hint" id="{{ control }}Hint" role="tooltip">Curated archive recordings from 19 locations. No API key required. Choose sites in Sound locations; each visit advances to the next recording.</small>
                 </div>
                 <label class="source-art" for="{{ control }}" aria-label="Toggle {{ label }}"><img src="/static/sound-{{ kind }}.svg" width="512" height="512" alt=""></label>
               </article>
@@ -269,11 +269,11 @@
             <div class="pane-heading"><div class="sound-location-heading"><h3>Sound locations</h3><span id="soundLocationCoordinates" aria-live="polite" hidden></span></div></div>
             <div class="location-editor-tabs" role="group" aria-label="Sound catalog">
               <button type="button" title="Choose Xeno-canto in Sound Sources to edit Birdsong regions. Recordings come from within 100 km of each point." data-location-catalog="birdsong">Birdsong</button>
-              <button type="button" title="Choose verified SanctSound recording sites." data-location-catalog="dolphin_calls">Dolphin Calls</button>
+              <button type="button" title="Choose verified dolphin recording sites." data-location-catalog="dolphin_calls">Dolphin Calls</button>
               <button type="button" title="Edit Frog Calls regions. Recordings come from within 100 km of each point." data-location-catalog="frog_calls">Frog Calls</button>
               <button type="button" class="is-active" title="Select a numbered location, then click the map to move it. Edit its name or coordinates in the list. Each sound uses exactly 19 locations." data-location-catalog="ocean_swell">Ocean Swells</button>
               <button type="button" title="Select a numbered location, then click the map to move it. Edit its name or coordinates in the list. Each sound uses exactly 19 locations." data-location-catalog="storm_outlook">Storm Outlook</button>
-              <button type="button" title="Choose verified SanctSound recording sites." data-location-catalog="whale_song">Whale Song</button>
+              <button type="button" title="Choose verified whale recording sites." data-location-catalog="whale_song">Whale Song</button>
             </div>
             <div class="location-editor-toolbar">
               <strong id="forecastLocationCount">19 / 19 locations</strong>

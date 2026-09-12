@@ -46,7 +46,7 @@ version = {attr = "gaiascapes.__version__"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-gaiascapes_host = ["sanctsound_catalog.json", "templates/*.html", "static/*.css", "static/*.js", "static/*.svg", "static/*.png", "static/*.ico", "static/*.icns", "static/*.webmanifest"]
+gaiascapes_host = ["sanctsound_catalog.json", "commons_birdsong_catalog.json", "recordings/*.wav", "recordings/*.md", "templates/*.html", "static/*.css", "static/*.js", "static/*.svg", "static/*.png", "static/*.ico", "static/*.icns", "static/*.webmanifest"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

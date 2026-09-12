@@ -1,0 +1,2610 @@
+{
+  "checked_at": "2026-09-12T12:49:03.677995+00:00",
+  "target_locations": 19,
+  "samples_per_location": 2,
+  "catalogs": [
+    {
+      "kind": "birdsong",
+      "provider": "wikimedia_commons",
+      "locations": [
+        {
+          "id": "canada-churchill",
+          "name": "Churchill, Manitoba, Canada",
+          "latitude": 58.6624,
+          "longitude": -93.834,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "552770",
+              "title": "Acanthis flammea - Common Redpoll XC552770.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Acanthis_flammea_-_Common_Redpoll_XC552770.mp3",
+              "creator": "Doug Hynes",
+              "license": "CC BY-SA 4.0",
+              "latitude": 58.6624,
+              "longitude": -93.834
+            },
+            {
+              "recording_id": "552848",
+              "title": "Calidris alpina - Dunlin XC552848.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Calidris_alpina_-_Dunlin_XC552848.mp3",
+              "creator": "Doug Hynes",
+              "license": "CC BY-SA 4.0",
+              "latitude": 58.6624,
+              "longitude": -93.834
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "canada-goulds",
+          "name": "Goulds, Newfoundland, Canada",
+          "latitude": 47.4793,
+          "longitude": -52.8036,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "569523",
+              "title": "Zonotrichia albicollis - White-throated Sparrow XC569523.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Zonotrichia_albicollis_-_White-throated_Sparrow_XC569523.mp3",
+              "creator": "Doug Hynes",
+              "license": "CC BY-SA 4.0",
+              "latitude": 47.7482,
+              "longitude": -52.788
+            },
+            {
+              "recording_id": "570786",
+              "title": "Setophaga coronata - Myrtle Warbler XC570786.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Setophaga_coronata_-_Myrtle_Warbler_XC570786.mp3",
+              "creator": "Doug Hynes",
+              "license": "CC BY-SA 4.0",
+              "latitude": 47.4793,
+              "longitude": -52.8036
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "costa-rica-rancho-naturalista",
+          "name": "Rancho Naturalista, Costa Rica",
+          "latitude": 9.8333,
+          "longitude": -83.5629,
+          "eligible_recordings": 3,
+          "samples": [
+            {
+              "recording_id": "464415",
+              "title": "Sipia laemosticta - Dull-mantled Antbird XC464415.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Sipia_laemosticta_-_Dull-mantled_Antbird_XC464415.mp3",
+              "creator": "Oliver Komar",
+              "license": "CC BY-SA 4.0",
+              "latitude": 9.8333,
+              "longitude": -83.5629
+            },
+            {
+              "recording_id": "579302",
+              "title": "Accipiter superciliosus - Tiny Hawk XC579302.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Accipiter_superciliosus_-_Tiny_Hawk_XC579302.mp3",
+              "creator": "David Mora Vargas",
+              "license": "CC BY-SA 4.0",
+              "latitude": 10.4384,
+              "longitude": -84.0464
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "ecuador-tapichalaca-reserve",
+          "name": "Tapichalaca Reserve, Ecuador",
+          "latitude": -4.496,
+          "longitude": -79.132,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "243305",
+              "title": "Zonotrichia capensis - Rufous-collared Sparrow XC243305.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Zonotrichia_capensis_-_Rufous-collared_Sparrow_XC243305.mp3",
+              "creator": "Niels Krabbe",
+              "license": "CC BY-SA 4.0",
+              "latitude": -4.757,
+              "longitude": -79.112
+            },
+            {
+              "recording_id": "250298",
+              "title": "Cercomacra nigrescens - Blackish Antbird XC250298.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Cercomacra_nigrescens_-_Blackish_Antbird_XC250298.mp3",
+              "creator": "Niels Krabbe",
+              "license": "CC BY-SA 4.0",
+              "latitude": -4.108,
+              "longitude": -78.964
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "ecuador-napo-galeras",
+          "name": "Napo Galeras, Ecuador",
+          "latitude": -0.833,
+          "longitude": -77.567,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "243290",
+              "title": "Cardellina canadensis - Canada Warbler XC243290.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Cardellina_canadensis_-_Canada_Warbler_XC243290.mp3",
+              "creator": "Niels Krabbe",
+              "license": "CC BY-SA 4.0",
+              "latitude": -0.655,
+              "longitude": -77.784
+            },
+            {
+              "recording_id": "248895",
+              "title": "Hylophylax naevius - Spot-backed Antbird XC248895.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Hylophylax_naevius_-_Spot-backed_Antbird_XC248895.mp3",
+              "creator": "Niels Krabbe",
+              "license": "CC BY-SA 4.0",
+              "latitude": -0.6,
+              "longitude": -77.3
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "brazil-atlantic-forest",
+          "name": "Atlantic Forest, São Paulo, Brazil",
+          "latitude": -24.2667,
+          "longitude": -47.4267,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "34058",
+              "title": "Molothrus oryzivorus - Giant Cowbird XC34058.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Molothrus_oryzivorus_-_Giant_Cowbird_XC34058.mp3",
+              "creator": "Tim Hirsch",
+              "license": "CC BY-SA 4.0",
+              "latitude": -24.2667,
+              "longitude": -47.4267
+            },
+            {
+              "recording_id": "433671",
+              "title": "Turdus albicollis - White-necked Thrush XC433671.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Turdus_albicollis_-_White-necked_Thrush_XC433671.mp3",
+              "creator": "maria belotti",
+              "license": "CC BY-SA 4.0",
+              "latitude": -24.7899,
+              "longitude": -47.9185
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "brazil-almeirim",
+          "name": "Almeirim, Pará, Brazil",
+          "latitude": -0.5719,
+          "longitude": -52.662,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "460681",
+              "title": "Thamnophilus melanothorax - Band-tailed Antshrike XC460681.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Thamnophilus_melanothorax_-_Band-tailed_Antshrike_XC460681.mp3",
+              "creator": "Kurazo Okada",
+              "license": "CC BY-SA 4.0",
+              "latitude": -0.5719,
+              "longitude": -52.662
+            },
+            {
+              "recording_id": "460685",
+              "title": "Hemitriccus josephinae - Boat-billed Tody-Tyrant XC460685.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Hemitriccus_josephinae_-_Boat-billed_Tody-Tyrant_XC460685.mp3",
+              "creator": "Kurazo Okada",
+              "license": "CC BY-SA 4.0",
+              "latitude": -0.5783,
+              "longitude": -52.6571
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "argentina-finca-el-candado",
+          "name": "Finca El Candado, Salta, Argentina",
+          "latitude": -25.2001,
+          "longitude": -65.8167,
+          "eligible_recordings": 3,
+          "samples": [
+            {
+              "recording_id": "112711",
+              "title": "Geranoaetus polyosoma - Variable Hawk XC112711.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Geranoaetus_polyosoma_-_Variable_Hawk_XC112711.mp3",
+              "creator": "Niels Krabbe",
+              "license": "CC BY-SA 3.0",
+              "latitude": -25.2001,
+              "longitude": -65.8167
+            },
+            {
+              "recording_id": "112712",
+              "title": "Camptostoma obsoletum - Southern Beardless Tyrannulet XC112712.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Camptostoma_obsoletum_-_Southern_Beardless_Tyrannulet_XC112712.mp3",
+              "creator": "Niels Krabbe",
+              "license": "CC BY-SA 3.0",
+              "latitude": -24.683,
+              "longitude": -65.406
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "poland-wroc-aw",
+          "name": "Wrocław, Poland",
+          "latitude": 51.0785,
+          "longitude": 17.0284,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "416256",
+              "title": "Hippolais icterina - Icterine Warbler XC416256.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Hippolais_icterina_-_Icterine_Warbler_XC416256.mp3",
+              "creator": "Phoenicurus ochruros",
+              "license": "CC BY-SA 4.0",
+              "latitude": 51.0762,
+              "longitude": 17.0266
+            },
+            {
+              "recording_id": "416395",
+              "title": "Luscinia megarhynchos - Common Nightingale XC416395.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Luscinia_megarhynchos_-_Common_Nightingale_XC416395.mp3",
+              "creator": "Phoenicurus ochruros",
+              "license": "CC BY-SA 4.0",
+              "latitude": 51.0785,
+              "longitude": 17.0284
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "scotland-ballochbuie",
+          "name": "Ballochbuie, Scotland",
+          "latitude": 56.9959,
+          "longitude": -3.3315,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "467639",
+              "title": "Turdus torquatus - Ring Ouzel XC467639.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Turdus_torquatus_-_Ring_Ouzel_XC467639.mp3",
+              "creator": "Anthony Wetherhill",
+              "license": "CC BY-SA 4.0",
+              "latitude": 56.9211,
+              "longitude": -3.4365
+            },
+            {
+              "recording_id": "468594",
+              "title": "Turdus torquatus - Ring Ouzel XC468594.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Turdus_torquatus_-_Ring_Ouzel_XC468594.mp3",
+              "creator": "Anthony Wetherhill",
+              "license": "CC BY-SA 4.0",
+              "latitude": 56.9538,
+              "longitude": -3.4001
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "morocco-oujda",
+          "name": "Oujda, Morocco",
+          "latitude": 34.6795,
+          "longitude": -1.8997,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "481945",
+              "title": "Carduelis carduelis - European Goldfinch XC481945.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Carduelis_carduelis_-_European_Goldfinch_XC481945.mp3",
+              "creator": "محبي الطيور المغردة",
+              "license": "CC BY-SA 4.0",
+              "latitude": 34.6795,
+              "longitude": -1.8997
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "kenya-nairobi",
+          "name": "Nairobi, Kenya",
+          "latitude": -1.2639,
+          "longitude": 36.7684,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "364472",
+              "title": "Passer rufocinctus - Kenya Sparrow XC364472.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Passer_rufocinctus_-_Kenya_Sparrow_XC364472.mp3",
+              "creator": "Anne",
+              "license": "CC BY-SA 4.0",
+              "latitude": -1.2639,
+              "longitude": 36.7684
+            },
+            {
+              "recording_id": "364474",
+              "title": "Lybius leucocephalus - White-headed Barbet XC364474.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Lybius_leucocephalus_-_White-headed_Barbet_XC364474.mp3",
+              "creator": "Anne",
+              "license": "CC BY-SA 4.0",
+              "latitude": -1.2639,
+              "longitude": 36.7684
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "kenya-kilifi",
+          "name": "Kilifi, Kenya",
+          "latitude": -3.8054,
+          "longitude": 39.833,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "403159",
+              "title": "Cyanomitra veroxii - Grey Sunbird XC403159.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Cyanomitra_veroxii_-_Grey_Sunbird_XC403159.mp3",
+              "creator": "Anne Ndung'u",
+              "license": "CC BY-SA 4.0",
+              "latitude": -3.8054,
+              "longitude": 39.833
+            },
+            {
+              "recording_id": "403666",
+              "title": "Motacilla aguimp - African Pied Wagtail XC403666.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Motacilla_aguimp_-_African_Pied_Wagtail_XC403666.mp3",
+              "creator": "Anne Ndung'u",
+              "license": "CC BY-SA 4.0",
+              "latitude": -3.8054,
+              "longitude": 39.833
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "india-chikballapur",
+          "name": "Chikballapur, Karnataka, India",
+          "latitude": 13.3614,
+          "longitude": 77.6721,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "336949",
+              "title": "Iduna rama - Sykes's Warbler XC336949.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Iduna_rama_-_Sykes%27s_Warbler_XC336949.mp3",
+              "creator": "Mike Prince",
+              "license": "CC BY-SA 4.0",
+              "latitude": 13.2233,
+              "longitude": 77.4433
+            },
+            {
+              "recording_id": "336956",
+              "title": "Alauda gulgula - Oriental Skylark XC336956.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Alauda_gulgula_-_Oriental_Skylark_XC336956.mp3",
+              "creator": "Mike Prince",
+              "license": "CC BY-SA 4.0",
+              "latitude": 12.9823,
+              "longitude": 77.3463
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "india-molem-national-park",
+          "name": "Molem National Park, Goa, India",
+          "latitude": 15.399,
+          "longitude": 74.176,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "125715",
+              "title": "Irena puella - Asian Fairy-bluebird XC125715.ogg",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Irena_puella_-_Asian_Fairy-bluebird_XC125715.ogg",
+              "creator": "Sudipto Roy",
+              "license": "CC BY-SA 3.0",
+              "latitude": 15.399,
+              "longitude": 74.176
+            },
+            {
+              "recording_id": "125716",
+              "title": "Ocyceros griseus - Malabar Grey Hornbill XC125716.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Ocyceros_griseus_-_Malabar_Grey_Hornbill_XC125716.mp3",
+              "creator": "Sudipto Roy",
+              "license": "CC BY-SA 3.0",
+              "latitude": 15.399,
+              "longitude": 74.176
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "south-africa-kruger-national-park",
+          "name": "Kruger National Park, South Africa",
+          "latitude": -24.0073,
+          "longitude": 31.2225,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "442983",
+              "title": "Cercotrichas leucophrys - White-browed Scrub Robin XC442983.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Cercotrichas_leucophrys_-_White-browed_Scrub_Robin_XC442983.mp3",
+              "creator": "Rion Lerm",
+              "license": "CC BY-SA 4.0",
+              "latitude": -23.9449,
+              "longitude": 31.1652
+            },
+            {
+              "recording_id": "443198",
+              "title": "Cercotrichas leucophrys - White-browed Scrub Robin XC443198.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Cercotrichas_leucophrys_-_White-browed_Scrub_Robin_XC443198.mp3",
+              "creator": "Rion Lerm",
+              "license": "CC BY-SA 4.0",
+              "latitude": -23.9449,
+              "longitude": 31.1652
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "australia-sydney",
+          "name": "Sydney, New South Wales, Australia",
+          "latitude": -33.8732,
+          "longitude": 151.2068,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "442361",
+              "title": "Sonus naturalis - Soundscape XC442361.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Sonus_naturalis_-_Soundscape_XC442361.mp3",
+              "creator": "James Ray",
+              "license": "CC BY-SA 4.0",
+              "latitude": -33.6903,
+              "longitude": 150.5296
+            },
+            {
+              "recording_id": "442377",
+              "title": "Sonus naturalis - Soundscape XC442377.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Sonus_naturalis_-_Soundscape_XC442377.mp3",
+              "creator": "James Ray",
+              "license": "CC BY-SA 4.0",
+              "latitude": -33.6903,
+              "longitude": 150.5296
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "australia-cooya-pooya",
+          "name": "Cooya Pooya, Pilbara, Australia",
+          "latitude": -20.9466,
+          "longitude": 117.0578,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "492215",
+              "title": "Dacelo leachii - Blue-winged Kookaburra XC492215.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Dacelo_leachii_-_Blue-winged_Kookaburra_XC492215.mp3",
+              "creator": "Peter Russell",
+              "license": "CC BY-SA 4.0",
+              "latitude": -20.9466,
+              "longitude": 117.0578
+            },
+            {
+              "recording_id": "496422",
+              "title": "Ptilotula keartlandi - Grey-headed Honeyeater XC496422.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Ptilotula_keartlandi_-_Grey-headed_Honeyeater_XC496422.mp3",
+              "creator": "Peter Russell",
+              "license": "CC BY-SA 4.0",
+              "latitude": -21.0719,
+              "longitude": 117.2481
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "new-zealand-ocean-beach",
+          "name": "Ocean Beach, Stewart Island, New Zealand",
+          "latitude": -46.9705,
+          "longitude": 168.1768,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "389022",
+              "title": "Apteryx australis - Southern Brown Kiwi XC389022.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Apteryx_australis_-_Southern_Brown_Kiwi_XC389022.mp3",
+              "creator": "ZHANG Shen",
+              "license": "CC BY-SA 3.0",
+              "latitude": -46.9705,
+              "longitude": 168.1768
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        }
+      ],
+      "location_count": 19,
+      "single_recording_locations": [
+        "Oujda, Morocco",
+        "Ocean Beach, Stewart Island, New Zealand"
+      ],
+      "checked_at": "2026-09-12T12:49:03.677995+00:00"
+    },
+    {
+      "kind": "whale_song",
+      "provider": "marine_archives",
+      "locations": [
+        {
+          "id": "ci02",
+          "name": "Channel Islands, California · CI02",
+          "latitude": 34.08532,
+          "longitude": -120.523,
+          "recording_count": 8,
+          "eligible_recordings": 8,
+          "samples": [
+            {
+              "recording_id": "SanctSound_CI02_04_humpbackwhalesong_20200225T123154Z",
+              "title": "Humpback whale song",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/ci02/sanctsound_ci02_04_sound_clips/metadata/SanctSound_CI02_04_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 34.08532,
+              "longitude": -120.523
+            },
+            {
+              "recording_id": "SanctSound_CI02_05_humpbackwhalesong_20201014T134727Z",
+              "title": "Humpback whale song",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/ci02/sanctsound_ci02_05_sound_clips/metadata/SanctSound_CI02_05_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 34.0835,
+              "longitude": -120.5223
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "ci04",
+          "name": "Channel Islands, California · CI04",
+          "latitude": 33.84888,
+          "longitude": -120.117,
+          "recording_count": 3,
+          "eligible_recordings": 3,
+          "samples": [
+            {
+              "recording_id": "SanctSound_CI04_04_humpbackwhalesong_20200213T122810Z",
+              "title": "Humpback whale song",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/ci04/sanctsound_ci04_04_sound_clips/metadata/SanctSound_CI04_04_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 33.84888,
+              "longitude": -120.117
+            },
+            {
+              "recording_id": "SanctSound_CI04_04_humpbackwhale_20200225T112447Z",
+              "title": "Humpback whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/ci04/sanctsound_ci04_04_sound_clips/metadata/SanctSound_CI04_04_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 33.84888,
+              "longitude": -120.117
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "hi01",
+          "name": "Hawaiian Islands · HI01",
+          "latitude": 20.807567,
+          "longitude": -156.65615,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_HI01_01_humpbackwhalesong_20190216T045823Z",
+              "title": "Humpback whale song",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/hi01/sanctsound_hi01_01_sound_clips/metadata/SanctSound_HI01_01_sound_clips-metadata.json",
+              "creator": "Eden Zang · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 20.807567,
+              "longitude": -156.65615
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "hi03",
+          "name": "Hawaiian Islands · HI03",
+          "latitude": 21.2852,
+          "longitude": -157.599983,
+          "recording_count": 4,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "SanctSound_HI03_01_humpbackwhalesong_20190130T144409Z",
+              "title": "Humpback whale song",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/hi03/sanctsound_hi03_01_sound_clips/metadata/SanctSound_HI03_01_sound_clips-metadata.json",
+              "creator": "Marc Lammers · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 21.2852,
+              "longitude": -157.599983
+            },
+            {
+              "recording_id": "SanctSound_HI03_01_humpbackwhaleanddolphin_20190118T024552Z",
+              "title": "Humpback whale and dolphin calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/hi03/sanctsound_hi03_01_sound_clips/metadata/SanctSound_HI03_01_sound_clips-metadata.json",
+              "creator": "Marc Lammers · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 21.2852,
+              "longitude": -157.599983
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "hi05",
+          "name": "Hawaiian Islands · HI05",
+          "latitude": 21.072183,
+          "longitude": -157.395017,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_HI05_01_humpbackwhalesong_20190101T105712Z",
+              "title": "Humpback whale song",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/hi05/sanctsound_hi05_01_sound_clips/metadata/SanctSound_HI05_01_sound_clips-metadata.json",
+              "creator": "Eden Zang · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 21.072183,
+              "longitude": -157.395017
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "oc02",
+          "name": "Olympic Coast, Washington · OC02",
+          "latitude": 48.4905,
+          "longitude": -125.0039,
+          "recording_count": 8,
+          "eligible_recordings": 8,
+          "samples": [
+            {
+              "recording_id": "SanctSound_OC02_03_humpbackwhalesong_20191206T025614Z",
+              "title": "Humpback whale song",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/oc02/sanctsound_oc02_03_sound_clips/metadata/SanctSound_OC02_03_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 48.4905,
+              "longitude": -125.0039
+            },
+            {
+              "recording_id": "SanctSound_OC02_03_humpbackwhalesong_20200105T230643Z",
+              "title": "Humpback whale song",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/oc02/sanctsound_oc02_03_sound_clips/metadata/SanctSound_OC02_03_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 48.4905,
+              "longitude": -125.0039
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "ci05",
+          "name": "Channel Islands, California · CI05",
+          "latitude": 34.0178,
+          "longitude": -119.317,
+          "recording_count": 3,
+          "eligible_recordings": 3,
+          "samples": [
+            {
+              "recording_id": "SanctSound_CI05_03_bluewhale_20190926T230959Z",
+              "title": "Blue whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/ci05/sanctsound_ci05_03_sound_clips/metadata/SanctSound_CI05_03_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 34.0178,
+              "longitude": -119.317
+            },
+            {
+              "recording_id": "SanctSound_CI05_04_finwhale_20191228T134133Z",
+              "title": "Fin whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/ci05/sanctsound_ci05_04_sound_clips/metadata/SanctSound_CI05_04_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 34.0178,
+              "longitude": -119.317
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "gr01",
+          "name": "Gray’s Reef, Georgia · GR01",
+          "latitude": 31.396417,
+          "longitude": -80.8904,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_GR01_01_northatlanticrightwhale_20181227T060148Z",
+              "title": "North Atlantic right whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/gr01/sanctsound_gr01_01_sound_clips/metadata/SanctSound_GR01_01_sound_clips-metadata.json",
+              "creator": "Timothy Rowell; Jenni Stanley; Kim Roberson · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 31.396417,
+              "longitude": -80.8904
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "hi04",
+          "name": "Hawaiian Islands · HI04",
+          "latitude": 22.26347,
+          "longitude": -159.58639,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_HI04_02_humpbackwhaleanddolphin_20200129T175046Z",
+              "title": "Humpback whale and dolphin calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/hi04/sanctsound_hi04_02_sound_clips/metadata/SanctSound_HI04_02_sound_clips-metadata.json",
+              "creator": "Eden Zang; Anke Kuegler · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 22.26347,
+              "longitude": -159.58639
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "mb01",
+          "name": "Monterey Bay, California · MB01",
+          "latitude": 36.798,
+          "longitude": -121.976,
+          "recording_count": 8,
+          "eligible_recordings": 8,
+          "samples": [
+            {
+              "recording_id": "SanctSound_MB01_01_bluewhale_20181123T203257Z",
+              "title": "Blue whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/mb01/sanctsound_mb01_01_sound_clips/metadata/SanctSound_MB01_01_sound_clips-metadata.json",
+              "creator": "John Joseph · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 36.798,
+              "longitude": -121.976
+            },
+            {
+              "recording_id": "SanctSound_MB01_04_bluewhaleAcall_20200124T031012Z",
+              "title": "Blue whale A call",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/mb01/sanctsound_mb01_04_sound_clips/metadata/SanctSound_MB01_04_sound_clips-metadata.json",
+              "creator": "John Joseph · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 36.798,
+              "longitude": -121.976
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "mb02",
+          "name": "Monterey Bay, California · MB02",
+          "latitude": 36.648,
+          "longitude": -121.9084,
+          "recording_count": 6,
+          "eligible_recordings": 6,
+          "samples": [
+            {
+              "recording_id": "SanctSound_MB02_01_humpbackwhale_20181118T115929Z",
+              "title": "Humpback whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/mb02/sanctsound_mb02_01_sound_clips/metadata/SanctSound_MB02_01_sound_clips-metadata.json",
+              "creator": "John Joseph · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 36.648,
+              "longitude": -121.9084
+            },
+            {
+              "recording_id": "SanctSound_MB02_02_humpbackwhale_20190419T040541Z",
+              "title": "Humpback whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/mb02/sanctsound_mb02_02_sound_clips/metadata/SanctSound_MB02_02_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 36.6495,
+              "longitude": -121.9084
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "mb03",
+          "name": "Monterey Bay, California · MB03",
+          "latitude": 36.3703,
+          "longitude": -122.3148,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_MB03_01_humpbackwhale_20190513T191247Z",
+              "title": "Humpback whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/mb03/sanctsound_mb03_01_sound_clips/metadata/SanctSound_MB03_01_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina; Christopher Miller · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 36.3703,
+              "longitude": -122.3148
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "oc01",
+          "name": "Olympic Coast, Washington · OC01",
+          "latitude": 48.3938,
+          "longitude": -124.62067,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_OC01_03_humbackwhalesong_20191107T001444Z",
+              "title": "Humpback whale song",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/oc01/sanctsound_oc01_03_sound_clips/metadata/SanctSound_OC01_03_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 48.3938,
+              "longitude": -124.62067
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "oc03",
+          "name": "Olympic Coast, Washington · OC03",
+          "latitude": 47.3179,
+          "longitude": -124.4166,
+          "recording_count": 2,
+          "eligible_recordings": 2,
+          "samples": [
+            {
+              "recording_id": "SanctSound_OC03_02_humpbackwhale_20191104T151853Z",
+              "title": "Humpback whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/oc03/sanctsound_oc03_02_sound_clips/metadata/SanctSound_OC03_02_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 47.3179,
+              "longitude": -124.4166
+            },
+            {
+              "recording_id": "SanctSound_OC03_02_killerwhale_20191128T091339Z",
+              "title": "Killer whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/oc03/sanctsound_oc03_02_sound_clips/metadata/SanctSound_OC03_02_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 47.3179,
+              "longitude": -124.4166
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "pm02",
+          "name": "Papahānaumokuākea, Hawaiʻi · PM02",
+          "latitude": 23.75715,
+          "longitude": -166.3385,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_PM02_01_humpbackwhale_20200227T220002Z",
+              "title": "Humpback whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/pm02/sanctsound_pm02_01_sound_clips/metadata/SanctSound_PM02_01_sound_clips-metadata.json",
+              "creator": "Marc Lammers; Eden Zang; Anke Kuegler · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 23.75715,
+              "longitude": -166.3385
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "pm05",
+          "name": "Papahānaumokuākea, Hawaiʻi · PM05",
+          "latitude": 24.81682,
+          "longitude": -168.13411,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_PM05_01_minkewhale_20200226T113612Z",
+              "title": "Minke whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/pm05/sanctsound_pm05_01_sound_clips/metadata/SanctSound_PM05_01_sound_clips-metadata.json",
+              "creator": "Marc Lammers; Eden Zang; Anke Kuegler · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 24.81682,
+              "longitude": -168.13411
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "sb01",
+          "name": "Stellwagen Bank, Massachusetts · SB01",
+          "latitude": 42.436838,
+          "longitude": -70.546958,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_SB01_01_northatlanticrightwhale_20181120T090303Z",
+              "title": "North Atlantic right whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/sb01/sanctsound_sb01_01_sound_clips/metadata/SanctSound_SB01_01_sound_clips-metadata.json",
+              "creator": "Jenni Stanley; Timothy Rowell · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 42.436838,
+              "longitude": -70.546958
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "sb02",
+          "name": "Stellwagen Bank, Massachusetts · SB02",
+          "latitude": 42.4713583,
+          "longitude": -70.2427633,
+          "recording_count": 2,
+          "eligible_recordings": 2,
+          "samples": [
+            {
+              "recording_id": "SanctSound_SB02_03_seiwhale_20190402T203828Z",
+              "title": "Sei whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/sb02/sanctsound_sb02_03_sound_clips/metadata/SanctSound_SB02_03_sound_clips-metadata.json",
+              "creator": "Jenni Stanley; Timothy Rowell · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 42.4713583,
+              "longitude": -70.2427633
+            },
+            {
+              "recording_id": "SanctSound_SB02_06_blueandfinwhales_20191025T050452Z",
+              "title": "Blue and fin whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/sb02/sanctsound_sb02_06_sound_clips/metadata/SanctSound_SB02_06_sound_clips-metadata.json",
+              "creator": "Timothy Rowell; Jenni Stanley · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 42.47096,
+              "longitude": -70.24231
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "sb03",
+          "name": "Stellwagen Bank, Massachusetts · SB03",
+          "latitude": 42.25542,
+          "longitude": -70.17901,
+          "recording_count": 6,
+          "eligible_recordings": 6,
+          "samples": [
+            {
+              "recording_id": "SanctSound_SB03_04_humpbackwhale_20190623T004507Z",
+              "title": "Humpback whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/sb03/sanctsound_sb03_04_sound_clips/metadata/SanctSound_SB03_04_sound_clips-metadata.json",
+              "creator": "Jenni Stanley; Timothy Rowell · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 42.25542,
+              "longitude": -70.17901
+            },
+            {
+              "recording_id": "SanctSound_SB03_05_finwhale_20190923T074930Z",
+              "title": "Fin whale calls",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/sb03/sanctsound_sb03_05_sound_clips/metadata/SanctSound_SB03_05_sound_clips-metadata.json",
+              "creator": "Jenni Stanley; Timothy Rowell · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 42.25551,
+              "longitude": -70.17906
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        }
+      ],
+      "location_count": 19,
+      "single_recording_locations": [
+        "Hawaiian Islands · HI01",
+        "Hawaiian Islands · HI05",
+        "Gray’s Reef, Georgia · GR01",
+        "Hawaiian Islands · HI04",
+        "Monterey Bay, California · MB03",
+        "Olympic Coast, Washington · OC01",
+        "Papahānaumokuākea, Hawaiʻi · PM02",
+        "Papahānaumokuākea, Hawaiʻi · PM05",
+        "Stellwagen Bank, Massachusetts · SB01"
+      ],
+      "checked_at": "2026-09-12T12:41:41.989592+00:00"
+    },
+    {
+      "kind": "dolphin_calls",
+      "provider": "marine_archives",
+      "locations": [
+        {
+          "id": "ci01",
+          "name": "Channel Islands, California · CI01",
+          "latitude": 34.04383,
+          "longitude": -120.081,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_CI01_03_dolphins_20190904T064203Z",
+              "title": "Dolphin vocalizations",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/ci01/sanctsound_ci01_03_sound_clips/metadata/SanctSound_CI01_03_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 34.04383,
+              "longitude": -120.081
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "ci04",
+          "name": "Channel Islands, California · CI04",
+          "latitude": 33.8489,
+          "longitude": -120.1171,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_CI04_05_dolphins_20200921T232749Z",
+              "title": "Dolphin vocalizations",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/ci04/sanctsound_ci04_05_sound_clips/metadata/SanctSound_CI04_05_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 33.8489,
+              "longitude": -120.1171
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "fk03",
+          "name": "Florida Keys, Florida · FK03",
+          "latitude": 24.45895,
+          "longitude": -81.774133,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_FK03_01_dolphins_20190301T042106Z",
+              "title": "Dolphin vocalizations",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/fk03/sanctsound_fk03_01_sound_clips/metadata/SanctSound_FK03_01_sound_clips-metadata.json",
+              "creator": "Timothy Rowell; Jenni Stanley; Lonny Anderson · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 24.45895,
+              "longitude": -81.774133
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "gr01",
+          "name": "Gray’s Reef, Georgia · GR01",
+          "latitude": 31.396417,
+          "longitude": -80.8904,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_GR01_01_dolphins_20181224T003744Z",
+              "title": "Dolphin vocalizations",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/gr01/sanctsound_gr01_01_sound_clips/metadata/SanctSound_GR01_01_sound_clips-metadata.json",
+              "creator": "Timothy Rowell; Jenni Stanley; Kim Roberson · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 31.396417,
+              "longitude": -80.8904
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "hi03",
+          "name": "Hawaiian Islands · HI03",
+          "latitude": 21.28542,
+          "longitude": -157.60012,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_HI03_02_dolphin_20191223T175613Z",
+              "title": "Dolphin vocalizations",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/hi03/sanctsound_hi03_02_sound_clips/metadata/sanctsound_hi03_02_sound_clips-metadata.json",
+              "creator": "Eden Zang; Anke Kuegler · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 21.28542,
+              "longitude": -157.60012
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "hi04",
+          "name": "Hawaiian Islands · HI04",
+          "latitude": 22.263528,
+          "longitude": -159.586528,
+          "recording_count": 2,
+          "eligible_recordings": 2,
+          "samples": [
+            {
+              "recording_id": "SanctSound_HI04_01_dolphins_20181207T035759Z",
+              "title": "Dolphin vocalizations",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/hi04/sanctsound_hi04_01_sound_clips/metadata/SanctSound_HI04_01_sound_clips-metadata.json",
+              "creator": "Marc Lammers · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 22.263528,
+              "longitude": -159.586528
+            },
+            {
+              "recording_id": "SanctSound_HI04_01_dolphinsandfish_20190111T155302Z",
+              "title": "Dolphin calls with fish sounds",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/hi04/sanctsound_hi04_01_sound_clips/metadata/SanctSound_HI04_01_sound_clips-metadata.json",
+              "creator": "Marc Lammers · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 22.263528,
+              "longitude": -159.586528
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "mb02",
+          "name": "Monterey Bay, California · MB02",
+          "latitude": 36.6495,
+          "longitude": -121.9084,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_MB02_04_dolphin_20200119T181004Z",
+              "title": "Dolphin vocalizations",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/mb02/sanctsound_mb02_04_sound_clips/metadata/SanctSound_MB02_04_sound_clips-metadata.json",
+              "creator": "John Joseph; Tetyana Margolina · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 36.6495,
+              "longitude": -121.9084
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "oc02",
+          "name": "Olympic Coast, Washington · OC02",
+          "latitude": 48.4904,
+          "longitude": -125.0038,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_OC02_01_dolphin_20190322T074217Z",
+              "title": "Dolphin vocalizations",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/oc02/sanctsound_oc02_01_sound_clips/metadata/SanctSound_OC02_01_sound_clips-metadata.json",
+              "creator": "John Joseph · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 48.4904,
+              "longitude": -125.0038
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "pm01",
+          "name": "Papahānaumokuākea, Hawaiʻi · PM01",
+          "latitude": 22.66151,
+          "longitude": -161.04086,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_PM01_01_dolphin_20200517T003927Z",
+              "title": "Dolphin vocalizations",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/pm01/sanctsound_pm01_01_sound_clips/metadata/SanctSound_PM01_01_sound_clips-metadata.json",
+              "creator": "Marc Lammers; Eden Zang; Anke Kuegler · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 22.66151,
+              "longitude": -161.04086
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "pm05",
+          "name": "Papahānaumokuākea, Hawaiʻi · PM05",
+          "latitude": 24.81682,
+          "longitude": -168.13411,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_PM05_01_dolphin_20200519T160612Z",
+              "title": "Dolphin vocalizations",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/pm05/sanctsound_pm05_01_sound_clips/metadata/SanctSound_PM05_01_sound_clips-metadata.json",
+              "creator": "Marc Lammers; Eden Zang; Anke Kuegler · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 24.81682,
+              "longitude": -168.13411
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "sb03",
+          "name": "Stellwagen Bank, Massachusetts · SB03",
+          "latitude": 42.25499,
+          "longitude": -70.17908,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "SanctSound_SB03_09_dolphins_20200426T030912Z",
+              "title": "Dolphin vocalizations",
+              "source_url": "https://storage.googleapis.com/noaa-passive-bioacoustic/sanctsound/products/sound_clips/sb03/sanctsound_sb03_09_sound_clips/metadata/SanctSound_SB03_09_sound_clips-metadata.json",
+              "creator": "Timothy Rowell · NOAA/Navy SanctSound",
+              "license": "NOAA open data",
+              "latitude": 42.25499,
+              "longitude": -70.17908
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "fremantle",
+          "name": "Fremantle Inner Harbour, Australia · FREMANTLE",
+          "latitude": -32.042,
+          "longitude": 115.7528,
+          "recording_count": 4,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "Figshare_8445704_Wh_0021",
+              "title": "Indo-Pacific bottlenose dolphin whistle",
+              "source_url": "https://figshare.com/articles/dataset/Underwater_recordings_of_the_whistles_of_bottlenose_dolphins_in_Fremantle_Inner_Harbour_Western_Australia/5011637",
+              "creator": "Sarah Marley; Christine Erbe; Chandra Salgado Kent",
+              "license": "CC BY 4.0",
+              "latitude": -32.042,
+              "longitude": 115.7528
+            },
+            {
+              "recording_id": "Figshare_8446151_Wh_0159",
+              "title": "Indo-Pacific bottlenose dolphin whistle",
+              "source_url": "https://figshare.com/articles/dataset/Underwater_recordings_of_the_whistles_of_bottlenose_dolphins_in_Fremantle_Inner_Harbour_Western_Australia/5011637",
+              "creator": "Sarah Marley; Christine Erbe; Chandra Salgado Kent",
+              "license": "CC BY 4.0",
+              "latitude": -32.042,
+              "longitude": 115.7528
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "adriatic",
+          "name": "Adriatic Sea off Ancona, Italy · ADRIATIC",
+          "latitude": 44.15685,
+          "longitude": 13.51085,
+          "recording_count": 4,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "Figshare_38319834_028_multiple_whistle",
+              "title": "Bottlenose dolphin whistles",
+              "source_url": "https://figshare.com/articles/media/Raw_recordings_of_bottlenose_dolphin_s_Tursiops_truncatus_Montagu_1821_whistles_during_interaction_with_bottom_trawling/21621345",
+              "creator": "Rocco De Marco; Francesco Di Nardo; Alessandro Lucchetti; Daniel Li Veli; Massimo Virgili; Andrea Petetta; Laura Screpanti; David Scaradozzi",
+              "license": "CC BY 4.0",
+              "latitude": 44.15685,
+              "longitude": 13.51085
+            },
+            {
+              "recording_id": "Figshare_38319909_053_multiple_whistle",
+              "title": "Bottlenose dolphin whistles",
+              "source_url": "https://figshare.com/articles/media/Raw_recordings_of_bottlenose_dolphin_s_Tursiops_truncatus_Montagu_1821_whistles_during_interaction_with_bottom_trawling/21621345",
+              "creator": "Rocco De Marco; Francesco Di Nardo; Alessandro Lucchetti; Daniel Li Veli; Massimo Virgili; Andrea Petetta; Laura Screpanti; David Scaradozzi",
+              "license": "CC BY 4.0",
+              "latitude": 44.15685,
+              "longitude": 13.51085
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "catalonia",
+          "name": "Vilanova i la Geltrú, Spain · CATALONIA",
+          "latitude": 41.14,
+          "longitude": 1.75,
+          "recording_count": 2,
+          "eligible_recordings": 2,
+          "samples": [
+            {
+              "recording_id": "Zenodo_15648703_006_03_093725_250kHz",
+              "title": "Bottlenose dolphin whistles and clicks",
+              "source_url": "https://zenodo.org/records/15648703",
+              "creator": "Chaparro Elias, Lydia; Rodero, Carlos; Giralt, Oriol; Marco, Núria; EMBIMOS research group (ICM-CSIC)",
+              "license": "CC BY 4.0",
+              "latitude": 41.14,
+              "longitude": 1.75
+            },
+            {
+              "recording_id": "Zenodo_15657853_006_06_094030_250kHz",
+              "title": "Bottlenose dolphin whistles and clicks",
+              "source_url": "https://zenodo.org/records/15657853",
+              "creator": "Chaparro Elias, Lydia; Rodero, Carlos; Marco, Núria; Giralt, Oriol; EMBIMOS research group (ICM-CSIC)",
+              "license": "CC BY 4.0",
+              "latitude": 41.14,
+              "longitude": 1.75
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "id": "tefe",
+          "name": "Rio Tefé, Amazonas, Brazil · TEFE",
+          "latitude": -3.611388888888889,
+          "longitude": -64.96333333333334,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "Freesound_408555_dolphins",
+              "title": "Amazonian river dolphin calls",
+              "source_url": "https://freesound.org/people/felix.blume/sounds/408555/",
+              "creator": "Félix Blume",
+              "license": "CC0",
+              "latitude": -3.611388888888889,
+              "longitude": -64.96333333333334
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "portugal",
+          "name": "Atlantic Ocean off Portugal · PORTUGAL",
+          "latitude": 40.55,
+          "longitude": -9.756,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "Freesound_202489_dolphins",
+              "title": "Dolphins recorded above water",
+              "source_url": "https://freesound.org/people/AugustSandberg/sounds/202489/",
+              "creator": "August Sandberg",
+              "license": "CC BY-NC 4.0",
+              "latitude": 40.55,
+              "longitude": -9.756
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "mbari-mars",
+          "name": "MBARI MARS, Monterey Bay, California · MBARI-MARS",
+          "latitude": 36.71,
+          "longitude": -122.186,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "Freesound_404148_dolphins",
+              "title": "Pacific white-sided dolphin calls",
+              "source_url": "https://freesound.org/people/MBARI_MARS/sounds/404148/",
+              "creator": "Monterey Bay Aquarium Research Institute",
+              "license": "CC BY-NC 4.0",
+              "latitude": 36.71,
+              "longitude": -122.186
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "punta-allen",
+          "name": "Punta Allen, Quintana Roo, Mexico · PUNTA-ALLEN",
+          "latitude": 19.772519125144523,
+          "longitude": -87.45803833007812,
+          "recording_count": 1,
+          "eligible_recordings": 1,
+          "samples": [
+            {
+              "recording_id": "Commons_161691_dolphins",
+              "title": "Dolphin calls in the Caribbean Sea",
+              "source_url": "https://commons.wikimedia.org/wiki/File:161691_felixblume_dolphin-screaming-underwater-in-caribbean-sea-mexico.wav",
+              "creator": "Félix Blume",
+              "license": "CC0",
+              "latitude": 19.772519125144523,
+              "longitude": -87.45803833007812
+            }
+          ],
+          "errors": [],
+          "status": "single"
+        },
+        {
+          "id": "xiamen",
+          "name": "Xiamen Bay, China · XIAMEN",
+          "latitude": 24.40797,
+          "longitude": 117.99167,
+          "recording_count": 4,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "Xiamen_dolphin_whistle_006",
+              "title": "Indo-Pacific humpback dolphin whistle",
+              "source_url": "https://springernature.figshare.com/articles/dataset/Acoustic_recordings_of_underwater_vocalizations_of_Indo-Pacific_humpback_dolphins_in_Xiamen_Bay_China/29143727",
+              "creator": "Zhongchang Song; Weijie Fu; Xuming Peng; Fuxing Wu; Fei Zhang; Chuang Zhang; Wenjie Xiang; Yu Zhang",
+              "license": "CC BY 4.0",
+              "latitude": 24.40797,
+              "longitude": 117.99167
+            },
+            {
+              "recording_id": "Xiamen_dolphin_whistle_070",
+              "title": "Indo-Pacific humpback dolphin whistle",
+              "source_url": "https://springernature.figshare.com/articles/dataset/Acoustic_recordings_of_underwater_vocalizations_of_Indo-Pacific_humpback_dolphins_in_Xiamen_Bay_China/29143727",
+              "creator": "Zhongchang Song; Weijie Fu; Xuming Peng; Fuxing Wu; Fei Zhang; Chuang Zhang; Wenjie Xiang; Yu Zhang",
+              "license": "CC BY 4.0",
+              "latitude": 24.41663,
+              "longitude": 118.13788
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        }
+      ],
+      "location_count": 19,
+      "single_recording_locations": [
+        "Channel Islands, California · CI01",
+        "Channel Islands, California · CI04",
+        "Florida Keys, Florida · FK03",
+        "Gray’s Reef, Georgia · GR01",
+        "Hawaiian Islands · HI03",
+        "Monterey Bay, California · MB02",
+        "Olympic Coast, Washington · OC02",
+        "Papahānaumokuākea, Hawaiʻi · PM01",
+        "Papahānaumokuākea, Hawaiʻi · PM05",
+        "Stellwagen Bank, Massachusetts · SB03",
+        "Rio Tefé, Amazonas, Brazil · TEFE",
+        "Atlantic Ocean off Portugal · PORTUGAL",
+        "MBARI MARS, Monterey Bay, California · MBARI-MARS",
+        "Punta Allen, Quintana Roo, Mexico · PUNTA-ALLEN"
+      ],
+      "checked_at": "2026-09-12T12:41:41.989592+00:00"
+    },
+    {
+      "kind": "birdsong",
+      "provider": "xeno_canto",
+      "locations": [
+        {
+          "name": "Boreal Canada",
+          "latitude": 53.0,
+          "longitude": -106.0,
+          "eligible_recordings": 5,
+          "samples": [
+            {
+              "recording_id": "329881",
+              "title": "White-throated Sparrow · song",
+              "source_url": "https://xeno-canto.org/329881",
+              "creator": "John Patterson",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 53.5743,
+              "longitude": -105.7646
+            },
+            {
+              "recording_id": "329835",
+              "title": "White-throated Sparrow · song",
+              "source_url": "https://xeno-canto.org/329835",
+              "creator": "John Patterson",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 52.9296,
+              "longitude": -107.1103
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Costa Rican Cloud Forest",
+          "latitude": 10.3,
+          "longitude": -84.8,
+          "eligible_recordings": 28,
+          "samples": [
+            {
+              "recording_id": "774109",
+              "title": "Chestnut-capped Warbler · song",
+              "source_url": "https://xeno-canto.org/774109",
+              "creator": "Paul Driver",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 10.2993,
+              "longitude": -84.8174
+            },
+            {
+              "recording_id": "774107",
+              "title": "Chestnut-capped Warbler · call",
+              "source_url": "https://xeno-canto.org/774107",
+              "creator": "Paul Driver",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 10.2993,
+              "longitude": -84.8174
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Ecuadorian Andes",
+          "latitude": -0.7,
+          "longitude": -78.6,
+          "eligible_recordings": 36,
+          "samples": [
+            {
+              "recording_id": "676311",
+              "title": "Equatorial Antpitta · ",
+              "source_url": "https://xeno-canto.org/676311",
+              "creator": "Galo Real",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -0.3766,
+              "longitude": -78.1603
+            },
+            {
+              "recording_id": "386207",
+              "title": "Equatorial Antpitta · song",
+              "source_url": "https://xeno-canto.org/386207",
+              "creator": "Jerome Fischer",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -0.3574,
+              "longitude": -78.1499
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Brazilian Atlantic Forest",
+          "latitude": -24.0,
+          "longitude": -47.5,
+          "eligible_recordings": 24,
+          "samples": [
+            {
+              "recording_id": "795926",
+              "title": "Solitary Tinamou · song",
+              "source_url": "https://xeno-canto.org/795926",
+              "creator": "Daniel Hinckley",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -24.3701,
+              "longitude": -47.0226
+            },
+            {
+              "recording_id": "619043",
+              "title": "Solitary Tinamou · song",
+              "source_url": "https://xeno-canto.org/619043",
+              "creator": "Lia Nahomi Kajiki",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -24.03,
+              "longitude": -47.3516
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Northwestern Argentina",
+          "latitude": -25.2,
+          "longitude": -65.8,
+          "eligible_recordings": 17,
+          "samples": [
+            {
+              "recording_id": "773037",
+              "title": "Yungas Guan · call, wing-flapping display",
+              "source_url": "https://xeno-canto.org/773037",
+              "creator": "Niels Krabbe",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -24.665,
+              "longitude": -65.377
+            },
+            {
+              "recording_id": "494097",
+              "title": "Yungas Sparrow · song",
+              "source_url": "https://xeno-canto.org/494097",
+              "creator": "Rosendo Manuel Fraga",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -24.7821,
+              "longitude": -65.4232
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Eastern Poland",
+          "latitude": 52.7,
+          "longitude": 23.8,
+          "eligible_recordings": 5,
+          "samples": [
+            {
+              "recording_id": "245951",
+              "title": "Whooper Swan · flight call",
+              "source_url": "https://xeno-canto.org/245951",
+              "creator": "Jarek Matusiak",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 53.2963,
+              "longitude": 22.9083
+            },
+            {
+              "recording_id": "1008461",
+              "title": "Whooper Swan · uncertain",
+              "source_url": "https://xeno-canto.org/1008461",
+              "creator": "Tomasz Kułakowski",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 53.1084,
+              "longitude": 23.2364
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Danube Delta, Romania",
+          "latitude": 45.1,
+          "longitude": 29.3,
+          "eligible_recordings": 20,
+          "samples": [
+            {
+              "recording_id": "820391",
+              "title": "Greylag Goose · call, flight call",
+              "source_url": "https://xeno-canto.org/820391",
+              "creator": "Grzegorz Lorek",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 44.7567,
+              "longitude": 28.886
+            },
+            {
+              "recording_id": "820390",
+              "title": "Greylag Goose · call, flight call",
+              "source_url": "https://xeno-canto.org/820390",
+              "creator": "Grzegorz Lorek",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 44.7567,
+              "longitude": 28.886
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Scottish Highlands",
+          "latitude": 57.0,
+          "longitude": -3.4,
+          "eligible_recordings": 31,
+          "samples": [
+            {
+              "recording_id": "564549",
+              "title": "Canada Goose · call",
+              "source_url": "https://xeno-canto.org/564549",
+              "creator": "Peter Stronach",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 57.6571,
+              "longitude": -4.1593
+            },
+            {
+              "recording_id": "319686",
+              "title": "Canada Goose · call, flight call",
+              "source_url": "https://xeno-canto.org/319686",
+              "creator": "Bernard BOUSQUET",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 56.5758,
+              "longitude": -3.5594
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Northern Morocco",
+          "latitude": 35.0,
+          "longitude": -5.4,
+          "eligible_recordings": 12,
+          "samples": [
+            {
+              "recording_id": "398794",
+              "title": "Slender-billed Curlew · flight call",
+              "source_url": "https://xeno-canto.org/398794",
+              "creator": "Adam Gretton",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 34.8559,
+              "longitude": -6.2898
+            },
+            {
+              "recording_id": "403647",
+              "title": "Slender-billed Curlew · flight call",
+              "source_url": "https://xeno-canto.org/403647",
+              "creator": "Adam Gretton",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 34.84,
+              "longitude": -6.275
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Central Kenya",
+          "latitude": -0.9,
+          "longitude": 36.7,
+          "eligible_recordings": 27,
+          "samples": [
+            {
+              "recording_id": "775920",
+              "title": "White-faced Whistling Duck · call, whistle",
+              "source_url": "https://xeno-canto.org/775920",
+              "creator": "isaac kilusu",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -0.6695,
+              "longitude": 37.2061
+            },
+            {
+              "recording_id": "397799",
+              "title": "Egyptian Goose · song",
+              "source_url": "https://xeno-canto.org/397799",
+              "creator": "Rory Nefdt",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -0.769,
+              "longitude": 36.4242
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Okavango Delta, Botswana",
+          "latitude": -19.3,
+          "longitude": 22.9,
+          "eligible_recordings": 34,
+          "samples": [
+            {
+              "recording_id": "613439",
+              "title": "Coqui Francolin · song",
+              "source_url": "https://xeno-canto.org/613439",
+              "creator": "Meena Haribal",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -19.6596,
+              "longitude": 23.0004
+            },
+            {
+              "recording_id": "613454",
+              "title": "Red-billed Spurfowl · song",
+              "source_url": "https://xeno-canto.org/613454",
+              "creator": "Meena Haribal",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -19.6596,
+              "longitude": 23.0004
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Eastern Madagascar",
+          "latitude": -18.8,
+          "longitude": 48.4,
+          "eligible_recordings": 17,
+          "samples": [
+            {
+              "recording_id": "697850",
+              "title": "White-faced Whistling Duck · call",
+              "source_url": "https://xeno-canto.org/697850",
+              "creator": "Ken Behrens",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -18.8667,
+              "longitude": 47.5189
+            },
+            {
+              "recording_id": "697835",
+              "title": "White-faced Whistling Duck · call",
+              "source_url": "https://xeno-canto.org/697835",
+              "creator": "Ken Behrens",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -18.8667,
+              "longitude": 47.5189
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Western Ghats, India",
+          "latitude": 11.7,
+          "longitude": 76.1,
+          "eligible_recordings": 21,
+          "samples": [
+            {
+              "recording_id": "362122",
+              "title": "Malabar Imperial Pigeon · call",
+              "source_url": "https://xeno-canto.org/362122",
+              "creator": "Vivek Puliyeri",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 11.3362,
+              "longitude": 76.1102
+            },
+            {
+              "recording_id": "37584",
+              "title": "Red Spurfowl · song",
+              "source_url": "https://xeno-canto.org/37584",
+              "creator": "David Farrow",
+              "license": "CC BY-NC-SA 3.0",
+              "latitude": 12.050317,
+              "longitude": 76.130705
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Borneo, Malaysia",
+          "latitude": 5.0,
+          "longitude": 117.7,
+          "eligible_recordings": 11,
+          "samples": [
+            {
+              "recording_id": "578723",
+              "title": "Bornean Black Magpie · call, song",
+              "source_url": "https://xeno-canto.org/578723",
+              "creator": "Okamoto Keita Sin",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 4.9648,
+              "longitude": 117.805
+            },
+            {
+              "recording_id": "576108",
+              "title": "Sunda Scimitar Babbler · song",
+              "source_url": "https://xeno-canto.org/576108",
+              "creator": "Okamoto Keita Sin",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 4.9648,
+              "longitude": 117.805
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Central Japan",
+          "latitude": 36.2,
+          "longitude": 138.2,
+          "eligible_recordings": 8,
+          "samples": [
+            {
+              "recording_id": "191333",
+              "title": "Mandarin Duck · call, display",
+              "source_url": "https://xeno-canto.org/191333",
+              "creator": "Andrew Spencer",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 36.3175,
+              "longitude": 138.7432
+            },
+            {
+              "recording_id": "191331",
+              "title": "Mandarin Duck · call, display",
+              "source_url": "https://xeno-canto.org/191331",
+              "creator": "Andrew Spencer",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 36.3175,
+              "longitude": 138.7432
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Sundarbans, Bangladesh",
+          "latitude": 22.0,
+          "longitude": 89.5,
+          "eligible_recordings": 17,
+          "samples": [
+            {
+              "recording_id": "168313",
+              "title": "Large-tailed Nightjar · call",
+              "source_url": "https://xeno-canto.org/168313",
+              "creator": "Animesh Manna",
+              "license": "CC BY-NC-SA 3.0",
+              "latitude": 21.564,
+              "longitude": 88.8911
+            },
+            {
+              "recording_id": "446810",
+              "title": "Masked Finfoot · call",
+              "source_url": "https://xeno-canto.org/446810",
+              "creator": "Sayam U. Chowdhury ",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 21.9935,
+              "longitude": 89.8025
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "South African Bushveld",
+          "latitude": -25.7,
+          "longitude": 28.2,
+          "eligible_recordings": 35,
+          "samples": [
+            {
+              "recording_id": "1079944",
+              "title": "White-faced Whistling Duck · flight call",
+              "source_url": "https://xeno-canto.org/1079944",
+              "creator": "Niall Perrins",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -25.158,
+              "longitude": 28.1041
+            },
+            {
+              "recording_id": "633268",
+              "title": "White-faced Whistling Duck · flight call",
+              "source_url": "https://xeno-canto.org/633268",
+              "creator": "Derek Solomon",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -25.1564,
+              "longitude": 28.217
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Eastern Australia",
+          "latitude": -27.9,
+          "longitude": 153.2,
+          "eligible_recordings": 26,
+          "samples": [
+            {
+              "recording_id": "617352",
+              "title": "Magpie Goose · call",
+              "source_url": "https://xeno-canto.org/617352",
+              "creator": "Greg McLachlan",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -27.0819,
+              "longitude": 153.1812
+            },
+            {
+              "recording_id": "256808",
+              "title": "Magpie Goose · call",
+              "source_url": "https://xeno-canto.org/256808",
+              "creator": "nick talbot",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -28.2108,
+              "longitude": 153.5206
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "North Island, New Zealand",
+          "latitude": -38.5,
+          "longitude": 175.4,
+          "eligible_recordings": 33,
+          "samples": [
+            {
+              "recording_id": "348749",
+              "title": "North Island Brown Kiwi · call",
+              "source_url": "https://xeno-canto.org/348749",
+              "creator": "Tony Fulford",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -38.0408,
+              "longitude": 175.5704
+            },
+            {
+              "recording_id": "795083",
+              "title": "Canada Goose · ",
+              "source_url": "https://xeno-canto.org/795083",
+              "creator": "Barry Edmonston",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -38.9439,
+              "longitude": 175.8528
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        }
+      ],
+      "location_count": 19,
+      "single_recording_locations": [],
+      "checked_at": "2026-09-12T12:41:41.989592+00:00"
+    },
+    {
+      "kind": "frog_calls",
+      "provider": "xeno_canto",
+      "locations": [
+        {
+          "name": "Montmorency Forest, Canada",
+          "latitude": 47.3205,
+          "longitude": -71.1411,
+          "eligible_recordings": 16,
+          "samples": [
+            {
+              "recording_id": "1020611",
+              "title": "Spring Peeper · call, chorus",
+              "source_url": "https://xeno-canto.org/1020611",
+              "creator": "Stanislas Wroza",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 47.425,
+              "longitude": -70.318
+            },
+            {
+              "recording_id": "1020608",
+              "title": "Spring Peeper · call",
+              "source_url": "https://xeno-canto.org/1020608",
+              "creator": "Stanislas Wroza",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 47.3205,
+              "longitude": -71.1411
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Everglades, United States",
+          "latitude": 25.3,
+          "longitude": -80.9,
+          "eligible_recordings": 6,
+          "samples": [
+            {
+              "recording_id": "982932",
+              "title": "Southern Chorus Frog · advertisement call",
+              "source_url": "https://xeno-canto.org/982932",
+              "creator": "Paul Marvin",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 25.3893,
+              "longitude": -80.6566
+            },
+            {
+              "recording_id": "416022",
+              "title": "Cuban Flat-headed Frog · ",
+              "source_url": "https://xeno-canto.org/416022",
+              "creator": "Bates Estabrooks",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 25.1759,
+              "longitude": -80.3696
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Veracruz, Mexico",
+          "latitude": 19.5,
+          "longitude": -96.9,
+          "eligible_recordings": 2,
+          "samples": [
+            {
+              "recording_id": "1137895",
+              "title": "Rio Grande Chirping Frog · uncertain",
+              "source_url": "https://xeno-canto.org/1137895",
+              "creator": "Alberto Lobato",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 19.5397,
+              "longitude": -96.9447
+            },
+            {
+              "recording_id": "1137390",
+              "title": "Common Mexican Treefrog · territorial call",
+              "source_url": "https://xeno-canto.org/1137390",
+              "creator": "Omar Suárez García",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 20.0099,
+              "longitude": -97.5098
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Sarapiqui, Costa Rica",
+          "latitude": 10.4,
+          "longitude": -84.0,
+          "eligible_recordings": 20,
+          "samples": [
+            {
+              "recording_id": "1045971",
+              "title": "Strawberry Poison Frog · advertisement call",
+              "source_url": "https://xeno-canto.org/1045971",
+              "creator": "Beatrix Saadi-Varchmin",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 10.4496,
+              "longitude": -84.0685
+            },
+            {
+              "recording_id": "1045954",
+              "title": "Strawberry Poison Frog · advertisement call",
+              "source_url": "https://xeno-canto.org/1045954",
+              "creator": "Beatrix Saadi-Varchmin",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 10.4496,
+              "longitude": -84.0685
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Mindo, Ecuador",
+          "latitude": -0.05,
+          "longitude": -78.77,
+          "eligible_recordings": 8,
+          "samples": [
+            {
+              "recording_id": "1082636",
+              "title": "Little-devil poison frog · uncertain",
+              "source_url": "https://xeno-canto.org/1082636",
+              "creator": "rudy gelis",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 0.5262,
+              "longitude": -79.2128
+            },
+            {
+              "recording_id": "1082635",
+              "title": "Little-devil poison frog · uncertain",
+              "source_url": "https://xeno-canto.org/1082635",
+              "creator": "rudy gelis",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 0.5262,
+              "longitude": -79.2128
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Atlantic Forest, Brazil",
+          "latitude": -24.0,
+          "longitude": -47.5,
+          "eligible_recordings": 17,
+          "samples": [
+            {
+              "recording_id": "1139730",
+              "title": " · advertisement call",
+              "source_url": "https://xeno-canto.org/1139730",
+              "creator": "Dante Buzzetti",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -24.3893,
+              "longitude": -47.0188
+            },
+            {
+              "recording_id": "1085105",
+              "title": " · territorial call",
+              "source_url": "https://xeno-canto.org/1085105",
+              "creator": "Douglas Meyer",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -23.7183,
+              "longitude": -46.8481
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Riachuelo, Argentina",
+          "latitude": -27.5824,
+          "longitude": -58.7597,
+          "eligible_recordings": 10,
+          "samples": [
+            {
+              "recording_id": "1039654",
+              "title": " · advertisement call",
+              "source_url": "https://xeno-canto.org/1039654",
+              "creator": "Guillaume Dillenseger",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -27.5811,
+              "longitude": -58.7598
+            },
+            {
+              "recording_id": "1039652",
+              "title": " · advertisement call",
+              "source_url": "https://xeno-canto.org/1039652",
+              "creator": "Guillaume Dillenseger",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -27.5824,
+              "longitude": -58.7597
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Camargue, France",
+          "latitude": 43.5,
+          "longitude": 4.5,
+          "eligible_recordings": 39,
+          "samples": [
+            {
+              "recording_id": "1139790",
+              "title": "Mediterranean Tree Frog · territorial call",
+              "source_url": "https://xeno-canto.org/1139790",
+              "creator": "Clement Bruneau",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 43.2755,
+              "longitude": 5.48
+            },
+            {
+              "recording_id": "1139789",
+              "title": "Mediterranean Tree Frog · territorial call",
+              "source_url": "https://xeno-canto.org/1139789",
+              "creator": "Clement Bruneau",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 43.2755,
+              "longitude": 5.48
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Rainham Marshes, United Kingdom",
+          "latitude": 51.4946,
+          "longitude": 0.1946,
+          "eligible_recordings": 8,
+          "samples": [
+            {
+              "recording_id": "1175877",
+              "title": "Marsh Frog · uncertain",
+              "source_url": "https://xeno-canto.org/1175877",
+              "creator": "David Darrell-Lambert",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 51.4946,
+              "longitude": 0.1946
+            },
+            {
+              "recording_id": "1145462",
+              "title": "Marsh Frog · uncertain",
+              "source_url": "https://xeno-canto.org/1145462",
+              "creator": "David Darrell-Lambert",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 51.375,
+              "longitude": 0.9439
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Biebrza, Poland",
+          "latitude": 53.5,
+          "longitude": 22.8,
+          "eligible_recordings": 14,
+          "samples": [
+            {
+              "recording_id": "1147181",
+              "title": "Marsh Frog · advertisement call",
+              "source_url": "https://xeno-canto.org/1147181",
+              "creator": "Paul Kelly",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 53.1523,
+              "longitude": 22.8512
+            },
+            {
+              "recording_id": "1147180",
+              "title": "Marsh Frog · advertisement call",
+              "source_url": "https://xeno-canto.org/1147180",
+              "creator": "Paul Kelly",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 53.1523,
+              "longitude": 22.8512
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Doñana, Spain",
+          "latitude": 37.0,
+          "longitude": -6.4,
+          "eligible_recordings": 18,
+          "samples": [
+            {
+              "recording_id": "1153756",
+              "title": "Iberian parsley frog · advertisement call",
+              "source_url": "https://xeno-canto.org/1153756",
+              "creator": "Pere Josa",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 37.1058,
+              "longitude": -6.2577
+            },
+            {
+              "recording_id": "1076125",
+              "title": "Iberian Green Frog · advertisement call",
+              "source_url": "https://xeno-canto.org/1076125",
+              "creator": "Esperanza Poveda",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 37.0713,
+              "longitude": -6.2763
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Lake Dayet Srij, Morocco",
+          "latitude": 31.0813,
+          "longitude": -4.0407,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "1153757",
+              "title": "Sicilian Green Toad · Song",
+              "source_url": "https://xeno-canto.org/1153757",
+              "creator": "Pere Josa",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 31.1047,
+              "longitude": -4.0613
+            },
+            {
+              "recording_id": "1098233",
+              "title": "Sicilian Green Toad · song",
+              "source_url": "https://xeno-canto.org/1098233",
+              "creator": "Stanislas Wroza",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 31.0813,
+              "longitude": -4.0407
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Lambwe, Kenya",
+          "latitude": -0.6066,
+          "longitude": 34.3303,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "1100769",
+              "title": "Ixoxo lomhlane oyisicaba · territorial call",
+              "source_url": "https://xeno-canto.org/1100769",
+              "creator": "GABRIEL LEITE",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -0.6066,
+              "longitude": 34.3303
+            },
+            {
+              "recording_id": "1100768",
+              "title": "Guttural Toad · territorial call",
+              "source_url": "https://xeno-canto.org/1100768",
+              "creator": "GABRIEL LEITE",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -0.6066,
+              "longitude": 34.3303
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Skukuza, South Africa",
+          "latitude": -24.9953,
+          "longitude": 31.5928,
+          "eligible_recordings": 3,
+          "samples": [
+            {
+              "recording_id": "1080070",
+              "title": "Red-Banded Rubber Frog · uncertain",
+              "source_url": "https://xeno-canto.org/1080070",
+              "creator": "JJSUN",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -24.9953,
+              "longitude": 31.5928
+            },
+            {
+              "recording_id": "1079967",
+              "title": "Senegal kassina · uncertain",
+              "source_url": "https://xeno-canto.org/1079967",
+              "creator": "JJSUN",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -25.4167,
+              "longitude": 31.4334
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Linnei, Taiwan",
+          "latitude": 23.7263,
+          "longitude": 120.6225,
+          "eligible_recordings": 12,
+          "samples": [
+            {
+              "recording_id": "1045299",
+              "title": "White-spotted Thigh Treefrog · uncertain",
+              "source_url": "https://xeno-canto.org/1045299",
+              "creator": "Lars Lachmann",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 23.7263,
+              "longitude": 120.6225
+            },
+            {
+              "recording_id": "1045298",
+              "title": "Temple Tree Frog · uncertain",
+              "source_url": "https://xeno-canto.org/1045298",
+              "creator": "Lars Lachmann",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 23.7263,
+              "longitude": 120.6225
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Western Ghats, India",
+          "latitude": 11.7,
+          "longitude": 76.1,
+          "eligible_recordings": 4,
+          "samples": [
+            {
+              "recording_id": "1032614",
+              "title": "Rao's intermediate Golden-backed frog · territorial call",
+              "source_url": "https://xeno-canto.org/1032614",
+              "creator": "Dinesh Chaudhary",
+              "license": "CC BY-SA 4.0",
+              "latitude": 12.302,
+              "longitude": 75.8681
+            },
+            {
+              "recording_id": "1031334",
+              "title": " · territorial call",
+              "source_url": "https://xeno-canto.org/1031334",
+              "creator": "Dinesh Chaudhary",
+              "license": "CC BY-SA 4.0",
+              "latitude": 12.302,
+              "longitude": 75.8681
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Sabah, Malaysia",
+          "latitude": 5.0,
+          "longitude": 117.7,
+          "eligible_recordings": 6,
+          "samples": [
+            {
+              "recording_id": "1036442",
+              "title": "Borneo Tree-hole frog · uncertain",
+              "source_url": "https://xeno-canto.org/1036442",
+              "creator": "Nick Talbot",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 4.9634,
+              "longitude": 117.8028
+            },
+            {
+              "recording_id": "1064747",
+              "title": "Nicobar Island Frog · uncertain",
+              "source_url": "https://xeno-canto.org/1064747",
+              "creator": "Nick Talbot",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 4.9702,
+              "longitude": 117.8124
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Okinawa, Japan",
+          "latitude": 26.7,
+          "longitude": 128.2,
+          "eligible_recordings": 2,
+          "samples": [
+            {
+              "recording_id": "1009428",
+              "title": "Common Tree Frog · uncertain",
+              "source_url": "https://xeno-canto.org/1009428",
+              "creator": "Jerome Chie-Jen Ko",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 26.7546,
+              "longitude": 128.301
+            },
+            {
+              "recording_id": "1009432",
+              "title": "Holst's Frog · uncertain",
+              "source_url": "https://xeno-canto.org/1009432",
+              "creator": "Jerome Chie-Jen Ko",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": 26.7606,
+              "longitude": 128.3055
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        },
+        {
+          "name": "Wet Tropics, Australia",
+          "latitude": -17.0,
+          "longitude": 145.6,
+          "eligible_recordings": 21,
+          "samples": [
+            {
+              "recording_id": "1051103",
+              "title": "Marine Toad · territorial call",
+              "source_url": "https://xeno-canto.org/1051103",
+              "creator": "Chris Harrison",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -16.588,
+              "longitude": 145.3959
+            },
+            {
+              "recording_id": "899951",
+              "title": "Ornate Frog · uncertain",
+              "source_url": "https://xeno-canto.org/899951",
+              "creator": "nick talbot",
+              "license": "CC BY-NC-SA 4.0",
+              "latitude": -16.539,
+              "longitude": 145.287
+            }
+          ],
+          "errors": [],
+          "status": "multiple"
+        }
+      ],
+      "location_count": 19,
+      "single_recording_locations": [],
+      "checked_at": "2026-09-12T12:41:41.989592+00:00"
+    }
+  ]
+}

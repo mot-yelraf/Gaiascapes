@@ -74,7 +74,8 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 1.45rem; }
 .view-option:hover { border-color: transparent; color: var(--ink); background: rgba(255,255,255,.04); }
 .view-option.is-active { color: #132014; background: var(--moss); }
 .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 12px; margin: 22px 0 0; }
-.metrics article { min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 12px; text-align: center; background: #111b17; }
+/* Reserve recording-detail space even while a source is loading or idle. */
+.metrics article { min-width: 0; height: 12rem; overflow-y: auto; padding: 20px; border: 1px solid var(--line); border-radius: 12px; text-align: center; background: #111b17; }
 .metrics span { display: block; margin-bottom: 8px; color: var(--muted); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
 .metrics strong { display: block; overflow: hidden; font-size: clamp(1rem, 2.1vw, 1.3rem); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .metrics small { display: block; min-height: 1.2em; margin-top: 8px; overflow: hidden; color: var(--muted); font-size: .76rem; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
@@ -177,7 +178,7 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .map-legend-event { background: var(--earth); box-shadow: 0 0 8px rgba(216,167,109,.6); }
 .map-legend-system { display: inline-block; width: 9px; height: 9px; border: 1.5px solid rgba(255,255,255,.9); border-radius: 50%; background: #53b86b; box-shadow: 0 0 5px rgba(83,184,107,.75); }
 .map-stage { position: relative; width: 70%; margin: 0 auto; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: rgba(8,16,17,.74); box-shadow: 0 22px 70px rgba(0,0,0,.2); }
-#worldMap { display: block; width: 100%; height: auto; min-height: 30rem; }
+#worldMap { display: block; width: 100%; height: auto; min-height: 30rem; transform: translateY(-15px); }
 .map-glow { fill: rgba(83,167,168,.12); filter: drop-shadow(0 0 22px rgba(64,152,158,.22)); }
 .map-ocean { fill: url(#mapOcean); stroke: rgba(198,230,228,.42); stroke-width: 2; }
 .map-grid-line { fill: none; stroke: rgba(198,230,228,.17); stroke-width: 1; vector-effect: non-scaling-stroke; }

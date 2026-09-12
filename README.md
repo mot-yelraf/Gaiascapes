@@ -76,9 +76,9 @@ and exits unsuccessfully if any region has no eligible downloadable sample.
 
 Birdsong, Frog Calls, Whale Song, and Dolphin Calls play each selected clip once
 per location visit, without looping short clips. On the next full pass through
-the locations, Xeno-canto and SanctSound select the next available recording for
-each location, wrapping after its last recording. Commons has one curated clip
-per location. These recordings play to the end instead of being cut off by the
+the locations, every recorded-sound provider selects the next available recording
+for each location, wrapping after its last recording. Each catalog has 19 default
+locations; a location with only one verified recording repeats it on each pass. These recordings play to the end instead of being cut off by the
 23-second location interval. The browser requests the next location during the
 final three seconds (or final 10% of short clips), fading between recordings.
 First-use downloads can leave a gap. Keep the browser or desktop player open
@@ -91,24 +91,39 @@ Healthy long recordings keep their place by reporting progress. Confirmed decodi
 failures cause one cache repair; a second failure quarantines that recording for
 the rest of the session. Previews remain limited to eight seconds.
 
-Whale Song and Dolphin Calls use NOAA NCEI / SanctSound recordings without an
-API key. Enable their tiles under Background sound sources, select one in
-Instruments, and choose included sites in Sound locations. Whale Song includes
-six hydrophone sites in the Hawaiian Islands, Channel Islands, and Olympic
-Coast. Dolphin Calls includes eleven sites across the Hawaiian Islands,
-Papahānaumokuākea, California, Olympic Coast, Florida Keys, Gray’s Reef, and
-Stellwagen Bank. At least one site must remain selected. These are archived
-recordings, and map points identify hydrophones rather than animal positions.
+Whale Song and Dolphin Calls each have 19 verified default recording locations.
+Whale Song includes natural-speed songs and calls from several whale species,
+using NOAA NCEI / SanctSound. Dolphin Calls supplements NOAA with documented
+Figshare, Zenodo, Commons, and Freesound recordings, including river dolphins
+and a recording captured above water off Portugal. No API key is required.
+Choose included sites in Sound locations; each site shows its recording count.
+At least one site must remain selected. Map points identify documented recording
+positions or explicitly approximate regions, not exact animal positions.
 
-The bundled SanctSound catalog contains eight natural-speed humpback-song clips
-and eleven dolphin clips, verified against the public archive on 2026-09-06.
-Audio downloads are bounded to 64 MiB and cached beneath `data/media/whale_song/`
-and `data/media/dolphin_calls/`, with archive size and checksum verification.
-Playback rotates through selected sites and then through each site's clips.
-Each cue retains recording date, contributor credit, metadata URL, and the
-[NOAA/Navy SanctSound dataset citation and use constraints](https://doi.org/10.25921/saca-sp25).
-No access key or live acoustic feed is needed. Source attribution belongs to
-the recordings; the application's MIT license does not relicense archive audio.
+The whale catalog has 59 recordings and the dolphin catalog has 30. Most
+recordings download on first use and are cached beneath `data/media/whale_song/`
+and `data/media/dolphin_calls/`, with a 64 MiB per-file limit and pinned checksums.
+Four short CC BY Xiamen dolphin whistles are bundled at their original speed,
+resampled to 48 kHz to avoid a 129 MB archive download and support browser playback.
+Each cue retains contributor credit, source, license, and available recording dates.
+The application's license does not relicense archive audio; some Freesound and
+Xeno-canto recordings are restricted to noncommercial use.
+
+The Commons bird catalog contains 68 distinct recordings across 19 documented
+regions, separate from the editable Xeno-canto regions. Every recording has an
+identified bird and source coordinates. Two Commons regions currently have one
+verified recording; the other 17 have multiple entries. Marine catalogs also
+retain single-recording sites where additional suitable samples were not found.
+The coverage and first two playback passes are recorded in
+[`docs/recorded-catalogs-audit.json`](docs/recorded-catalogs-audit.json).
+Run a fresh verification without changing installed runtime state:
+
+```sh
+PYTHONPATH=src python scripts/audit_recorded_catalogs.py --config /path/to/data/config.json --output /tmp/recorded-catalogs-audit.json
+```
+
+On upgrade, complete legacy marine defaults expand to the new 19-site catalogs;
+custom site subsets are preserved. Restore defaults includes all 19 sites again.
 
 The Birdsong tile in Sound Sources enables archived recordings and selects
 Wikimedia Commons or Xeno-canto. For Xeno-canto, enter a personal API key there.

@@ -66,7 +66,7 @@ Ocean Swells and Storm Outlook normally advance to another background location a
 
 For **Birdsong, Frog Calls, Whale Song, and Dolphin Calls**, each location visit plays one complete recording once. Short recordings do not loop, and long recordings are not cut off after 23 seconds. The player requests the next location during the final **three seconds**, or final **10%** of a short clip, and fades between recordings while the outgoing clip finishes. A first-time download can leave a gap between clips. Keep a browser opened locally on the host, or the host’s desktop player, open for the recording rotation to advance. A remote listening browser does not advance that rotation. **Preview** remains an eight-second sample; **Stop** or changing the background can interrupt a recording.
 
-With **Xeno-canto Birdsong** and **Frog Calls**, the first pass plays the first available recording at each of the 19 regions. The next pass selects the second recording at each region, and later passes continue through its available recordings before wrapping to the first. **Whale Song** and **Dolphin Calls** follow the same sequence across their included hydrophone sites, rather than 19 regions. A location with only one recording repeats that recording on each pass; **Wikimedia Commons Birdsong** has one curated recording per location.
+Every recorded-sound catalog has **19 default locations**: Wikimedia Commons Birdsong, Xeno-canto Birdsong, Frog Calls, Whale Song, and Dolphin Calls. The first pass plays the first available recording at each location. The next pass plays the second recording at each location, and later passes continue through each location's list before wrapping. A location with one verified recording repeats it on each pass. Marine playback follows the included subset when you exclude sites.
 
 ### Event History
 
@@ -128,11 +128,11 @@ Open **Settings → Sound sources**. Background sources appear above event sourc
 | Source tile | What it supplies | Credentials and additional settings |
 | --- | --- | --- |
 | **Birdsong** | Archived bird recordings. The **Birdsong source** selector chooses Wikimedia Commons or Xeno-canto. | **Wikimedia Commons:** no key; uses 19 curated locations. **Xeno-canto:** shared API key; uses 19 editable regions with searches within 100 km of each center. |
-| **Dolphin Calls** | NOAA NCEI / SanctSound dolphin recordings from selected hydrophone sites. | No key. Select included sites in Sound locations. |
+| **Dolphin Calls** | Dolphin recordings from NOAA and other verified archives at 19 locations. | No key. Select included sites in Sound locations. |
 | **Frog Calls** | Xeno-canto frog and toad recordings near the chosen region centers. | The same Xeno-canto API key as Birdsong. Its 19 region centers are edited independently of Birdsong. |
 | **Open-Meteo Storm Outlook** | Forecast conditions used to generate a storm background. | No key. Uses the 19 Storm Outlook locations. This is forecast convection, not observed lightning. |
 | **Open-Meteo surf & tides** | Modeled ocean swells and tide turns. | No key. Uses the 19 Ocean Swells locations. Supplies both the Ocean Swells background and events for Tidal Tone. |
-| **Whale Song** | NOAA NCEI / SanctSound humpback-song recordings from selected hydrophone sites. | No key. Select included sites in Sound locations. |
+| **Whale Song** | NOAA whale songs and calls from several species at 19 locations. | No key. Select included sites in Sound locations. |
 
 NOAA marine recordings come from the [NCEI passive acoustic archive](https://www.ncei.noaa.gov/products/passive-acoustic-data). Gaiascapes caches selected recordings locally and retains their source attribution. A first use can require a download; subsequent uses can reuse the cache.
 
@@ -202,11 +202,11 @@ Choose **Imperial** or **Metric** to control displayed measurements, such as dis
 | --- | --- |
 | **None** | No continuous background. Event voices can still play. |
 | **Birdsong** | Plays recordings from the provider chosen in the Birdsong source tile. |
-| **Dolphin Calls** | Plays SanctSound dolphin recordings from the included sites. |
+| **Dolphin Calls** | Plays curated dolphin recordings from the included sites. |
 | **Frog Calls** | Plays Xeno-canto frog recordings from the configured regions. |
 | **Ocean Swells** | Generates a background from modeled swell conditions; requires Open-Meteo surf & tides. |
 | **Storm Outlook** | Generates a background from forecast storm conditions; requires Open-Meteo Storm Outlook. |
-| **Whale Song** | Plays SanctSound humpback songs from the included sites. |
+| **Whale Song** | Plays curated whale songs and calls from the included sites. |
 
 Birdsong, Frog Calls, Whale Song, and Dolphin Calls play through the browser or desktop web view. Ocean Swells, Storm Outlook, and the event voices use the configured SuperCollider renderer. A working recording preview therefore does not by itself confirm that synthesized sounds are available.
 
@@ -258,22 +258,22 @@ For **Frog Calls** and **Xeno-canto Birdsong**, each point is a search center wi
 
 ![Birdsong’s curated Commons locations with read-only coordinates](docs/images/user-guide/11-commons-locations.png)
 
-Commons uses a fixed catalog of **19 curated locations**. Names and coordinates are read-only, and Restore defaults is disabled for this view. To use editable Birdsong regions, choose **Xeno-canto** in the Birdsong source tile and provide the shared key. Gaiascapes retains the separate Xeno-canto location catalog when you switch providers.
+Commons uses **68 recordings across 19 curated locations**, with multiple recordings at 17 locations and a single verified recording at two. Each return to a location advances to its next recording. Names and coordinates are read-only, and Restore defaults is disabled for this view. To use editable Birdsong regions, choose **Xeno-canto** in the Birdsong source tile and provide the shared key. Gaiascapes retains the separate Xeno-canto location catalog when you switch providers.
 
 ### Whale Song and Dolphin Calls
 
-![Whale Song’s six selectable hydrophone sites](docs/images/user-guide/09-whale-locations.png)
+![Whale Song’s recording-site selection (earlier catalog shown)](docs/images/user-guide/09-whale-locations.png)
 
 These tabs list verified archive sites, not movable search centers. Use **Include in playback** to include or exclude a site from the rotation. Keep at least one site selected. The count shows how many sites are included. The numbered button or map marker identifies the site; the checkbox controls whether it plays. Names and coordinates are read-only.
 
 | Catalog | Available sites and regions |
 | --- | --- |
-| **Whale Song** | **6 sites**, with 8 clips: Channel Islands, Hawaiian Islands, and Olympic Coast. |
-| **Dolphin Calls** | **11 sites**, with 11 clips: Channel Islands, Florida Keys, Gray’s Reef, Hawaiian Islands, Monterey Bay, Olympic Coast, Papahānaumokuākea, and Stellwagen Bank. |
+| **Whale Song** | **19 sites**, with 59 recordings: California, Hawaiian Islands, Olympic Coast, Gray’s Reef, Papahānaumokuākea, and Stellwagen Bank. |
+| **Dolphin Calls** | **19 sites**, with 30 recordings: the original 11 NOAA sites plus Australia, Italy, Spain, Portugal, Brazil, Mexico, China, and MBARI MARS. |
 
 ![Dolphin Calls’ selectable hydrophone sites](docs/images/user-guide/10-dolphin-locations.png)
 
-Map points identify **hydrophones**, not the exact position of the animal. Site codes such as HI01 distinguish recording stations. Playback visits included sites and rotates through available clips at a site. These recordings are archived examples; they are not live hydrophone streams or worldwide searches.
+Map points identify documented recording locations or approximate study regions, not exact animal positions. Site codes such as HI01 distinguish NOAA recording stations. Each site lists its recording count; single-recording sites repeat on each pass. Playback visits included sites and rotates through available clips at a site. These recordings are archived examples; they are not live hydrophone streams or worldwide searches.
 
 ### Restore defaults and Projection Model
 

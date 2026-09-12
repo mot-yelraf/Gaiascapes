@@ -31,6 +31,7 @@ from .config import (
 )
 from .audio_stream import AUDIO_TIMEOUT, RendererAudioRelay
 from .sanctsound import MARINE_KINDS, available_locations
+from .commons_birdsong import BIRDSONG_LOCATIONS
 from .geoip import GeoIpLocationResolver
 from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
 from .service import GaiascapesService
@@ -191,7 +192,7 @@ def create_app(
                           for location in available_locations(kind)] for kind in MARINE_KINDS},
                 "frog_calls": config.frog_calls_locations,
                 "birdsong": config.birdsong_locations,
-                "commons_birdsong": default_birdsong_locations(),
+                "commons_birdsong": default_forecast_locations(location[:4] for location in BIRDSONG_LOCATIONS),
                 "ocean_swell": config.ocean_swell_locations,
                 "storm_outlook": config.storm_outlook_locations,
             },

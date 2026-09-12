@@ -1,8 +1,8 @@
-"""Keyless SanctSound recordings with verified listening sites and local caching.
+"""Keyless marine recordings with verified listening sites and local caching.
 
-The bundled catalog retains NOAA NCEI object checksums, deployment coordinates,
-and attribution. Only selected archive sites participate in playback; coordinates
-describe hydrophones, not the precise positions of vocalizing animals.
+The bundled catalog retains source checksums, documented recording coordinates,
+and attribution for NOAA and supplementary archives. Selected sites rotate in
+order, advancing to the next recording on each return to a site.
 """
 
 from __future__ import annotations
@@ -28,15 +28,16 @@ CATALOG = tuple(json.loads(Path(__file__).with_name("sanctsound_catalog.json").r
 
 
 def available_locations(kind: str) -> list[dict]:
-    """Return the verified hydrophone sites containing this recording kind."""
+    """Return the documented recording sites containing this recording kind."""
     if kind not in MARINE_KINDS:
         raise ValueError("Unsupported SanctSound recording kind")
     sites = {}
     for clip in CATALOG:
         if clip["kind"] == kind:
             sites.setdefault(clip["site"], {
-                "id": clip["site"], "name": f'{clip["region"]} · {clip["site"].upper()}',
+                "id": clip["site"], "name": clip["region"] if clip.get("provider") else f'{clip["region"]} · {clip["site"].upper()}',
                 "latitude": clip["latitude"], "longitude": clip["longitude"],
+                "recording_count": sum(item["kind"] == kind and item["site"] == clip["site"] for item in CATALOG),
             })
     return list(sites.values())
 
@@ -57,7 +58,7 @@ def validate_regions(value, kind: str) -> list[str]:
 
 
 class SanctSoundClient:
-    """Rotate verified NOAA clips across the user's selected recording sites."""
+    """Rotate verified marine clips across the user's selected recording sites."""
 
     def __init__(self, data_dir: Path, kind: str, regions=None, opener=None):
         self.kind = kind
@@ -75,21 +76,25 @@ class SanctSoundClient:
         clip = choices[(index // len(self.regions)) % len(choices)]
         with self._lock:
             path = self._download(clip)
-        title = "Humpback whale song" if self.kind == "whale_song" else "Dolphin vocalizations"
+        title = clip["title"]
         recorded = path.stem.rsplit("_", 1)[-1]
         return GaiaEvent(
-            provider="noaa_sanctsound", event_id=f"{path.stem}-{time.time_ns()}",
+            provider=clip.get("provider", "noaa_sanctsound"), event_id=f"{path.stem}-{time.time_ns()}",
             kind=self.kind, timestamp=time.time(), latitude=clip["latitude"],
             longitude=clip["longitude"], strength=0.6,
             traits={
                 "place": f'{clip["region"]} · {site.upper()}', "magnitude": 1.0,
                 "media_url": f'/{self.kind.replace("_", "-")}-media/{path.name}',
                 "title": title, "creator": clip["creator"],
-                "license": "NOAA open data", "license_url": DATASET_URL,
-                "source_url": ARCHIVE_URL + clip["metadata"],
-                "citation": clip["citation"], "dataset_url": DATASET_URL,
-                "recording_id": path.stem, "recorded_date": recorded[:8],
-                "recorded_time": recorded[9:], "location_kind": "hydrophone",
+                "license": clip.get("license", "NOAA open data"), "license_url": clip.get("license_url", DATASET_URL),
+                "source_url": clip.get("source_url") or ARCHIVE_URL + clip["metadata"],
+                "citation": clip["citation"], "dataset_url": clip.get("dataset_url", DATASET_URL),
+                "recording_id": path.stem, "recorded_date": clip.get("recorded_date", recorded[:8]),
+                "recorded_time": clip.get("recorded_time", recorded[9:]),
+                "location_kind": clip.get("location_kind", "hydrophone"),
+                "location_note": clip.get("location_note", "Hydrophone position; animal positions are not known"),
+                "processing": clip.get("processing", ""),
+                "recording_medium": clip.get("recording_medium", "water"),
                 "region_id": site,
             },
         )
@@ -98,39 +103,54 @@ class SanctSoundClient:
         destination = self.media_dir / Path(clip["object"]).name
         if destination.is_file() and self._valid_audio(destination, clip):
             return destination
+        self._download_payload(clip.get("download_url") or ARCHIVE_URL + clip["object"], destination, clip)
+        return destination
+
+    def _download_payload(self, url: str, destination: Path, metadata: dict) -> None:
+        """Publish a bounded download only after its pinned checksum is verified."""
         # Replacing settings can leave an older client downloading this clip.
         # Separate temporary files keep their atomic cache writes independent.
         with tempfile.NamedTemporaryFile(dir=os.environ.get("GAIASCAPES_WORKER_TEMP_DIR", self.media_dir), suffix=".part", delete=False) as pending:
             temporary = Path(pending.name)
-        request = urllib.request.Request(ARCHIVE_URL + clip["object"], headers={
+        request = urllib.request.Request(url, headers={
             "User-Agent": "Gaiascapes (https://github.com/mot-yelraf/Gaiascapes)"
         })
         try:
-            with self._opener(request, timeout=60) as response, temporary.open("wb") as output:
-                remaining = min(clip["size"], MAX_AUDIO_BYTES) + 1
+            if bundled := metadata.get("bundled_file"):
+                response = Path(__file__).with_name("recordings").joinpath(bundled).open("rb")
+            else:
+                response = self._opener(request, timeout=60)
+            with response, temporary.open("wb") as output:
+                remaining = min(metadata["size"], MAX_AUDIO_BYTES) + 1
                 while remaining:
                     chunk = response.read(min(65536, remaining))
                     if not chunk:
                         break
                     output.write(chunk)
                     remaining -= len(chunk)
-            if not self._valid_audio(temporary, clip):
-                raise RuntimeError("NOAA SanctSound returned an incomplete or invalid WAV recording")
+            valid = self._valid_audio(temporary, metadata)
+            if not valid:
+                raise RuntimeError("Marine archive returned an incomplete or invalid WAV/MP3 recording")
             temporary.replace(destination)
         finally:
             temporary.unlink(missing_ok=True)
-        return destination
 
     @staticmethod
     def _valid_audio(path: Path, clip: dict) -> bool:
+        if clip["size"] > MAX_AUDIO_BYTES or not SanctSoundClient._valid_checksum(path, clip):
+            return False
+        with path.open("rb") as audio:
+            header = audio.read(12)
+        return ((header[:4] == b"RIFF" and header[8:12] == b"WAVE")
+                or header[:3] == b"ID3"
+                or (len(header) >= 2 and header[0] == 0xff and header[1] & 0xe0 == 0xe0))
+
+    @staticmethod
+    def _valid_checksum(path: Path, clip: dict) -> bool:
         if path.stat().st_size != clip["size"] or not 0 < clip["size"] <= MAX_AUDIO_BYTES:
             return False
         digest = hashlib.md5(usedforsecurity=False)
         with path.open("rb") as audio:
-            header = audio.read(12)
-            if header[:4] != b"RIFF" or header[8:12] != b"WAVE":
-                return False
-            digest.update(header)
             for chunk in iter(lambda: audio.read(65536), b""):
                 digest.update(chunk)
         return base64.b64encode(digest.digest()).decode("ascii") == clip["md5"]

@@ -8,6 +8,7 @@ import json
 
 import pytest
 
+
 from gaiascapes_host.config import (
     AppConfig,
     _legacy_frog_locations,
@@ -174,7 +175,7 @@ def test_existing_config_enables_glm_once_during_revision_migration(tmp_path):
     config.save(path)
     reloaded = AppConfig.load(path)
 
-    assert config.config_revision == 7
+    assert config.config_revision == 8
     assert config.enabled_sources == ["usgs", "noaa_glm"]
     assert reloaded.enabled_sources == ["usgs", "noaa_glm"]
 
@@ -367,3 +368,24 @@ def test_all_legacy_frog_defaults_migrate_to_verified_regions(tmp_path):
     path = tmp_path / "config.json"
     path.write_text(json.dumps({"frog_calls_locations": _legacy_frog_locations()}))
     assert AppConfig.load(path).frog_calls_locations == default_frog_locations()
+
+def test_legacy_complete_marine_catalogs_expand_without_changing_custom_selections(tmp_path):
+    """Existing default users get nineteen sites; intentional subsets stay intact."""
+    from gaiascapes_host.sanctsound import default_regions
+
+    path = tmp_path / "config.json"
+    original = {
+        "config_revision": 7,
+        "whale_song_regions": ["ci02", "ci04", "hi01", "hi03", "hi05", "oc02"],
+        "dolphin_calls_regions": ["ci01", "ci04", "fk03", "gr01", "hi03", "hi04", "mb02", "oc02", "pm01", "pm05", "sb03"],
+    }
+    path.write_text(json.dumps(original))
+    config = AppConfig.load(path)
+    assert config.whale_song_regions == default_regions("whale_song")
+    assert config.dolphin_calls_regions == default_regions("dolphin_calls")
+    assert json.loads(path.read_text()) == original
+    original.update(whale_song_regions=["hi01"], dolphin_calls_regions=["fk03", "hi04"])
+    path.write_text(json.dumps(original))
+    config = AppConfig.load(path)
+    assert config.whale_song_regions == ["hi01"]
+    assert config.dolphin_calls_regions == ["fk03", "hi04"]
