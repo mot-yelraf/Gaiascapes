@@ -68,6 +68,11 @@ class SanctSoundClient:
         self._opener = opener or urllib.request.urlopen
         self._lock = threading.Lock()
 
+    @property
+    def location_count(self) -> int:
+        """Return the number of locations traversed by one recording round."""
+        return len(self.regions)
+
     def event_at(self, index: int) -> GaiaEvent:
         """Return a recording cue, downloading and verifying its WAV once."""
         index = int(index)

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title id="title">Canine Calls</title>
+<defs><radialGradient id="forest" cx="55%" cy="30%" r="85%"><stop stop-color="#95b97d" stop-opacity=".24"/><stop offset="1" stop-color="#0c1b19"/></radialGradient></defs>
+<path fill="#10221f" d="M0 0H512V512H0Z"/><path fill="url(#forest)" d="M0 0H512V512H0Z"/>
+<circle cx="365" cy="117" r="45" fill="#d2c48c" opacity=".72"/>
+<path d="M65 415Q256 393 447 415" fill="none" stroke="#587e58" stroke-width="7" stroke-linecap="round"/>
+<path d="M156 400L185 325L201 263L216 215L221 153L261 205L288 161L298 230L334 273L374 289L364 311L313 326L300 385L331 400Z" fill="#92aa8e"/>
+<path d="M221 153L232 218L250 212Z" fill="#475f50"/><path d="M288 161L280 222L298 230Z" fill="#475f50"/>
+<path d="M203 282L235 310L248 361L276 389L300 385L313 326L280 302L257 252Z" fill="#c4c9a4"/>
+<path d="M354 284L377 290L364 311L352 304Z" fill="#23382f"/>
+<path d="M285 265L303 271M319 311L345 310" stroke="#23382f" stroke-width="6" stroke-linecap="round"/>
+<path d="M185 325L174 365L213 351L204 382L247 359" fill="#78917c"/>
+<path d="M119 205Q98 230 111 256M95 188Q62 226 83 275" fill="none" stroke="#abc989" stroke-width="5" stroke-linecap="round"/>
+</svg>

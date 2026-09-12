@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title id="title">Feline Calls</title>
+<defs><radialGradient id="forest" cx="55%" cy="30%" r="85%"><stop stop-color="#95b97d" stop-opacity=".24"/><stop offset="1" stop-color="#0c1b19"/></radialGradient></defs>
+<path fill="#10221f" d="M0 0H512V512H0Z"/><path fill="url(#forest)" d="M0 0H512V512H0Z"/>
+<circle cx="365" cy="117" r="45" fill="#d2c48c" opacity=".72"/>
+<path d="M65 415Q256 393 447 415" fill="none" stroke="#587e58" stroke-width="7" stroke-linecap="round"/>
+<path d="M141 325Q123 282 151 239L144 192L189 201Q253 163 319 205L365 190L365 245Q399 297 368 347L333 383L281 403L229 399L178 370Z" fill="#80613d"/>
+<circle cx="192" cy="234" r="26" fill="#ba985d"/><circle cx="322" cy="234" r="26" fill="#ba985d"/>
+<path d="M185 247Q255 206 327 247L314 330L281 363L232 362L197 329Z" fill="#c4ad75"/>
+<path d="M206 274L230 281M283 281L307 274" stroke="#203128" stroke-width="10" stroke-linecap="round"/>
+<path d="M224 313Q256 291 288 313L276 343L256 355L236 343Z" fill="#ded1a1"/>
+<path d="M239 310H273L256 328Z" fill="#344038"/><path d="M256 328V340M256 340L243 346M256 340L269 346" fill="none" stroke="#344038" stroke-width="5" stroke-linecap="round"/>
+<path d="M119 205Q98 230 111 256M95 188Q62 226 83 275" fill="none" stroke="#abc989" stroke-width="5" stroke-linecap="round"/>
+</svg>

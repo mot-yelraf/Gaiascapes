@@ -408,8 +408,49 @@ releases the synth when continuous mode stops or the background selection change
 Birdsong uses the renderer-neutral emitted-cue stream and is played from Gaiascapes's
 local media cache by the web view, so it does not require a SuperCollider sampler.
 
-LAN browsers can choose **Listen on this device** in **Settings → Sound Choices**, to the left of Units to hear the
+LAN browsers can choose **Listen on this device** in **Settings → Sound Choices**, at the right of the Sound Choices heading, to hear the
 complete soundscape, or **Mute this device** to stop only their own playback.
+Enable **Announce Recording** in **Sound Sources**, in its own row below Background,
+and select Automatic, Say quark (macOS), or eSpeak NG. In **Sound Choices**, the
+**Announce Recorded Sounds** tile after Units controls dialect, voice variant
+(Default, Male, or Female), and volume. Save settings to apply both.
+Announcements speak the species and named location.
+Coordinates alone are omitted; names retain the recording metadata's language.
+Announcements finish before the animal recording starts, without overlapping the
+previous animal sound. Disabled announcements retain the existing playback behavior.
+Speech failures are shown and animal playback continues. Announcements follow each
+listening device's mute and playback state and do not require SuperCollider.
+
+Install [eSpeak NG](https://github.com/espeak-ng/espeak-ng) on the host:
+
+- macOS: `brew install espeak-ng`.
+- Debian, Ubuntu, Raspberry Pi OS: `sudo apt install espeak-ng`.
+- Windows: install the eSpeak NG package from its
+  [official releases](https://github.com/espeak-ng/espeak-ng/releases). Gaiascapes
+  checks PATH and the standard `Program Files/eSpeak NG` directories.
+
+Automatic prefers the [SuperCollider Say quark](https://github.com/adcxyz/say)
+on macOS. Gaiascapes uses macOS 10.11 as a conservative compatibility floor based
+on the oldest version mentioned in the quark documentation; upstream declares no
+minimum. The installed SuperCollider version must also support the host OS.
+Install the quark in SuperCollider with `Quarks.install("https://github.com/adcxyz/say")`.
+Gaiascapes detects its standard `downloaded-quarks/say` or `Extensions/say` directory
+and a standard SuperCollider app installation (or `sclang` on PATH).
+A standalone language worker renders speech without booting the audio server.
+Its configuration and scratch files stay under the selected data directory.
+If Say, SuperCollider, the requested native dialect/variant, or native rendering
+is unavailable, eSpeak NG takes over and the tile reports the fallback. Selecting
+eSpeak NG explicitly bypasses native speech. Keep eSpeak NG installed for fallback.
+
+Restart the host after installation if its PATH changed. The engine is optional
+and separately installed; other audio remains available without it. Available
+choices cover English (US, UK, Scotland, Caribbean), Spanish (Spain, Latin
+America), French (France, Belgium, Switzerland), German, Ukrainian, and Portuguese
+(Portugal, Brazil). A selected voice missing from an older engine installation
+produces a visible error. Generation uses temporary files under
+`data/announcements/`, deletes each temporary file afterward, and keeps at most
+32 generated clips in memory.
+
 Update and restart both Python and `supercollider/gaia-scape.scd` for this feature.
 The receiver routes Gaiascapes through a private stereo bus and copies completed
 512-frame blocks from an in-memory ring buffer over loopback OSC. Python relays

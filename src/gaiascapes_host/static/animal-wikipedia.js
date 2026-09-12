@@ -11,6 +11,13 @@ globalThis.animalWikipedia = (() => {
   const heading = document.getElementById("animalArticleTitle");
   const content = document.getElementById("animalArticleText");
   const source = document.getElementById("animalArticleSource");
+  const visibility = document.getElementById("animalImageVisibility");
+  const details = document.getElementById("animalImageDetails");
+  visibility?.addEventListener("change", () => {
+    details.hidden = visibility.value === "hide";
+    if (details.hidden) close();
+    refreshPointer();
+  });
   const cache = new Map();
   let current = "";
   let controller;
@@ -80,9 +87,11 @@ globalThis.animalWikipedia = (() => {
   picture.addEventListener("load", refreshPointer);
 
   function subject(event) {
-    if (!["birdsong", "frog_calls", "whale_song", "dolphin_calls"].includes(event?.kind)) return "";
+    if (!["birdsong", "frog_calls", "whale_song", "dolphin_calls", "feline_calls", "canine_calls", "elephant_calls", "primate_calls"].includes(event?.kind)) return "";
     const traits = event.traits || {};
     if (traits.wikipedia_title || traits.scientific_name) return traits.wikipedia_title || traits.scientific_name;
+    const mammal = {feline_calls: "Felidae", canine_calls: "Canidae", elephant_calls: "Elephant", primate_calls: "Primate"}[event.kind];
+    if (mammal) return traits.common_name || mammal;
     const title = (traits.title || "").replace(/^File:/, "");
     if (event.kind === "birdsong") return title.match(/^([A-Z][a-z]+ [a-z]+)\b/)?.[1] || "Bird vocalization";
     if (event.kind === "frog_calls") return "Frog";
@@ -173,6 +182,7 @@ globalThis.animalWikipedia = (() => {
         };
         credit.href = `https://en.wikipedia.org/wiki/${encodeURIComponent(`File:${page.pageimage}`)}`;
         credit.hidden = !page.pageimage;
+        if (picture.decode) await picture.decode().catch(() => {});
       } else {
         caption.textContent = `${page.title} · No Wikipedia image · Read article`;
       }

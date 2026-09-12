@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title id="title">Elephants</title>
+<defs><radialGradient id="forest" cx="55%" cy="30%" r="85%"><stop stop-color="#95b97d" stop-opacity=".24"/><stop offset="1" stop-color="#0c1b19"/></radialGradient></defs>
+<path fill="#10221f" d="M0 0H512V512H0Z"/><path fill="url(#forest)" d="M0 0H512V512H0Z"/>
+<circle cx="365" cy="117" r="45" fill="#d2c48c" opacity=".72"/>
+<path d="M65 415Q256 393 447 415" fill="none" stroke="#587e58" stroke-width="7" stroke-linecap="round"/>
+<path d="M124 319Q94 244 159 217Q222 185 289 215Q342 187 375 222Q396 244 381 289L376 340Q378 375 397 361L412 344L426 355Q412 408 377 391Q353 380 354 340L350 299L331 307L325 399H289L283 331L209 330L199 399H160L158 316Z" fill="#859d91"/>
+<path d="M147 242Q105 259 102 320L94 341" fill="none" stroke="#859d91" stroke-width="10" stroke-linecap="round"/>
+<path d="M281 224Q220 205 224 270Q229 330 282 322Q318 306 304 248Z" fill="#657f72"/>
+<path d="M331 288Q345 329 368 315Q350 319 346 285Z" fill="#d7cca3"/>
+<circle cx="354" cy="251" r="5" fill="#20382e"/>
+<path d="M167 385H196M294 385H323" stroke="#bec7aa" stroke-width="6"/>
+<path d="M119 205Q98 230 111 256M95 188Q62 226 83 275" fill="none" stroke="#abc989" stroke-width="5" stroke-linecap="round"/>
+</svg>

@@ -13,7 +13,8 @@ let lightningIntensityTimer = null;
 let lastLightningIntensityUpdate = 0;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const MARINE_BACKGROUNDS = ["whale_song", "dolphin_calls"];
-const RECORDED_BACKGROUNDS = ["birdsong", "frog_calls", ...MARINE_BACKGROUNDS];
+const MAMMAL_BACKGROUNDS = {feline_calls: "Feline Calls", canine_calls: "Canine Calls", elephant_calls: "Elephants", primate_calls: "Primates"};
+const RECORDED_BACKGROUNDS = ["birdsong", "frog_calls", ...MARINE_BACKGROUNDS, ...Object.keys(MAMMAL_BACKGROUNDS)];
 let deviceListening = false;
 let deviceMuted = false;
 let listeningAttempt = 0;
@@ -102,7 +103,8 @@ function stopRecordingPlayback(fadeMilliseconds = 700) {
   recordingLoadController?.abort();
   recordingPlaybackGeneration += 1;
   recordingKind = null;
-  globalThis.animalWikipedia?.update(null);
+  if (!globalThis.gaiascapesControls?.previewEvent) globalThis.animalWikipedia?.update(null);
+  globalThis.recordingAnnouncements?.stop();
   if (recordingFadeTimer) clearInterval(recordingFadeTimer);
   if (recordingPreviewTimer) clearTimeout(recordingPreviewTimer);
   recordingFadeTimer = null;
@@ -129,6 +131,7 @@ function stopRecordingPlayback(fadeMilliseconds = 700) {
 }
 
 async function playRecordingCue(cue) {
+  if (globalThis.gaiascapesControls?.previewEvent) return;
   const mediaUrl = cue.event?.traits?.media_url;
   if (!mediaUrl) {
     if (cue.recording_rotation) recoverRecording(cue.sequence, recordingPlaybackGeneration, "missing_media");
@@ -140,11 +143,12 @@ async function playRecordingCue(cue) {
   recordingLoadController = controller;
   const generation = ++recordingPlaybackGeneration;
   recordingKind = cue.event.kind;
+  globalThis.recordingAnnouncements?.stop();
   const cueDuration = Number(cue.duration ?? 0);
   // Protect a preview from status refreshes while the media is still loading.
   recordingPreviewUntil = cueDuration > 0 && cueDuration <= 10
     ? Infinity : 0;
-  const previous = recordingAudio;
+  let previous = recordingAudio;
   // Play the buffer already decoded for normalization on desktop as well.
   // A second media-element load can stall independently of that successful load.
   const next = recordingNormalizer.createPlayer();
@@ -175,6 +179,27 @@ async function playRecordingCue(cue) {
       controller.signal.throwIfAborted();
       await recordingNormalizer.prepare(next, mediaUrl, controller.signal);
       controller.signal.throwIfAborted();
+      if (globalThis.recordingAnnouncements?.enabled()) {
+        // End outgoing animal audio before speaking; keep the incoming buffer silent.
+        if (recordingFadeTimer) clearInterval(recordingFadeTimer);
+        if (recordingPreviewTimer) clearTimeout(recordingPreviewTimer);
+        recordingFadeTimer = null;
+        recordingPreviewTimer = null;
+        for (const audio of activeRecordingAudio) {
+          audio.pause();
+          audio.releaseNormalization?.();
+          audio.removeAttribute("src");
+        }
+        activeRecordingAudio.clear();
+        previous = null;
+        recordingAudio = null;
+        next.startOffset = 0;
+        globalThis.animalWikipedia?.update(cue.event);
+        // Speech has its own deadline; the media-loading deadline ends here.
+        clearTimeout(loadTimeout);
+        await globalThis.recordingAnnouncements.play(cue);
+        controller.signal.throwIfAborted();
+      }
       await next.play();
       if (controller.signal.aborted) next.pause();
       controller.signal.throwIfAborted();
@@ -209,7 +234,10 @@ async function playRecordingCue(cue) {
   recordingAudio = next;
   globalThis.animalWikipedia?.update(cue.event);
   next.addEventListener("ended", () => {
-    if (recordingAudio === next) globalThis.animalWikipedia?.update(null);
+    if (recordingAudio === next) {
+      globalThis.animalWikipedia?.update(null);
+      globalThis.recordingAnnouncements?.stop();
+    }
   }, {once: true});
   activeRecordingAudio.add(next);
   if (byId("mapPulseLayer")) {
@@ -656,7 +684,11 @@ function syncRecoveryToasts(health = {}) {
     const dismiss = document.createElement("small");
     dismiss.textContent = "Click to dismiss";
     toast.append(title, detail, dismiss);
-    toast.addEventListener("click", () => toast.remove(), {once: true});
+    const timer = setTimeout(() => toast.remove(), 5000);
+    toast.addEventListener("click", () => {
+      clearTimeout(timer);
+      toast.remove();
+    }, {once: true});
     stack.append(toast);
   });
 }
@@ -823,6 +855,12 @@ function updateBackgroundCharacteristics(event, fallbackText = null) {
       provenance.textContent = `${sourceName} · ${traits.license || "License unavailable"}`;
       element.classList.add("forecast-characteristics");
       element.append(description, credit, provenance);
+      if (traits.context) {
+        const context = document.createElement("span");
+        context.className = "forecast-characteristics-details recording-attribution";
+        context.textContent = traits.context;
+        element.append(context);
+      }
       element.setAttribute("aria-label", `${source.textContent}; ${credit.textContent}; ${provenance.textContent}`);
       return;
     }
@@ -867,6 +905,7 @@ function eventKindLabel(kind) {
     frog_calls: "Frog Calls",
     whale_song: "Whale Song",
     dolphin_calls: "Dolphin Calls",
+    ...MAMMAL_BACKGROUNDS,
   };
   return labels[kind] || instrumentLabel(kind);
 }
@@ -1062,6 +1101,7 @@ function updateLastEarthquakeStatus(event) {
 }
 
 function backgroundSoundLabel(instrument) {
+  if (MAMMAL_BACKGROUNDS[instrument]) return MAMMAL_BACKGROUNDS[instrument];
   if (instrument === "ocean_swell") return "Ocean Swells";
   if (instrument === "storm_potential") return "Storm Outlook";
   if (instrument === "birdsong") return "Birdsong Atlas";
@@ -1173,6 +1213,7 @@ async function updateStatus() {
       ? (status.live.running ? `Continuous · ${status.live.played_count} cues` : "Paused")
       : (status.performance.running ? `Playing ${status.performance.played_count}/${status.performance.cue_count}` : "Capture");
     byId("performanceBadge").classList.toggle("running", active);
+    globalThis.gaiascapesControls?.setPlaying(active);
     if (historyChanged) await updateEvents();
   } catch (error) {
     message(error.message, true);
@@ -1270,6 +1311,7 @@ async function updateEvents() {
 }
 
 function instrumentLabel(instrument) {
+  if (MAMMAL_BACKGROUNDS[instrument]) return MAMMAL_BACKGROUNDS[instrument];
   if (instrument === "tidal_bell") return "Tidal Tone";
   if (instrument === "seismic_bells") return "Seismic Tone";
   if (instrument === "lightning_glass") return "Lightning R2D2";
@@ -1419,7 +1461,8 @@ setInterval(() => {
   if (interrupted) recoverAfterWake();
 }, 5000);
 
-byId("startButton").addEventListener("click", async () => {
+async function startPlayback() {
+  if (globalThis.gaiascapesControls) globalThis.gaiascapesControls.previewEvent = null;
   try {
     if (!deviceMuted && (localRecordingPlayback || deviceListening)
         && RECORDED_BACKGROUNDS.includes(byId("backgroundInstrument")?.value)) {
@@ -1436,17 +1479,30 @@ byId("startButton").addEventListener("click", async () => {
       message(`Started ${payload.cue_count} cues from ${payload.event_count} captured events.`);
     }
     await updateStatus();
-  } catch (error) { message(error.message, true); }
-});
+    return true;
+  } catch (error) {
+    message(error.message, true);
+    globalThis.gaiascapesControls?.showError(error.message);
+    return false;
+  }
+}
+byId("startButton").addEventListener("click", startPlayback);
 
-byId("stopButton").addEventListener("click", async () => {
+async function stopPlayback() {
   try {
     const continuous = byId("liveMode").value === "continuous";
     await request(continuous ? "/api/live/stop" : "/api/performance/stop", {method: "POST", body: "{}"});
+    stopRecordingPlayback(1);
     message(continuous ? "Continuous environmental sound paused." : "Performance stopped.");
     await updateStatus();
-  } catch (error) { message(error.message, true); }
-});
+    return true;
+  } catch (error) {
+    message(error.message, true);
+    globalThis.gaiascapesControls?.showError(error.message);
+    return false;
+  }
+}
+byId("stopButton").addEventListener("click", stopPlayback);
 
 byId("liveMode").addEventListener("change", async (event) => {
   const mode = event.target.value;
@@ -1572,11 +1628,17 @@ let settingsToastTimer = null;
 function showSettingsToast(text, failed = false) {
   const stack = byId("settingsToasts");
   clearTimeout(settingsToastTimer);
-  const toast = document.createElement("div");
+  const toast = document.createElement("button");
+  toast.type = "button";
   toast.className = `dialog-toast${failed ? " dialog-toast--error" : ""}`;
   toast.textContent = `${failed ? "Error: " : ""}${text}`;
+  toast.setAttribute("aria-label", `${toast.textContent} Click to dismiss.`);
+  toast.addEventListener("click", () => {
+    clearTimeout(settingsToastTimer);
+    toast.remove();
+  }, {once: true});
   stack.replaceChildren(toast);
-  settingsToastTimer = setTimeout(() => stack.replaceChildren(), 5000);
+  settingsToastTimer = setTimeout(() => toast.remove(), 5000);
 }
 
 const settingsDialog = byId("settingsDialog");
@@ -2101,6 +2163,7 @@ if (settingsDialog && settingsForm) {
         method: "PUT",
         body: JSON.stringify({
           map_projection: mapProjection,
+          sound_location_order: byId("soundLocationOrder").value,
           birdsong_locations: forecastLocationCatalogs.birdsong,
           frog_calls_locations: forecastLocationCatalogs.frog_calls,
           whale_song_regions: forecastLocationCatalogs.whale_song.filter((location) => location.selected).map((location) => location.id),
@@ -2138,13 +2201,20 @@ if (settingsDialog && settingsForm) {
           frog_calls_enabled: byId("sourceFrogCalls").checked,
           whale_song_enabled: byId("sourceWhaleSong").checked,
           dolphin_calls_enabled: byId("sourceDolphinCalls").checked,
+          ...Object.fromEntries(Object.keys(MAMMAL_BACKGROUNDS).map(kind => [`${kind}_enabled`, byId(`source_${kind}`).checked])),
           birdsong_provider: byId("birdsongProvider").value,
           xeno_canto_api_key: byId("xenoCantoApiKey").value,
           units: byId("displayUnits").value,
+          announcements_enabled: byId("announcementsEnabled").checked,
+          announcement_synthesizer: byId("announcementSynthesizer").value,
+          announcement_voice: byId("announcementVoice").value,
+          announcement_variant: byId("announcementVariant").value,
+          announcement_volume: Number(byId("announcementVolume").value) / 100,
           system_location_enabled: byId("systemLocationEnabled").checked,
         }),
       });
       applyRecordingVolume(audioSettings.instrument_volumes.background);
+      globalThis.recordingAnnouncements?.configure(audioSettings);
       if (audioSettings.eumetsat_credentials_configured) {
         mtgLiToggle.dataset.credentialsConfigured = "true";
         eumetsatConsumerKey.value = "";
@@ -2174,6 +2244,10 @@ if (settingsDialog && settingsForm) {
 
 document.querySelectorAll(".status-card").forEach((card) => {
   card.addEventListener("mouseover", () => {
+    if (card.querySelector(".status-card-details")?.hidden) {
+      card.removeAttribute("title");
+      return;
+    }
     card.title = Array.from(card.querySelectorAll("[data-status-field]"), (field) =>
       field.getAttribute("aria-label") || field.textContent.trim()
     ).join("\n");
