@@ -30,8 +30,8 @@ from .config import (
     resolve_data_dir,
 )
 from .announcements import (
-    ANNOUNCEMENT_VARIANTS, ANNOUNCEMENT_VOICES, INSTALL_MESSAGE, AnnouncementRenderer,
-    espeak_executable, recording_announcement,
+    ANNOUNCEMENT_VARIANTS, ANNOUNCEMENT_VOICES, AnnouncementRenderer,
+    announcement_install_message, espeak_executable, recording_announcement,
 )
 from .macos_say import say_quark_paths
 from .audio_stream import AUDIO_TIMEOUT, RendererAudioRelay
@@ -189,7 +189,9 @@ def create_app(
             announcement_variants=ANNOUNCEMENT_VARIANTS,
             announcement_volume=config.announcement_volume,
             announcement_voices=ANNOUNCEMENT_VOICES,
-            announcement_available=bool(espeak_executable() or say_quark_paths()),
+            announcement_available=bool(espeak_executable() or
+                                        (config.announcement_synthesizer != "espeak-ng" and say_quark_paths())),
+            announcement_install_message=announcement_install_message(config.announcement_synthesizer),
             instrument_slots=config.instrument_slots(),
             instrument_volumes=config.volume_slots(),
             lightning_sample_rate=config.lightning_sample_rate,
@@ -458,7 +460,7 @@ def create_app(
                     changes[name] = body[name]
             if changes["announcements_enabled"] and not (espeak_executable() or
                     (changes["announcement_synthesizer"] != "espeak-ng" and say_quark_paths())):
-                raise RuntimeError(INSTALL_MESSAGE)
+                raise RuntimeError(announcement_install_message(changes["announcement_synthesizer"]))
             await service.update_settings(changes, config_path)
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

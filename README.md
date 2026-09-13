@@ -304,13 +304,20 @@ On macOS:
 The macOS installer offers to install **Python 3.13 through Homebrew** if the
 selected Python is missing or older than the required **3.10**. It asks before
 installing and uses the resulting interpreter for the remaining steps. It also
-offers to install **SuperCollider** for synthesized audio rendering. If Homebrew
+offers to install **SuperCollider** for synthesized audio rendering, then the
+separate **Say quark** from its upstream Git repository for macOS announcements.
+The quark is placed in the user's SuperCollider `Extensions/say` directory;
+existing installations are preserved. Git is required for this step. If Homebrew
 is missing or a dependency installation fails, it prints manual installation
 instructions. Supported Python is required to continue; without SuperCollider,
 capture, history, the web UI, and browser animal recordings still work. Offers
 require an interactive Terminal; unattended runs never accept them automatically.
-An existing supported Python can be selected with `GAIA_SCAPE_PYTHON=/full/path/to/python3`.
-When installing Homebrew Python, any existing `.venv` is preserved in a uniquely
+If the default `python3` is unusable, the installer checks versioned Python
+commands and existing Homebrew Python installations before offering an install.
+An existing supported Python can be selected with `GAIA_SCAPE_PYTHON=/full/path/to/python3`;
+an explicit selection is checked directly without searching for alternatives.
+When installing Homebrew Python, changing interpreters, or repairing a broken
+environment, any existing `.venv` is preserved in a uniquely
 named `.venv-previous.*` directory before a fresh environment is created. The
 application's `data/` directory is preserved.
 
@@ -349,6 +356,34 @@ GAIA_SCAPE_INSTALL_DIR="$HOME/Gaiascapes" ./install.sh
 
 Set `GAIA_SCAPE_AUTO_START=yes` to install a user-level systemd service on
 Linux/Raspberry Pi or a LaunchAgent on macOS.
+
+To update ostara from a source checkout on samhain, quit Gaiascapes on ostara
+(and stop its auto-start service if enabled), then run these commands on ostara:
+
+```sh
+rsync -av --exclude='.venv*' --exclude='venv/' --exclude='__pycache__/' \
+  --exclude='.pytest_cache/' --exclude='build/' --exclude='dist/' \
+  --exclude='*.egg-info/' --exclude='data/' \
+  samhain:Projects/Gaiascapes/ "$HOME/Projects/Gaiascapes/"
+cd "$HOME/Projects/Gaiascapes"
+GAIA_SCAPE_INSTALL_DIR="$HOME/Gaiascapes" ./install.sh
+"$HOME/Gaiascapes/scripts/run_gaiascapes_gui.sh"
+```
+
+Sync the source checkout; each host builds its own installed `.venv` and keeps
+its own `~/Gaiascapes/data`. Copying a virtual environment between Macs can leave
+invalid interpreter paths or incompatible native packages. Rsync exclusions do
+not remove files already copied, but the source checkout's `.venv` is not used
+by this installer. The installed application receives the updated package and
+launch scripts while retaining its data and settings.
+
+If Python still cannot be found, accept the installer's Homebrew Python offer,
+or select an existing Homebrew Python 3.13 explicitly:
+
+```sh
+GAIA_SCAPE_PYTHON="$(brew --prefix python@3.13)/bin/python3.13" \
+  GAIA_SCAPE_INSTALL_DIR="$HOME/Gaiascapes" ./install.sh
+```
 
 Run `./uninstall.sh` from the installed directory to remove the application and
 auto-start service while preserving captured data. To remove the data as well:
@@ -437,9 +472,16 @@ Coordinates alone are omitted; names retain the recording metadata's language.
 Announcements finish before the animal recording starts, without overlapping the
 previous animal sound. Disabled announcements retain the existing playback behavior.
 Speech failures are shown and animal playback continues. Announcements follow each
-listening device's mute and playback state and do not require SuperCollider.
+listening device's mute and playback state. Say requires SuperCollider; eSpeak NG
+can provide announcements independently.
 
-Install [eSpeak NG](https://github.com/espeak-ng/espeak-ng) on the host:
+On macOS, rerun `install.sh` from the updated checkout and accept the Say quark
+offer, then select **Automatic** or **Say quark (macOS)**. SuperCollider alone
+does not include this quark. eSpeak NG is not required when Say supports the
+selected voice.
+
+For other hosts or an optional fallback, install
+[eSpeak NG](https://github.com/espeak-ng/espeak-ng) on the host:
 
 - macOS: `brew install espeak-ng`.
 - Debian, Ubuntu, Raspberry Pi OS: `sudo apt install espeak-ng`.
@@ -458,7 +500,8 @@ A standalone language worker renders speech without booting the audio server.
 Its configuration and scratch files stay under the selected data directory.
 If Say, SuperCollider, the requested native dialect/variant, or native rendering
 is unavailable, eSpeak NG takes over and the tile reports the fallback. Selecting
-eSpeak NG explicitly bypasses native speech. Keep eSpeak NG installed for fallback.
+eSpeak NG explicitly bypasses native speech. If no fallback is installed, a Say
+failure reports the native error and animal playback continues.
 
 Restart the host after installation if its PATH changed. The engine is optional
 and separately installed; other audio remains available without it. Available
