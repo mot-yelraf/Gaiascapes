@@ -75,3 +75,41 @@ def test_worker_isolation_and_text_file(tmp_path, monkeypatch):
     monkeypatch.setattr(macos_say.subprocess, 'Popen', start)
     macos_say.render_say(text, 'en-us', 'female', tmp_path, output)
     assert output.read_bytes() == wav_bytes()
+
+
+def test_say_works_without_espeak_and_reports_native_failure(tmp_path, monkeypatch):
+    monkeypatch.setattr(announcements, 'say_quark_paths', lambda: ('sclang', 'library', 'quark'))
+    monkeypatch.setattr(announcements, 'espeak_executable', lambda: None)
+    def native(text, voice, variant, directory, output):
+        output.write_bytes(wav_bytes())
+    monkeypatch.setattr(announcements, 'render_say', native)
+    renderer = announcements.AnnouncementRenderer(tmp_path)
+    assert renderer.render('Bird', 'en-us', synthesizer='say') == wav_bytes()
+    assert renderer.last_backend == 'Say quark'
+    def failed(*args):
+        raise RuntimeError('No installed Say voice matches the dialect and variant')
+    monkeypatch.setattr(announcements, 'render_say', failed)
+    with pytest.raises(RuntimeError, match='No installed Say voice') as error:
+        renderer.render('Frog', 'en-us', synthesizer='say')
+    assert 'Install eSpeak NG' not in str(error.value)
+
+
+@pytest.mark.parametrize('synthesizer', ['auto', 'say', 'espeak-ng'])
+def test_macos_settings_and_page_explain_selected_engine(tmp_path, monkeypatch, synthesizer):
+    from fastapi.testclient import TestClient
+    from gaiascapes_host.app import create_app
+    monkeypatch.setattr(announcements.platform, 'system', lambda: 'Darwin')
+    monkeypatch.setattr('gaiascapes_host.app.espeak_executable', lambda: None)
+    monkeypatch.setattr('gaiascapes_host.app.say_quark_paths', lambda: None)
+    client = TestClient(create_app(tmp_path, auto_capture=False))
+    assert client.put('/api/settings/audio', json={
+        'announcements_enabled': False, 'announcement_synthesizer': synthesizer,
+    }).status_code == 200
+    response = client.put('/api/settings/audio', json={'announcements_enabled': True})
+    assert response.status_code == 503
+    expected = 'Install eSpeak NG' if synthesizer == 'espeak-ng' else 'Say announcements require SuperCollider'
+    assert expected in response.json()['detail']
+    assert expected in client.get('/').text
+    monkeypatch.setattr('gaiascapes_host.app.say_quark_paths', lambda: ('sclang', 'library', 'quark'))
+    response = client.put('/api/settings/audio', json={'announcements_enabled': True})
+    assert response.status_code == (503 if synthesizer == 'espeak-ng' else 200)

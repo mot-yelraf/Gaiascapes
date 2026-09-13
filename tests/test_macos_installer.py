@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import shlex
 import subprocess
+import sys
 
 import pytest
 
@@ -17,8 +18,9 @@ HELPER = Path("scripts/macos_dependencies.sh").resolve()
 
 
 def run_checks(tmp_path, body):
-    env = {**os.environ, "GAIA_SCAPE_DATA_DIR": str(tmp_path / "data")}
-    return subprocess.run(["bash", "-c", f'set -eu\nsource {shlex.quote(str(HELPER))}\n' + body],
+    env = {**os.environ, "GAIA_SCAPE_DATA_DIR": str(tmp_path / "data"), "GAIA_SCAPE_PYTHON": ""}
+    return subprocess.run(["bash", "-c", f'set -eu\nsource {shlex.quote(str(HELPER))}\n'
+                           + 'macos_python_candidates() { :; }\n' + body],
                           capture_output=True, text=True, env=env)
 
 
@@ -125,6 +127,7 @@ def test_new_homebrew_python_preserves_old_venv_before_replacement(tmp_path):
     (runtime / "data/config.json").write_text('{"http_port":8768}')
     result = run_checks(tmp_path, f'''
 INSTALL_DIR={shlex.quote(str(runtime))}
+PYTHON_BIN={shlex.quote(sys.executable)}
 MACOS_PYTHON_INSTALLED=yes
 prepare_macos_venv
 ''')
@@ -134,6 +137,106 @@ prepare_macos_venv
     assert len(backups) == 1
     assert backups[0].read_text() == "old environment"
     assert (runtime / 'data/config.json').read_text() == '{"http_port":8768}'
+
+
+@pytest.mark.parametrize("explicit", [False, True])
+def test_existing_python_discovery_respects_explicit_override(tmp_path, explicit):
+    result = run_checks(tmp_path, f'''
+PYTHON_BIN=/missing/python3
+GAIA_SCAPE_PYTHON={'/missing/explicit-python' if explicit else ''}
+macos_python_candidates() {{ printf '%s\\n' /missing/candidate {shlex.quote(sys.executable)}; }}
+find_homebrew() {{ return 1; }}
+ensure_macos_python
+printf 'SELECTED:%s\\n' "$PYTHON_BIN"
+''')
+    if explicit:
+        assert result.returncode != 0
+        assert "Using existing Python" not in result.stdout
+    else:
+        assert result.returncode == 0, result.stderr
+        assert f"SELECTED:{sys.executable}" in result.stdout
+        assert "Install supported Python" not in result.stderr
+
+
+def test_candidates_include_homebrew_python_outside_path(tmp_path):
+    prefix = tmp_path / "brew prefix"
+    result = subprocess.run(
+        ["bash", "-c", f'''set -eu
+source {shlex.quote(str(HELPER))}
+find_homebrew() {{ BREW_BIN=fake_brew; }}
+fake_brew() {{ printf '%s\\n' {shlex.quote(str(prefix))}; }}
+macos_python_candidates
+'''], capture_output=True, text=True,
+        env={**os.environ, "GAIA_SCAPE_DATA_DIR": str(tmp_path / "data")},
+    )
+    assert result.returncode == 0, result.stderr
+    assert str(prefix / "opt/python@3.13/bin/python3.13") in result.stdout.splitlines()
+
+
+@pytest.mark.parametrize('scenario', ['present', 'accept', 'decline', 'no_sc', 'failed', 'invalid', 'existing'])
+def test_say_quark_install_is_optional_and_preserves_existing_files(tmp_path, scenario):
+    home = tmp_path / 'home'
+    root = home / 'Library/Application Support/SuperCollider'
+    destination = root / 'Extensions/say'
+    if scenario == 'present':
+        classes = root / 'downloaded-quarks/say/Classes'
+        classes.mkdir(parents=True)
+        (classes / 'Say.sc').write_text('existing quark')
+    elif scenario == 'existing':
+        destination.mkdir(parents=True)
+        (destination / 'custom.txt').write_text('keep')
+    result = run_checks(tmp_path, f'''
+HOME={shlex.quote(str(home))}
+TMPDIR={shlex.quote(str(tmp_path))}
+supercollider_installed() {{ return {1 if scenario == 'no_sc' else 0}; }}
+confirm_dependency() {{ echo OFFER; return {1 if scenario == 'decline' else 0}; }}
+git() {{
+  echo "CLONE:$*"
+  [[ {scenario} != failed ]] || return 1
+  mkdir -p "$5/Classes"
+  if [[ {scenario} != invalid ]]; then printf 'Say {{}}' > "$5/Classes/Say.sc"; fi
+}}
+ensure_macos_say_quark
+echo CONTINUING
+''')
+    assert result.returncode == 0, result.stderr
+    assert 'CONTINUING' in result.stdout
+    assert (destination / 'Classes/Say.sc').is_file() == (scenario == 'accept')
+    if scenario in {'present', 'decline', 'no_sc', 'existing'}:
+        assert 'CLONE:' not in result.stdout
+    if scenario not in {'present', 'accept'}:
+        assert 'Quarks.install(' in result.stderr
+    if scenario == 'existing':
+        assert (destination / 'custom.txt').read_text() == 'keep'
+
+
+def test_macos_installer_checks_say_after_supercollider():
+    installer = Path('install.sh').read_text()
+    assert installer.index('ensure_macos_supercollider') < installer.index('ensure_macos_say_quark')
+
+
+@pytest.mark.parametrize("state", ["broken", "different", "same"])
+def test_existing_venv_is_preserved_when_python_needs_replacement(tmp_path, state):
+    runtime = tmp_path / "runtime"
+    executable = runtime / ".venv/bin/python"
+    executable.parent.mkdir(parents=True)
+    if state == "same":
+        executable.symlink_to(sys.executable)
+    elif state == "different":
+        executable.write_text('#!/bin/bash\nprintf "/previous/python\\n"\n')
+        executable.chmod(0o755)
+    (runtime / "data").mkdir()
+    config = runtime / "data/config.json"
+    config.write_text('{"http_port":8768,"osc_port":57130}')
+    result = run_checks(tmp_path, f'''
+INSTALL_DIR={shlex.quote(str(runtime))}
+PYTHON_BIN={shlex.quote(sys.executable)}
+prepare_macos_venv
+''')
+    assert result.returncode == 0, result.stderr
+    assert (runtime / ".venv").exists() == (state == "same")
+    assert len(list(runtime.glob(".venv-previous.*"))) == (0 if state == "same" else 1)
+    assert config.read_text() == '{"http_port":8768,"osc_port":57130}'
 
 
 @pytest.mark.parametrize('answer,accepted', [('yes', True), ('y', True), ('', False), ('no', False)])

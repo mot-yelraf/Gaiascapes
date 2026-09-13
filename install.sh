@@ -34,6 +34,7 @@ if [[ "$(uname -s)" == Darwin ]]; then
   source "$SOURCE_DIR/scripts/macos_dependencies.sh"
   ensure_macos_python || fail "A supported Python interpreter is required; see the instructions above."
   ensure_macos_supercollider
+  ensure_macos_say_quark
 else
   command -v "$PYTHON_BIN" >/dev/null 2>&1 || fail "Python 3.10 or newer was not found."
   "$PYTHON_BIN" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' || fail "Python 3.10 or newer is required."

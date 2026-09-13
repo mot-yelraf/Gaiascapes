@@ -101,7 +101,7 @@ def test_missing_engine_and_timeouts_are_explicit(tmp_path, monkeypatch):
     monkeypatch.setattr(announcements, 'espeak_executable', lambda: None)
     renderer = AnnouncementRenderer(tmp_path)
     with pytest.raises(RuntimeError, match='Install eSpeak NG'):
-        renderer.render('Bird', 'en-us')
+        renderer.render('Bird', 'en-us', synthesizer='espeak-ng')
     monkeypatch.setattr(announcements, 'espeak_executable', lambda: '/fake/espeak-ng')
 
     def fail(*args, **kwargs):

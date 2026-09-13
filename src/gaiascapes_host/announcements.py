@@ -35,6 +35,17 @@ RECORDED_KINDS = {"birdsong", "frog_calls", "whale_song", "dolphin_calls", *MAMM
 INSTALL_MESSAGE = "Install eSpeak NG on the Gaiascapes host to enable announcements."
 
 
+def announcement_install_message(synthesizer: str = "auto") -> str:
+    """Explain how to enable the selected speech engine on this host."""
+    if synthesizer == "say" or (synthesizer == "auto" and platform.system() == "Darwin"):
+        return ('Say announcements require SuperCollider and the Say quark on this Mac. '
+                'Rerun install.sh from the updated source checkout, or evaluate '
+                'Quarks.install("https://github.com/adcxyz/say") in SuperCollider. '
+                'Restart Gaiascapes and select Automatic or Say quark (macOS). '
+                'eSpeak NG is optional when Say can render the selected voice.')
+    return INSTALL_MESSAGE
+
+
 def recording_announcement(event: dict) -> str:
     """Return the recorded species and named location, omitting coordinates."""
     if event.get("kind") not in RECORDED_KINDS:
@@ -88,7 +99,7 @@ class AnnouncementRenderer:
         executable = espeak_executable()
         use_say = synthesizer != "espeak-ng" and say_quark_paths() is not None
         if not executable and not use_say:
-            raise RuntimeError(INSTALL_MESSAGE)
+            raise RuntimeError(announcement_install_message(synthesizer))
         suffix = ANNOUNCEMENT_VARIANTS[variant]
         espeak_voice = f"{voice}+{suffix}" if suffix else voice
         key = hashlib.sha256(f"{synthesizer}\0{use_say}\0{espeak_voice}\0{text}".encode()).hexdigest()
@@ -110,7 +121,11 @@ class AnnouncementRenderer:
                             if audio.getnframes() < 1 or audio.getnchannels() != 1 or output.stat().st_size > 4_000_000:
                                 raise ValueError("Invalid native speech audio")
                         self.last_backend = "Say quark"
-                    except (OSError, RuntimeError, subprocess.SubprocessError, wave.Error, EOFError, ValueError):
+                    except (OSError, RuntimeError, subprocess.SubprocessError, wave.Error, EOFError, ValueError) as exc:
+                        if not executable:
+                            raise RuntimeError(f'Say could not render the announcement: {exc}. '
+                                               'Check the Say quark installation and choose an installed '
+                                               'macOS voice matching the dialect and variant.') from exc
                         self.last_fallback = "Say voice unavailable or rendering failed; using eSpeak NG."
                 elif synthesizer == "say" or (synthesizer == "auto" and platform.system() == "Darwin"):
                     self.last_fallback = "Say quark unavailable on this installation; using eSpeak NG."

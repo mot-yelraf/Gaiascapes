@@ -18,6 +18,30 @@ find_homebrew() {
   [[ -n "$BREW_BIN" ]]
 }
 
+macos_python_candidates() {
+  local version prefix=""
+  if find_homebrew; then prefix="$("$BREW_BIN" --prefix 2>/dev/null || true)"; fi
+  for version in 3.13 3.14 3.12 3.11 3.10; do
+    command -v "python$version" 2>/dev/null || true
+    if [[ -n "$prefix" ]]; then
+      printf '%s/opt/python@%s/bin/python%s\n' "$prefix" "$version" "$version"
+    fi
+  done
+}
+
+find_supported_macos_python() {
+  local original="$PYTHON_BIN" candidate
+  while IFS= read -r candidate; do
+    PYTHON_BIN="$candidate"
+    if supported_python; then
+      printf 'Using existing Python: %s\n' "$PYTHON_BIN"
+      return 0
+    fi
+  done < <(macos_python_candidates)
+  PYTHON_BIN="$original"
+  return 1
+}
+
 confirm_dependency() {
   local answer=""
   if [[ ! -t 0 ]]; then
@@ -45,6 +69,7 @@ HELP
 ensure_macos_python() {
   MACOS_PYTHON_INSTALLED=no
   if supported_python; then return 0; fi
+  if [[ -z "${GAIA_SCAPE_PYTHON:-}" ]] && find_supported_macos_python; then return 0; fi
   printf 'Python is missing, cannot run, or is too old (%s). Minimum required: Python 3.10.\n' "$PYTHON_BIN" >&2
   if ! find_homebrew; then
     printf 'Homebrew was not found; automatic Python installation is unavailable.\n' >&2
@@ -78,11 +103,15 @@ ensure_macos_python() {
 }
 
 prepare_macos_venv() {
-  if [[ "${MACOS_PYTHON_INSTALLED:-no}" == yes && -d "$INSTALL_DIR/.venv" ]]; then
+  [[ -d "$INSTALL_DIR/.venv" ]] || return 0
+  local selected_base existing_base
+  selected_base="$("$PYTHON_BIN" -c 'import os, sys; print(os.path.realpath(sys._base_executable))')" || return 1
+  existing_base="$("$INSTALL_DIR/.venv/bin/python" -c 'import os, sys; print(os.path.realpath(sys._base_executable))' 2>/dev/null)" || existing_base=""
+  if [[ "${MACOS_PYTHON_INSTALLED:-no}" == yes || -z "$existing_base" || "$existing_base" != "$selected_base" ]]; then
     local backup
     backup="$(mktemp -d "$INSTALL_DIR/.venv-previous.XXXXXX")" || return 1
     mv "$INSTALL_DIR/.venv" "$backup/venv" || return 1
-    printf 'Previous virtual environment preserved at %s/venv; creating a fresh environment with the selected Homebrew Python.\n' "$backup"
+    printf 'Previous virtual environment preserved at %s/venv; creating a fresh environment with the selected Python.\n' "$backup"
   fi
 }
 
@@ -127,4 +156,49 @@ ensure_macos_supercollider() {
     printf 'SuperCollider installation was not accepted.\n' >&2
   fi
   supercollider_install_help
+}
+
+say_quark_installed() {
+  local root="$HOME/Library/Application Support/SuperCollider" location
+  for location in "$root/downloaded-quarks/say" "$root/Extensions/say"; do
+    [[ ! -f "$location/Classes/Say.sc" ]] || return 0
+  done
+  return 1
+}
+
+say_quark_install_help() {
+  cat >&2 <<'HELP'
+Say announcements need both SuperCollider and the separate Say quark on this Mac.
+In SuperCollider, evaluate: Quarks.install("https://github.com/adcxyz/say")
+Then restart Gaiascapes and select Automatic or Say quark (macOS).
+eSpeak NG is optional when Say can render the selected voice.
+HELP
+}
+
+ensure_macos_say_quark() {
+  if say_quark_installed; then
+    printf 'Say quark detected.\n'
+    return 0
+  fi
+  if ! supercollider_installed; then
+    say_quark_install_help
+    return 0
+  fi
+  local destination="$HOME/Library/Application Support/SuperCollider/Extensions/say" staging
+  if [[ -e "$destination" || -L "$destination" ]]; then
+    printf 'Say directory exists but Classes/Say.sc is missing; leaving it unchanged: %s\n' "$destination" >&2
+  elif ! command -v git >/dev/null 2>&1; then
+    printf 'Git is unavailable; automatic Say quark installation cannot run.\n' >&2
+  elif confirm_dependency 'Install the Say quark from github.com/adcxyz/say for macOS recording announcements?'; then
+    staging="$(mktemp -d "${TMPDIR:-/tmp}/gaiascapes-say.XXXXXX")" || { say_quark_install_help; return 0; }
+    if git clone --depth 1 https://github.com/adcxyz/say.git "$staging/say" &&
+        [[ -f "$staging/say/Classes/Say.sc" ]] &&
+        mkdir -p "$(dirname -- "$destination")" &&
+        mv "$staging/say" "$destination"; then
+      printf 'Say quark installed in %s. Restart Gaiascapes to use it.\n' "$destination"
+      return 0
+    fi
+    printf 'Say quark installation failed; any downloaded files remain in %s.\n' "$staging" >&2
+  fi
+  say_quark_install_help
 }

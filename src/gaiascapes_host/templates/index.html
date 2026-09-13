@@ -323,7 +323,7 @@
                   <select id="announcementVariant">{% for variant in announcement_variants %}<option value="{{ variant }}" {% if announcement_variant == variant %}selected{% endif %}>{{ variant | capitalize }}</option>{% endfor %}</select>
                 </label>
                 <label class="volume-control" for="announcementVolume"><input id="announcementVolume" type="range" min="0" max="100" step="1" value="{{ (announcement_volume * 100) | round | int }}" aria-label="Announcement volume"><output>{{ (announcement_volume * 100) | round | int }}%</output></label>
-                <span id="announcementStatus" role="status" aria-live="polite">{% if not announcement_available %}Install eSpeak NG on the host to enable announcements.{% endif %}</span>
+                <span id="announcementStatus" role="status" aria-live="polite">{% if not announcement_available %}{{ announcement_install_message }}{% endif %}</span>
               </article>
               {{ sound_tile("Background", "background", "background", [("feline_calls", "Feline Calls"), ("canine_calls", "Canine Calls"), ("elephant_calls", "Elephants"), ("primate_calls", "Primates"), ("birdsong", "Birdsong"), ("frog_calls", "Frog Calls"), ("whale_song", "Whale Song"), ("dolphin_calls", "Dolphin Calls"), ("ocean_swell", "Ocean Swells"), ("storm_potential", "Storm Outlook"), ("none", "None")], "background") }}
             </div>
