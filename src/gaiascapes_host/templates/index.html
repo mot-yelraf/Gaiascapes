@@ -237,8 +237,9 @@
             </div>
             <div class="source-tile-grid announcement-source-row">
               <article class="source-tile" aria-label="Announce Recording">
-                <h4>Announce Recording</h4>
-                <label class="announcement-toggle"><input id="announcementsEnabled" type="checkbox" {% if announcements_enabled %}checked{% endif %}> Enabled</label>
+                <div class="source-title">
+                  <label for="announcementsEnabled"><input id="announcementsEnabled" type="checkbox" {% if announcements_enabled %}checked{% endif %}><strong>Announce Recording</strong></label>
+                </div>
                 <label class="announcement-dialect" for="announcementSynthesizer">Synthesizer
                   <select id="announcementSynthesizer">
                     <option value="auto" {% if announcement_synthesizer == "auto" %}selected{% endif %}>Automatic</option>

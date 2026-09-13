@@ -546,8 +546,6 @@ main.has-animal > [data-app-view] { grid-column: 2; grid-row: 2; min-width: 0; }
 
 .sound-choices-heading { justify-content: space-between; }
 .sound-choices-heading > .device-listening { display: grid; flex: 0 0 auto; max-width: 15rem; text-align: right; }
-.announcement-toggle { display: flex; align-items: center; justify-content: flex-start; gap: .5rem; }
-.announcement-toggle input { width: auto; }
 .announcement-dialect { display: grid; gap: .4rem; }
 .announcement-dialect select { width: 100%; min-width: 0; padding: .4rem; font: inherit; font-size: .75rem; }
 #announcementStatus { color: var(--muted); font-size: .75rem; line-height: 1.4; }

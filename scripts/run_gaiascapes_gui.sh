@@ -21,7 +21,7 @@ if ! pgrep -f "$RUNTIME_DIR/supercollider/gaia-scape.scd" >/dev/null 2>&1; then
   sleep 2
   if ! kill -0 "$supercollider_pid" >/dev/null 2>&1; then
     wait "$supercollider_pid" || true
-    printf 'SuperCollider did not remain running; Gaiascapes will start without audio.\n' >&2
+    printf 'SuperCollider did not remain running; synthesized audio is unavailable. Capture, history, the web UI, and browser animal recordings remain available.\n' >&2
     supercollider_pid=""
   fi
 fi

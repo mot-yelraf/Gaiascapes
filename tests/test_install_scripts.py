@@ -199,3 +199,49 @@ def test_installed_repair_delegates_to_recorded_checkout(tmp_path):
                             capture_output=True, text=True)
     assert result.returncode == 1
     assert 'source checkout is unavailable' in result.stderr
+
+
+def test_legacy_launcher_cleanup_preserves_current_custom_and_referenced_files(tmp_path):
+    import plistlib
+    import runpy
+
+    cleanup = runpy.run_path('scripts/cleanup_legacy_launchers.py')['cleanup_legacy_launchers']
+    runtime = tmp_path / 'runtime'
+    home = tmp_path / 'home'
+    config_home = tmp_path / 'config'
+    (runtime / 'scripts').mkdir(parents=True)
+    names = ('run_gaiascapes.sh', 'run_gaiascapes_gui.sh', 'run_supercollider.sh')
+    for name in names:
+        (runtime / 'scripts' / name).write_text('current launcher')
+        (runtime / name).write_text(
+            f'#!/usr/bin/env bash\nexec "$(dirname -- "$0")/scripts/{name}" "$@"\n')
+    agents = home / 'Library/LaunchAgents'
+    agents.mkdir(parents=True)
+    (agents / 'custom.plist').write_bytes(plistlib.dumps({
+        'ProgramArguments': [str(runtime / names[0])],
+    }, fmt=plistlib.FMT_BINARY))
+    (runtime / names[2]).write_text('#!/bin/bash\n# custom audio setup\n')
+    assert cleanup(runtime, home, config_home) == [names[1]]
+    assert all((runtime / 'scripts' / name).read_text() == 'current launcher' for name in names)
+    assert (runtime / names[0]).is_file()
+    assert (runtime / names[2]).is_file()
+    (agents / 'custom.plist').unlink()
+    assert cleanup(runtime, home, config_home) == [names[0]]
+    assert cleanup(runtime, home, config_home) == []
+
+
+def test_legacy_launcher_cleanup_preserves_systemd_references(tmp_path):
+    import runpy
+
+    cleanup = runpy.run_path('scripts/cleanup_legacy_launchers.py')['cleanup_legacy_launchers']
+    runtime = tmp_path / 'runtime'
+    config_home = tmp_path / 'config'
+    (runtime / 'scripts').mkdir(parents=True)
+    name = 'run_gaiascapes.sh'
+    (runtime / 'scripts' / name).write_text('current')
+    (runtime / name).write_text(f'#!/usr/bin/env bash\nexec "$(dirname -- "$0")/scripts/{name}" "$@"\n')
+    services = config_home / 'systemd/user'
+    services.mkdir(parents=True)
+    (services / 'custom.service').write_text(f'[Service]\nExecStart="{runtime / name}"\n')
+    assert cleanup(runtime, tmp_path / 'home', config_home) == []
+    assert (runtime / name).is_file()
