@@ -30,8 +30,14 @@ if [[ ! -f "$SOURCE_DIR/pyproject.toml" ]]; then
   fail "Run install.sh from your Gaiascapes source checkout with GAIA_SCAPE_INSTALL_DIR set to $SOURCE_DIR. The recorded source checkout is unavailable."
 fi
 
-command -v "$PYTHON_BIN" >/dev/null 2>&1 || fail "Python 3.10 or newer was not found."
-"$PYTHON_BIN" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' || fail "Python 3.10 or newer is required."
+if [[ "$(uname -s)" == Darwin ]]; then
+  source "$SOURCE_DIR/scripts/macos_dependencies.sh"
+  ensure_macos_python || fail "A supported Python interpreter is required; see the instructions above."
+  ensure_macos_supercollider
+else
+  command -v "$PYTHON_BIN" >/dev/null 2>&1 || fail "Python 3.10 or newer was not found."
+  "$PYTHON_BIN" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' || fail "Python 3.10 or newer is required."
+fi
 
 remembered="$DEFAULT_INSTALL_DIR"
 if [[ -f "$STATE_FILE" ]]; then IFS= read -r remembered < "$STATE_FILE" || true; fi
@@ -113,6 +119,9 @@ LOG_FILE="$INSTALL_DIR/install.log"
 if [[ "$(uname -s)" == Linux ]]; then
   "$PYTHON_BIN" -m venv --system-site-packages "$INSTALL_DIR/.venv" || fail "Could not create the virtual environment. Install python3-venv and retry."
 else
+  if [[ "$(uname -s)" == Darwin ]]; then
+    prepare_macos_venv || fail "Could not preserve the previous Python environment."
+  fi
   "$PYTHON_BIN" -m venv "$INSTALL_DIR/.venv" || fail "Could not create the virtual environment."
 fi
 if ! "$INSTALL_DIR/.venv/bin/python" -m pip install --disable-pip-version-check --upgrade "$SOURCE_DIR[$PACKAGE_EXTRAS]" 2>&1 | tee -a "$LOG_FILE"; then
@@ -135,14 +144,6 @@ if [[ "$SOURCE_DIR" != "$INSTALL_DIR" ]]; then
   install -m 755 "$SOURCE_DIR/scripts/run_gaiascapes.sh" "$INSTALL_DIR/scripts/run_gaiascapes.sh"
   install -m 755 "$SOURCE_DIR/scripts/run_gaiascapes_gui.sh" "$INSTALL_DIR/scripts/run_gaiascapes_gui.sh"
   install -m 755 "$SOURCE_DIR/scripts/run_supercollider.sh" "$INSTALL_DIR/scripts/run_supercollider.sh"
-  # Existing service definitions and shortcuts may still use the old paths.
-  # Keep those existing entry points as forwarding wrappers during upgrades.
-  for launcher in run_gaiascapes.sh run_gaiascapes_gui.sh run_supercollider.sh; do
-    if [[ -f "$INSTALL_DIR/$launcher" ]]; then
-      printf '#!/usr/bin/env bash\nexec "$(dirname -- "$0")/scripts/%s" "$@"\n' "$launcher" > "$INSTALL_DIR/$launcher"
-      chmod 755 "$INSTALL_DIR/$launcher"
-    fi
-  done
   install -m 755 "$SOURCE_DIR/scripts/resolve_macos_audio.py" "$INSTALL_DIR/scripts/resolve_macos_audio.py"
   install -m 644 "$SOURCE_DIR/supercollider/gaia-scape.scd" "$INSTALL_DIR/supercollider/gaia-scape.scd"
   install -m 644 "$SOURCE_DIR/README.md" "$INSTALL_DIR/README.md"
@@ -185,10 +186,12 @@ if [[ "$enable_autostart" == yes ]]; then
   fi
 fi
 
-if command -v sclang >/dev/null 2>&1 || [[ -x /Applications/SuperCollider.app/Contents/MacOS/sclang ]]; then
+"$PYTHON_BIN" "$SOURCE_DIR/scripts/cleanup_legacy_launchers.py" "$INSTALL_DIR"
+
+if command -v sclang >/dev/null 2>&1 || [[ -x /Applications/SuperCollider.app/Contents/MacOS/sclang ]] || [[ -x "$HOME/Applications/SuperCollider.app/Contents/MacOS/sclang" ]]; then
   printf 'SuperCollider detected.\n'
 else
-  printf 'SuperCollider was not detected; capture and the web UI will still work.\n'
+  printf 'SuperCollider was not detected; capture, history, the web UI, and browser animal recordings will still work. Synthesized audio is unavailable.\n'
 fi
 
 printf '\nGaiascapes was installed in %s\n' "$INSTALL_DIR"

@@ -32,7 +32,9 @@ headless installer includes both satellite extras.
 
 ## Audio
 
-SuperCollider is required for sound output but not for capture, history, or the web UI.
+SuperCollider is required for synthesized audio rendering, but not for capture,
+history, the web UI, or browser playback of animal recordings. The macOS Say
+quark needs SuperCollider; eSpeak NG can provide announcements independently.
 
 - macOS: install the SuperCollider application in `/Applications`.
 - Debian, Ubuntu, or Raspberry Pi OS: install the `supercollider` package.
@@ -52,7 +54,27 @@ sudo apt update
 sudo apt install python3 python3-venv python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 supercollider
 ```
 
-`install.sh` verifies Python and reports whether SuperCollider was detected.
+On macOS, `install.sh` (also invoked by `scripts/install_macos.sh`) checks Python
+before changing the installation. If it is missing or older than 3.10, the
+installer offers `brew install python@3.13` in an interactive Terminal. Accepting
+uses that Homebrew interpreter for the rest of installation, even if an older
+`python3` remains first on PATH. Declining, a Homebrew failure, or an unusable
+interpreter stops installation with manual setup instructions; all host features
+require supported Python.
+
+The installer also offers `brew install --cask supercollider` when `sclang` is
+absent from PATH, `/Applications`, and `~/Applications`. Declining or failing this
+optional step continues installation with the functionality described above.
+Homebrew itself is never installed automatically. If it is unavailable, follow
+[Homebrew's installation instructions](https://brew.sh), or obtain compatible
+installers directly from [Python](https://www.python.org/downloads/macos/) and
+[SuperCollider](https://supercollider.github.io/downloads). Noninteractive runs
+do not install dependencies automatically; rerun in Terminal to accept offers.
+
+The Homebrew packages used are [Python 3.13](https://formulae.brew.sh/formula/python@3.13)
+and [SuperCollider](https://formulae.brew.sh/cask/supercollider). Their platform
+requirements may be newer than Gaiascapes' Python minimum; check compatibility
+with your macOS when installing manually or resolving Homebrew failures.
 
 ## Network
 

@@ -301,6 +301,24 @@ On macOS:
 ./scripts/install_macos.sh
 ```
 
+The macOS installer offers to install **Python 3.13 through Homebrew** if the
+selected Python is missing or older than the required **3.10**. It asks before
+installing and uses the resulting interpreter for the remaining steps. It also
+offers to install **SuperCollider** for synthesized audio rendering. If Homebrew
+is missing or a dependency installation fails, it prints manual installation
+instructions. Supported Python is required to continue; without SuperCollider,
+capture, history, the web UI, and browser animal recordings still work. Offers
+require an interactive Terminal; unattended runs never accept them automatically.
+An existing supported Python can be selected with `GAIA_SCAPE_PYTHON=/full/path/to/python3`.
+When installing Homebrew Python, any existing `.venv` is preserved in a uniquely
+named `.venv-previous.*` directory before a fresh environment is created. The
+application's `data/` directory is preserved.
+
+Upgrades remove redundant top-level `run_` forwarding scripts when their current
+counterparts exist under `scripts/` and no user LaunchAgent or systemd service
+references the old paths. Custom scripts and referenced wrappers are retained
+with an explanatory message. Use the launchers under `scripts/` for new shortcuts.
+
 On Linux or Raspberry Pi OS:
 
 ```sh

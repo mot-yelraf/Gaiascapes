@@ -2,19 +2,19 @@
 
 This guide explains the controls in Gaiascapes **v0.26.255.22**. Installation and system setup are covered separately in the [README](README.md).
 
-The screenshots below were captured from this release on September 12, 2026, in an isolated demonstration session. Desktop screenshots use a 1,440-pixel-wide browser (1,920 pixels for the bird map views); mobile screenshots use a 390-pixel-wide browser simulation, not a physical iPhone. Settings screenshots focus on the dialog. Some lists scroll within the dialog, so only their visible rows are shown. Example earthquakes and the selected bird recording location are illustrative, not live observations. The bird views show a paused, image-only selection using Next. Credential fields are blank, and enabled switches in a screenshot demonstrate the controls rather than confirm access to a provider.
+Peace Hill Studios hope you find the app fun and educational with soothing background sounds.
 
 ## Contents
 
 - [Dashboard, playback, and history](#dashboard-playback-and-history)
 - [Map view](#map-view)
-- [Mobile and iPhone Home Screen](#mobile-and-iphone-home-screen)
 - [Sound sources](#sound-sources)
 - [Obtaining credentials](#obtaining-credentials)
 - [Sound Choices](#sound-choices)
 - [Sound locations](#sound-locations)
 - [Theme](#theme)
 - [Saving settings](#saving-settings)
+- [Mobile and iPhone Home Screen](#mobile-and-iphone-home-screen)
 - [Gaiascapes Game](#gaiascapes-game)
 - [Status and troubleshooting](#status-and-troubleshooting)
 - [Location privacy](#location-privacy)
@@ -94,27 +94,6 @@ Select **Map** at the top of the window. Select **Dashboard** to return to the p
 ![Map view with a greater roadrunner image, recording-location pointer, Play/Pause/Next controls, and status tiles](docs/images/user-guide/03-map.png)
 
 The legend distinguishes background locations, event locations, and **My location**. Moving the pointer over the map displays coordinates. The system-location marker, when available, shows the host’s approximate location derived from its public IP address. Background locations come from **Sound locations**; the host location can seed location 1 for Xeno-canto Birdsong and Storm Outlook at startup (see [Location privacy](#location-privacy)). The chosen Dashboard/Map view is remembered.
-
-## Mobile and iPhone Home Screen
-
-On narrow screens, the gear and Dashboard/Map selector appear in a centered row below the title. The status tiles stack beneath the main content. Scroll down to see all three tiles when they extend below the screen.
-
-![Mobile Dashboard with centered header controls and vertically stacked status tiles](docs/images/user-guide/15-mobile-dashboard.png)
-
-![Mobile Map with its legend and vertically stacked status tiles](docs/images/user-guide/16-mobile-map.png)
-
-In Settings, the section buttons move above the content. The listening button is in the Sound Choices heading. Units, Announce Recorded Sounds, Background, and the event tiles stack below it. Scroll inside the settings content to reach the lower controls. The **×** remains in the dialog header and **Save settings** in its footer.
-
-![Mobile Sound Choices with the listening button in its heading and Units below](docs/images/user-guide/17-mobile-listening.png)
-
-To add Gaiascapes to an iPhone Home Screen:
-
-1. Open the running host’s LAN URL in **Safari**.
-2. Open Safari’s **Share** menu and choose **Add to Home Screen**. If it is missing, use **Edit Actions** to add it.
-3. Keep **Open as Web App** enabled if Safari offers that option, then tap **Add**. See [Apple’s Home Screen web-app instructions](https://support.apple.com/en-gb/guide/iphone/iphea86e5236/ios).
-4. Open the new Gaiascapes icon and use **Settings → Sound Choices → Listen on this device** to enable audio.
-
-Gaiascapes supplies its app artwork for the Home Screen icon. If an existing shortcut still shows a letter, remove that shortcut and add it again from the refreshed site after updating the host. The Home Screen app still connects to the running host; it is not an offline installation. Keeping the phone on the LAN is required, and backgrounding or locking the phone may interrupt audio.
 
 ## Sound sources
 
@@ -355,6 +334,27 @@ Use the **×** in the dialog header to close Settings; there is no Close button 
 
 Mode and Dashboard/Map view changes are applied and saved immediately through their own controls. Theme is saved immediately in this browser. Listen/Mute applies only to the current page session. History-window and performance-length values control the current replay request and are not saved by the Settings dialog.
 
+## Mobile and iPhone Home Screen
+
+On narrow screens, the gear and Dashboard/Map selector appear in a centered row below the title. The status tiles stack beneath the main content. Scroll down to see all three tiles when they extend below the screen.
+
+![Mobile Dashboard with centered header controls and vertically stacked status tiles](docs/images/user-guide/15-mobile-dashboard.png)
+
+![Mobile Map with its legend and vertically stacked status tiles](docs/images/user-guide/16-mobile-map.png)
+
+In Settings, the section buttons move above the content. The listening button is in the Sound Choices heading. Units, Announce Recorded Sounds, Background, and the event tiles stack below it. Scroll inside the settings content to reach the lower controls. The **×** remains in the dialog header and **Save settings** in its footer.
+
+![Mobile Sound Choices with the listening button in its heading and Units below](docs/images/user-guide/17-mobile-listening.png)
+
+To add Gaiascapes to an iPhone Home Screen:
+
+1. Open the running host’s LAN URL in **Safari**.
+2. Open Safari’s **Share** menu and choose **Add to Home Screen**. If it is missing, use **Edit Actions** to add it.
+3. Keep **Open as Web App** enabled if Safari offers that option, then tap **Add**. See [Apple’s Home Screen web-app instructions](https://support.apple.com/en-gb/guide/iphone/iphea86e5236/ios).
+4. Open the new Gaiascapes icon and use **Settings → Sound Choices → Listen on this device** to enable audio.
+
+Gaiascapes supplies its app artwork for the Home Screen icon. If an existing shortcut still shows a letter, remove that shortcut and add it again from the refreshed site after updating the host. The Home Screen app still connects to the running host; it is not an offline installation. Keeping the phone on the LAN is required, and backgrounding or locking the phone may interrupt audio.
+
 ## Gaiascapes Game
 
 Turn an animal background into an identification quiz: show the picture first,
@@ -366,7 +366,7 @@ the game and controls when clues and answers appear.
 Complete setup before showing the screen to the players.
 
 1. In **Settings → Sound sources**, enable the animal recording source you want
-   to use. Clear **Enabled** under **Announce Recording** so spoken names will
+   to use. Clear the checkbox beside **Announce Recording** so spoken names will
    not give away the answer.
 2. In **Sound Choices**, select that animal source as **Background**. Set
    **Event 1**, **Event 2**, and **Event 3** to **None** to avoid unrelated sounds
