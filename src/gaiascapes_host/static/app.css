@@ -249,7 +249,8 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .source-credentials label { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: .2rem; color: var(--ink); font-size: .65rem; font-weight: 700; }
 .source-credentials label[hidden] { display: none; }
 .source-credentials input, .source-credentials select { width: 100%; min-width: 0; padding: .4rem .45rem; border: 1px solid var(--line); background: #08100d; color: var(--ink); font: inherit; }
-.settings-dialog:has([data-pane="sources"]:not([hidden])) { height: min(54rem, calc(100vh - 2rem)); }
+.settings-dialog:has([data-pane="sources"]:not([hidden]), [data-pane="instruments"]:not([hidden])) { height: min(54rem, calc(100vh - 2rem)); }
+.settings-dialog:has([data-pane="locations"]:not([hidden]), [data-pane="theme"]:not([hidden])) { height: min(50.4rem, calc(100vh - 2rem)); }
 .settings-pane[data-pane="sources"] { padding-block: .75rem; }
 .settings-pane[data-pane="sources"] .pane-heading { padding-bottom: .5rem; margin-bottom: .75rem; }
 .settings-pane[data-pane="sources"] .settings-tip { margin-top: .75rem; font-size: .65rem; padding: .6rem; }
@@ -292,7 +293,7 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .location-settings-pane { display: flex; flex-direction: column; overflow: hidden; }
 .location-settings-pane > .pane-heading { flex: 0 0 auto; }
 .location-editor-tabs { display: flex; gap: .45rem; }
-.location-editor-tabs button { flex: 1 1 0; }
+.location-editor-tabs button { flex: 1 1 0; min-width: 0; padding: .35rem .45rem; font-size: .8rem; }
 .location-editor-tabs button.is-active { color: var(--ink); border-color: rgba(106,181,189,.66); background: rgba(50,127,148,.2); }
 .location-editor-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: .7rem 0; }
 .location-editor-toolbar strong { color: var(--moss); font-size: .78rem; letter-spacing: .04em; }
@@ -318,7 +319,8 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .forecast-coordinate-input input { width: 100%; min-width: 0; padding: .3rem .35rem; background: #101b17; font-size: .68rem; font-variant-numeric: tabular-nums; }
 .forecast-location-name { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .45rem; color: var(--muted); font-size: .63rem; }
 .forecast-location-name input { width: 100%; min-width: 0; padding: .4rem .5rem; background: #101b17; }
-.location-settings-pane > .settings-field { flex: 0 0 auto; margin-top: .8rem; }
+.location-editor-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 0 0 auto; gap: .85rem; margin-top: .8rem; }
+.location-editor-options .settings-field { min-width: 0; }
 .modal-footer { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 4.3rem; padding: .8rem 1.2rem; border-top: 1px solid var(--line); background: #0c1511; }
 .modal-footer p { color: var(--muted); font-size: .7rem; }
 .modal-footer > div { display: flex; gap: .55rem; }
@@ -361,7 +363,6 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 }
 
 /* Compact artwork preserves tile widths and leaves room for both rows. */
-.settings-dialog:has([data-pane="instruments"]:not([hidden])) { height: min(64rem, calc(100vh - 2rem)); }
 .settings-pane[data-pane="instruments"] { padding-block: .75rem; }
 .settings-pane[data-pane="instruments"] .pane-heading { padding-bottom: .5rem; margin-bottom: .6rem; }
 .background-sound-row > .sound-tile { grid-column: 3; }
@@ -572,7 +573,6 @@ main.has-animal > [data-app-view] { grid-column: 2; grid-row: 2; min-width: 0; }
 .status-card-heading select { flex: 0 0 auto; max-width: 100%; font: inherit; font-size: .72rem; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--panel); }
 .status-card-details[hidden] { display: none; }
 
-.location-order-note { color: var(--muted); font-size: .74rem; line-height: 1.4; margin-block: .5rem .85rem; }
 
 #animalImageVisibility { display: block; width: auto; margin: 0 auto 8px; font: inherit; font-size: .72rem; border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
 #animalImageDetails[hidden] { display: none; }

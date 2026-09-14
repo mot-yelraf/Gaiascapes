@@ -337,7 +337,6 @@
           </section>
           <section class="settings-pane location-settings-pane" data-pane="locations" hidden>
             <div class="pane-heading"><div class="sound-location-heading"><h3>Sound locations</h3><span id="soundLocationCoordinates" aria-live="polite" hidden></span></div></div>
-            <p class="units-note">Feline Calls, Canine Calls, Elephants, and Primates use their curated recording sites. Their locations cannot be changed.</p>
             <div class="location-editor-tabs" role="group" aria-label="Sound catalog">
               <button type="button" title="Choose Xeno-canto in Sound Sources to edit Birdsong regions. Recordings come from within 100 km of each point." data-location-catalog="birdsong">Birdsong</button>
               <button type="button" title="Choose verified dolphin recording sites." data-location-catalog="dolphin_calls">Dolphin Calls</button>
@@ -367,15 +366,16 @@
               </div>
               <div class="forecast-location-list" id="forecastLocationList" aria-label="Editable sound locations"></div>
             </div>
-            <label class="settings-field" for="soundLocationOrder"><span>Sound location order</span><select id="soundLocationOrder">
-              <option value="sequential" {% if sound_location_order == "sequential" %}selected{% endif %}>Sequential</option>
-              <option value="random" {% if sound_location_order == "random" %}selected{% endif %}>Random</option>
-            </select></label>
-            <p class="location-order-note">Random shuffles background locations. Realtime volcano, seismic, thunder/lightning, and tidal events keep their timing and order.</p>
-            <label class="settings-field" for="mapProjection"><span>Projection Model</span><select id="mapProjection">
-              <option value="robinson" {% if map_projection == "robinson" %}selected{% endif %}>Robinson</option>
-              <option value="eckert_iv" {% if map_projection == "eckert_iv" %}selected{% endif %}>Eckert IV</option>
-            </select></label>
+            <div class="location-editor-options">
+              <label class="settings-field" for="mapProjection"><span>Projection Model</span><select id="mapProjection">
+                <option value="robinson" {% if map_projection == "robinson" %}selected{% endif %}>Robinson</option>
+                <option value="eckert_iv" {% if map_projection == "eckert_iv" %}selected{% endif %}>Eckert IV</option>
+              </select></label>
+              <label class="settings-field" for="soundLocationOrder"><span>Sound location order</span><select id="soundLocationOrder">
+                <option value="sequential" {% if sound_location_order == "sequential" %}selected{% endif %}>Sequential</option>
+                <option value="random" {% if sound_location_order == "random" %}selected{% endif %}>Random</option>
+              </select></label>
+            </div>
           </section>
         </div>
       </div>
