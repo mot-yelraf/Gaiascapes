@@ -21,7 +21,7 @@ def test_location_order_persists_and_rejects_invalid_values(tmp_path):
     assert client.put('/api/settings/locations', json={'sound_location_order':'random'}).status_code == 200
     assert AppConfig.load(tmp_path/'config.json').sound_location_order == 'random'
     html = client.get('/').text
-    assert html.index('id="soundLocationOrder"') < html.index('id="mapProjection"')
+    assert html.index('id="mapProjection"') < html.index('id="soundLocationOrder"')
     assert client.put('/api/settings/locations', json={'sound_location_order':'invalid'}).status_code == 422
     assert AppConfig.load(tmp_path/'config.json').sound_location_order == 'random'
 

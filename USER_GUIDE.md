@@ -266,7 +266,7 @@ Open **Settings → Sound locations**. The catalog tabs are alphabetized: Birdso
 
 ### Editable location catalogs
 
-![Ocean Swells location editor with numbered markers, names, coordinates, and projection setting](docs/images/user-guide/07-ocean-locations.png)
+![Ocean Swells location editor with numbered markers, names, coordinates, and side-by-side projection and location order settings](docs/images/user-guide/07-ocean-locations.png)
 
 Ocean Swells, Storm Outlook, Frog Calls, and Birdsong using Xeno-canto each have **19 locations**. These catalogs are independent.
 
@@ -423,7 +423,7 @@ updates remain hidden until the player selects Reveal.
 
 ### Sound location order
 
-In **Sound locations**, choose **Sequential** (the default) or **Random** above
+In **Sound locations**, choose **Sequential** (the default) or **Random** beside
 Projection Model, then save settings. Random visits each background location once
 per shuffled round, then reshuffles; recordings continue to the next clip at each
 site on subsequent rounds. It applies to birds, frogs, whales, dolphins, the mammal collections, ocean
