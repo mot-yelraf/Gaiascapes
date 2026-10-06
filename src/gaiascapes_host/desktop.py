@@ -318,8 +318,9 @@ def _stop_owned_server(process: subprocess.Popen[Any] | None) -> None:
 
 
 def _desktop_exec_arg(value: str) -> str:
-    escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
-    return f'"{escaped}"'
+    quoted = "".join("\\" + char if char in '\\"`$' else char for char in str(value))
+    escaped = quoted.replace("\\", "\\\\").replace("%", "%%")
+    return '"' + escaped.replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r") + '"'
 
 
 def configure_linux_app_identity() -> Path | None:
@@ -334,6 +335,11 @@ def configure_linux_app_identity() -> Path | None:
     except Exception as exc:
         print(f"Gaiascapes could not set its Linux application ID: {exc}", file=sys.stderr)
 
+    return write_linux_app_launcher(resolve_data_dir().parent)
+
+
+def write_linux_app_launcher(runtime_dir: Path) -> Path | None:
+    """Create the Linux menu launcher without starting GTK or the application."""
     data_root = Path(
         os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")
     ).expanduser()
@@ -341,7 +347,6 @@ def configure_linux_app_identity() -> Path | None:
     icons_dir = data_root / "icons" / "hicolor" / "512x512" / "apps"
     desktop_path = applications_dir / f"{LINUX_APP_ID}.desktop"
     themed_icon_path = icons_dir / f"{LINUX_APP_ID}.png"
-    runtime_dir = resolve_data_dir().parent
     launcher_path = runtime_dir / "scripts" / "run_gaiascapes_gui.sh"
     desktop_text = "\n".join(
         (
@@ -350,10 +355,11 @@ def configure_linux_app_identity() -> Path | None:
             "Name=Gaiascapes",
             "Comment=Open the Gaiascapes living Earth soundscape",
             f"Exec={_desktop_exec_arg(str(launcher_path))}",
-            f"Path={runtime_dir}",
+            "Path=" + str(runtime_dir).replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t"),
             f"Icon={LINUX_APP_ID}",
             "Terminal=false",
             "StartupNotify=true",
+            "Categories=AudioVideo;Audio;",
             f"StartupWMClass={LINUX_APP_ID}",
             "",
         )

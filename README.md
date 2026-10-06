@@ -337,6 +337,18 @@ On macOS and Linux, the default installation and launch directory is `~/Gaiascap
 presents a folder selector, remembers the chosen location,
 creates a private `.venv`, installs a self-contained Python application, and
 preserves the selected installation's `data/` directory during updates.
+Desktop installations also create a click-to-launch icon, whether or not
+startup launch is enabled. On macOS, double-click `~/Applications/Gaiascapes.app`
+in Finder; you can drag it to the Dock. On Linux and Raspberry Pi OS, choose
+**Gaiascapes** from your desktop's application menu. Windows installation creates
+**Gaiascapes** and **Gaiascapes Audio** desktop shortcuts as before. Headless
+macOS/Linux installations do not create GUI icons. Rerunning the installer
+refreshes the icon and its selected installation path. Uninstalling removes
+macOS/Linux launch icons owned by that installation.
+
+If the macOS icon cannot start the app, it displays a repair message; launch
+output is saved in the selected installation's `data/desktop-launch.log`.
+
 Run the shell launchers from the selected installation directory (by default,
 `cd ~/Gaiascapes`). Direct Python and console launches default to
 `~/Gaiascapes/data`; set `GAIA_SCAPE_DATA_DIR` for a custom runtime.

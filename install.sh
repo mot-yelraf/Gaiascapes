@@ -160,6 +160,10 @@ fi
 
 printf '%s\n' "$SOURCE_DIR" > "$INSTALL_DIR/data/install-source"
 printf '%s\n' "$INSTALL_MODE" > "$INSTALL_DIR/data/install-mode"
+if [[ "$INSTALL_MODE" == desktop ]]; then
+  "$INSTALL_DIR/.venv/bin/python" -m gaiascapes_host.launch_icons "$INSTALL_DIR" \
+    || fail "Could not create the click-to-launch icon. Check the error above and retry."
+fi
 mkdir -p "$STATE_DIR"
 state_temp="$STATE_FILE.tmp.$$"
 printf '%s\n' "$INSTALL_DIR" > "$state_temp"
