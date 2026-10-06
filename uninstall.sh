@@ -28,6 +28,11 @@ elif [[ "$(uname -s)" == Darwin ]]; then
   rm -f "$legacy_plist"
 fi
 
+if [[ -x "$INSTALL_DIR/.venv/bin/python" ]]; then
+  "$INSTALL_DIR/.venv/bin/python" -m gaiascapes_host.launch_icons "$INSTALL_DIR" --remove \
+    || printf 'Could not remove the launch icon; remove it manually from your applications.\n' >&2
+fi
+
 rm -rf "$INSTALL_DIR/.venv" "$INSTALL_DIR/supercollider"
 rm -f "$INSTALL_DIR/scripts/run_gaiascapes.sh" "$INSTALL_DIR/scripts/run_gaiascapes_gui.sh" \
   "$INSTALL_DIR/scripts/run_supercollider.sh"
