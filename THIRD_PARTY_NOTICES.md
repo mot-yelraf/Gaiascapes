@@ -158,6 +158,16 @@ that all of its raster and vector map data are in the public domain:
 
 <https://www.naturalearthdata.com/about/terms-of-use/>
 
+The offline `world-terrain-robinson.png` and `world-terrain-eckert_iv.png`
+images are reprojected from Natural Earth I with Shaded Relief and Water
+(`NE1_50M_SR_W`, version 3.2.0). They show generalized land cover, relief, and
+bathymetric colors, rather than live conditions or precise depth measurements.
+Rebuild them with `python scripts/build_map_terrain.py /path/to/NE1_50M_SR_W.zip`
+using Pillow and NumPy (build-time dependencies only).
+
+- Source: <https://www.naturalearthdata.com/downloads/50m-raster-data/50m-natural-earth-1/>
+- Archive: <https://naturalearth.s3.amazonaws.com/50m_raster/NE1_50M_SR_W.zip>
+
 Credit: Made with Natural Earth. The geometry has been transformed and styled
 for Gaiascapes; Natural Earth does not warrant its accuracy or endorse this
 project.
@@ -194,7 +204,7 @@ not change the source recording's license.
 
 ### Project assets
 
-Except for the Natural Earth geometry and attributed recordings identified above, Gaiascapes's icons,
+Except for the Natural Earth map data and attributed recordings identified above, Gaiascapes's icons,
 styles, templates, and SuperCollider synth definitions are project assets
 distributed under the repository's `LICENSE`. The PNG and ICO desktop icons are
 derived from the Gaiascapes SVG artwork.

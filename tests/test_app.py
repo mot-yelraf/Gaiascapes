@@ -200,7 +200,11 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'id="mapPulseLayer"' in home.text
         assert 'id="mapSystemLocationLayer"' in home.text
         assert "My location" in home.text
-        assert 'href="/static/gaia-scape-icon.svg#realistic-land"' in home.text
+        assert home.text.count('href="/static/world-terrain-robinson.png"') == 2
+        terrain = client.get("/static/world-terrain-robinson.png")
+        assert terrain.status_code == 200
+        assert terrain.headers["content-type"] == "image/png"
+        assert terrain.content.startswith(b"\x89PNG\r\n\x1a\n")
         assert 'role="tablist"' in home.text
         assert 'data-workspace-tab="live"' in home.text
         assert 'data-workspace-tab="history"' in home.text
@@ -243,7 +247,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
             '<section class="metrics"'
         )
         assert 'id="liveMode"' in home.text
-        assert '/static/gaia-scape-icon.svg' in home.text
+        assert '/static/world-terrain-robinson.png' in home.text
         assert "Created by Peace Hill Studios" in home.text
         assert f'/static/app.js?v={app.version}' in home.text
         assert f'/static/app.css?v={app.version}' in home.text
@@ -1988,9 +1992,12 @@ def test_map_projection_persists_and_rejects_unknown_models(tmp_path):
         assert response.json()["map_projection"] == "eckert_iv"
         home = client.get("/").text
         assert '<option value="eckert_iv" selected>' in home
-        assert home.count("world-land-eckert-iv.svg#realistic-land") == 2
+        assert home.count("world-terrain-eckert_iv.png") == 2
         assert "sea-cell preference" not in home
-        assert client.get("/static/world-land-eckert-iv.svg").status_code == 200
+        terrain = client.get("/static/world-terrain-eckert_iv.png")
+        assert terrain.status_code == 200
+        assert terrain.headers["content-type"] == "image/png"
+        assert terrain.content.startswith(b"\x89PNG\r\n\x1a\n")
         saved = (tmp_path / "config.json").read_text()
         response = client.put("/api/settings/locations", json={
             **catalogs, "map_projection": "mercator",

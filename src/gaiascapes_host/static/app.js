@@ -1865,11 +1865,10 @@ if (settingsDialog && settingsForm) {
       marker.setAttribute("cx", position.x);
       marker.setAttribute("cy", position.y);
     });
-    const asset = mapProjection === "eckert_iv" ? "world-land-eckert-iv.svg" : "gaia-scape-icon.svg";
-    document.querySelectorAll("[data-map-land]").forEach((land) => {
-      land.setAttribute("href", `/static/${asset}#realistic-land`);
+    document.querySelectorAll("[data-map-terrain]").forEach((terrain) => {
+      terrain.setAttribute("href", `/static/world-terrain-${mapProjection}.png`);
     });
-    byId("worldMapDescription").textContent = `${mapProjection === "eckert_iv" ? "Eckert IV" : "Robinson"} projection with latitude and longitude grid, approximate system location, recent environmental locations, and animated sound cues.`;
+    byId("worldMapDescription").textContent = `${mapProjection === "eckert_iv" ? "Eckert IV" : "Robinson"} projection with land cover, mountain relief, ocean depth shading, a space background, latitude and longitude grid, approximate system location, recent environmental locations, and animated sound cues.`;
     byId("mapCoordinateReadout").textContent = "Move over the map to inspect coordinates";
     renderMapProjection();
     renderMapGrid();
