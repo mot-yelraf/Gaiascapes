@@ -349,6 +349,28 @@ macOS/Linux launch icons owned by that installation.
 If the macOS icon cannot start the app, it displays a repair message; launch
 output is saved in the selected installation's `data/desktop-launch.log`.
 
+With the default local installation at `~/Gaiascapes`, desktop startup does
+not require Local Network, Automation, Accessibility, or Full Disk Access
+permission. The desktop window connects to `127.0.0.1:8768`, OSC defaults to
+`127.0.0.1:57130`, and SuperCollider is configured with zero audio input
+channels and follows the selected output device. Gaiascapes does not capture
+microphone audio. Its environmental feeds use public internet services rather
+than LAN devices, so it does not need Caelus's native launcher for LAN consent.
+[Apple's local-network guidance](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy)
+also distinguishes outgoing LAN connections from accepting incoming HTTP
+connections, which does not require Local Network permission.
+
+Keep the runtime outside Desktop, Documents, Downloads, iCloud Drive, and
+network volumes if you want to avoid
+[macOS protected-folder permissions](https://support.apple.com/en-gb/guide/security/secddd1d86a6/web).
+An explicitly configured remote OSC renderer may require Local Network
+permission. LAN browser access may require an incoming
+[firewall allowance](https://support.apple.com/en-gb/guide/mac-help/mh34041/mac),
+and downloaded applications remain subject to
+[Gatekeeper checks](https://support.apple.com/en-au/102445).
+These installation and optional network conditions prevent a universal
+guarantee that macOS will never display a permission or security prompt.
+
 Run the shell launchers from the selected installation directory (by default,
 `cd ~/Gaiascapes`). Direct Python and console launches default to
 `~/Gaiascapes/data`; set `GAIA_SCAPE_DATA_DIR` for a custom runtime.
