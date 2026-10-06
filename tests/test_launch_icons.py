@@ -57,6 +57,7 @@ def test_macos_icon_preserves_unrelated_bundle(tmp_path, monkeypatch):
     assert sentinel.read_text() == "keep"
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Linux paths may contain quotes forbidden on Windows")
 def test_linux_install_creates_menu_entry_without_running_gui(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "desktop"))
     monkeypatch.setattr(launch_icons.sys, "platform", "linux")
