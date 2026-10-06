@@ -178,13 +178,17 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .map-legend-event { background: var(--earth); box-shadow: 0 0 8px rgba(216,167,109,.6); }
 .map-legend-system { display: inline-block; width: 9px; height: 9px; border: 1.5px solid rgba(255,255,255,.9); border-radius: 50%; background: #53b86b; box-shadow: 0 0 5px rgba(83,184,107,.75); }
 .map-stage { position: relative; width: 70%; margin: 0 auto; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: rgba(8,16,17,.74); box-shadow: 0 22px 70px rgba(0,0,0,.2); }
+.map-stage, .forecast-map-stage {
+  background-color: #050b18;
+  background-image: radial-gradient(circle at 17px 29px, rgba(232,241,255,.65) .7px, transparent 1.2px), radial-gradient(circle at 73px 61px, rgba(173,204,239,.45) .6px, transparent 1.1px), radial-gradient(circle at 41px 113px, rgba(232,241,255,.3) .8px, transparent 1.3px), radial-gradient(ellipse at 25% 20%, rgba(45,65,108,.28), transparent 65%);
+  background-size: 137px 151px, 211px 193px, 307px 251px, 100% 100%;
+}
 #worldMap { display: block; width: 100%; height: auto; min-height: 30rem; transform: translateY(-15px); }
 .map-glow { fill: rgba(83,167,168,.12); filter: drop-shadow(0 0 22px rgba(64,152,158,.22)); }
 .map-ocean { fill: url(#mapOcean); stroke: rgba(198,230,228,.42); stroke-width: 2; }
-.map-grid-line { fill: none; stroke: rgba(198,230,228,.17); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.map-grid-equator, .map-grid-prime { stroke: rgba(198,230,228,.3); }
+.map-grid-line { fill: none; stroke: rgba(15,39,53,.23); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.map-grid-equator, .map-grid-prime { stroke: rgba(15,39,53,.36); }
 .map-coordinate-label { fill: var(--muted); font-size: 11px; font-weight: 650; letter-spacing: .04em; }
-.map-land { opacity: .92; }
 .map-history-marker { stroke: rgba(234,241,232,.7); stroke-width: 1.1; opacity: .72; vector-effect: non-scaling-stroke; }
 .map-background-marker { fill: rgba(12,31,34,.85); stroke-width: 4; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 8px currentColor); }
 .map-background-core { stroke: rgba(234,241,232,.82); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
@@ -299,7 +303,7 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .location-editor-toolbar strong { color: var(--moss); font-size: .78rem; letter-spacing: .04em; }
 .location-editor-toolbar button { padding: .48rem .7rem; font-size: .72rem; }
 .location-editor-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(18rem, .85fr); flex: 1 1 auto; gap: .85rem; min-height: 0; }
-.forecast-map-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: .6rem; border: 1px solid var(--line); background: #0a1717; }
+.forecast-map-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: .6rem; border: 1px solid var(--line); }
 #forecastMapOceanPath { fill: url(#forecastMapOcean); }
 #forecastLocationMap { display: block; width: 100%; min-height: 0; flex: 1 1 auto; cursor: crosshair; }
 .forecast-map-stage output { flex: 0 0 auto; min-height: 1.7rem; padding: .4rem .35rem 0; color: var(--muted); font-size: .7rem; }
@@ -453,7 +457,7 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 [data-theme] .forecast-location-row.is-selected .forecast-location-number { color: var(--ink); border-color: var(--moss); }
 [data-theme] .location-editor-tabs button.is-active { background: var(--canvas); border-color: var(--moss); }
 [data-theme] .settings-field select, [data-theme] .event-mapping-input select { border-radius: 7px; }
-/* Maps retain their dark ocean, with light labels for contrast. */
+/* Maps retain their space background, with light labels for contrast. */
 [data-theme] .map-stage, [data-theme] .forecast-map-stage { --muted: #d4e4e6; }
 .settings-menu { overflow-y: auto; }
 .settings-studio-logo { display: block; width: 100%; max-width: 12rem; height: auto; flex: 0 0 auto; align-self: center; margin-top: auto; padding-top: 1rem; border-radius: 22px; }
