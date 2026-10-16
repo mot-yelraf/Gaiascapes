@@ -6,6 +6,7 @@ Fake archive retrieval keeps these checks independent of media and Wikipedia.
 import asyncio
 from types import SimpleNamespace
 
+import pytest
 from fastapi.testclient import TestClient
 
 from gaiascapes.events import GaiaEvent
@@ -13,8 +14,9 @@ from gaiascapes_host.app import create_app
 from gaiascapes_host.config import AppConfig
 
 
-def test_next_stages_recording_and_resume_plays_it_once(tmp_path):
-    AppConfig(live_mode='continuous', osc_enabled=False, system_location_enabled=False,
+@pytest.mark.parametrize("mode", ["continuous", "capture"])
+def test_next_stages_recording_and_resume_plays_it_once(tmp_path, mode):
+    AppConfig(live_mode=mode, osc_enabled=False, system_location_enabled=False,
               event_instruments={'event_1':'none','event_2':'none','event_3':'none','background':'birdsong'}).save(tmp_path/'config.json')
     app = create_app(tmp_path, auto_capture=False)
     svc = app.state.service

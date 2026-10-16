@@ -191,11 +191,11 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert "Open-Meteo surf & tides" in home.text
         assert 'id="sourceGlm"' in home.text
         assert "NOAA GOES GLM lightning" in home.text
-        assert "<h2>Live Events</h2>" in home.text
+        assert "<h3>Event History</h3>" in home.text
         assert "spatial soundscapes" not in home.text
         assert 'id="systemPulse"' not in home.text
-        assert 'id="dashboardViewButton"' in home.text
-        assert 'id="mapViewButton"' in home.text
+        assert 'id="dashboardViewButton"' not in home.text
+        assert 'id="mapViewButton"' not in home.text
         assert 'id="worldMap"' in home.text
         assert 'id="mapPulseLayer"' in home.text
         assert 'id="mapSystemLocationLayer"' in home.text
@@ -206,16 +206,15 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert terrain.headers["content-type"] == "image/png"
         assert terrain.content.startswith(b"\x89PNG\r\n\x1a\n")
         assert 'role="tablist"' in home.text
-        assert 'data-workspace-tab="live"' in home.text
-        assert 'data-workspace-tab="history"' in home.text
-        assert 'role="tabpanel"' in home.text
-        assert home.text.count('class="panel ') == 1
-        assert "Waiting for application status" not in home.text
-        assert home.text.index('class="actions"') < home.text.index(
-            'class="mode-note continuous-only"'
-        )
-        assert '>Start</button>' in home.text
-        assert 'id="startButton"' in home.text
+        assert 'data-workspace-tab=' not in home.text
+        assert 'data-settings-pane="history"' in home.text
+        assert home.text.index('data-settings-pane="theme"') < home.text.index('data-settings-pane="history"')
+        assert 'id="startButton"' not in home.text
+        assert 'id="stopButton"' not in home.text
+        assert 'id="hours"' not in home.text
+        assert 'id="duration"' not in home.text
+        assert 'class="cue-count" id="cueCount"' in home.text
+        assert 'id="message" role="status"' in home.text
         assert 'id="captureButton"' not in home.text
         assert 'id="refreshButton"' not in home.text
         assert 'id="backgroundSoundsStatus"' in home.text
@@ -224,17 +223,17 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'id="lastEarthquakeLocation"' in home.text
         assert 'id="lastEarthquakeDetail"' in home.text
         assert 'id="backgroundSoundsTitle" data-status-field="background-title">Ocean Swells</span>' in home.text
-        assert home.text.count('data-status-field="background-location"') == 2
-        assert home.text.count('data-status-field="background-characteristics"') == 2
-        assert home.text.count('data-status-field="last-event-type"') == 2
-        assert home.text.count('data-status-field="last-event-time"') == 2
-        assert home.text.count('data-status-field="last-earthquake-location"') == 2
-        assert home.text.count('data-status-field="last-earthquake-detail"') == 2
-        assert home.text.count(">Last Event</span>") == 2
-        assert home.text.count(">Last Earthquake Event</span>") == 2
-        assert home.text.count('class="status-card status-card--background"') == 2
-        assert home.text.count('class="status-card status-card--event"') == 2
-        assert home.text.count('class="status-card status-card--earthquake"') == 2
+        assert home.text.count('data-status-field="background-location"') == 1
+        assert home.text.count('data-status-field="background-characteristics"') == 1
+        assert home.text.count('data-status-field="last-event-type"') == 1
+        assert home.text.count('data-status-field="last-event-time"') == 1
+        assert home.text.count('data-status-field="last-earthquake-location"') == 1
+        assert home.text.count('data-status-field="last-earthquake-detail"') == 1
+        assert home.text.count(">Last Event</span>") == 1
+        assert home.text.count(">Last Earthquake Event</span>") == 1
+        assert home.text.count('class="status-card status-card--background"') == 1
+        assert home.text.count('class="status-card status-card--event"') == 1
+        assert home.text.count('class="status-card status-card--earthquake"') == 1
         assert 'aria-label="Map application status"' in home.text
         assert "Open-Meteo Storm Outlook" in home.text
         assert '<option value="storm_potential" >Storm Outlook</option>' in home.text
@@ -243,10 +242,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert "Event Sounds" not in home.text
         assert 'id="scStatus"' not in home.text
         assert 'id="oscStatus"' not in home.text
-        assert home.text.index('<section class="workspace">') < home.text.index(
-            '<section class="metrics"'
-        )
-        assert 'id="liveMode"' in home.text
+        assert 'id="liveMode"' not in home.text
         assert '/static/world-terrain-robinson.png' in home.text
         assert "Created by Peace Hill Studios" in home.text
         assert f'/static/app.js?v={app.version}' in home.text
@@ -339,12 +335,9 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'return `${type} · M${magnitude} · ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`' in script
         assert '!["lightning_glass", "natural_thunder"].includes(select.value)' in script
         assert "lightning_sample_rate: Number(lightningSampleSliders[0].value)" in script
-        assert "activateWorkspacePane" in script
-        assert "activateAppView" in script
-        assert 'APP_VIEW_STORAGE_KEY = "gaia-scape-app-view"' in script
-        assert 'request("/api/settings/view"' in script
-        assert "activateAppView(savedAppView(), true)" in script
-        assert "saveAppView(selectedName)" in script
+        assert "activateAppView" not in script
+        assert 'request("/api/settings/view"' not in script
+        assert 'request("/api/performance/replay"' not in script
         assert "projectCoordinates" in script
         assert "inverseProjectCoordinates" in script
         assert "mapProjectionBoundary" in script
@@ -414,11 +407,33 @@ def test_selected_app_view_persists_across_restart(tmp_path):
 
     assert invalid.status_code == 422
     assert restarted_app.state.config.app_view == "map"
-    assert 'data-initial-app-view="map"' in home.text
+    assert 'data-initial-app-view=' not in home.text
     assert '<body data-app-view=' not in home.text
-    assert 'class="view-option is-active" id="mapViewButton"' in home.text
-    assert 'id="dashboardView" data-app-view="dashboard" hidden' in home.text
+    assert 'id="mapViewButton"' not in home.text
+    assert 'id="dashboardView"' not in home.text
     assert 'id="mapView" data-app-view="map" aria-label="Global event map">' in home.text
+
+
+@pytest.mark.parametrize("view", ["dashboard", "map"])
+def test_map_is_visible_for_legacy_view_preferences(tmp_path, view):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    with TestClient(app) as client:
+        client.put("/api/settings/view", json={"view": view})
+        home = client.get("/").text
+    assert 'id="mapView" data-app-view="map" aria-label="Global event map">' in home
+    assert 'id="dashboardView"' not in home
+
+
+def test_play_selects_continuous_for_capture_configuration(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    with TestClient(app) as client:
+        assert app.state.config.live_mode == "capture"
+        started = client.post("/api/live/start", json={})
+        assert started.status_code == 200
+        assert started.json()["running"] is True
+        assert app.state.config.live_mode == "continuous"
+        assert client.post("/api/live/stop", json={}).json()["running"] is False
+    assert '"live_mode": "continuous"' in (tmp_path / "config.json").read_text()
 
 
 def test_open_meteo_message_clears_after_provider_recovers(tmp_path):

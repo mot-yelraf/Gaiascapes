@@ -6,7 +6,7 @@ Peace Hill Studios hope you find the app fun and educational with soothing backg
 
 ## Contents
 
-- [Dashboard, playback, and history](#dashboard-playback-and-history)
+- [Playback and history](#playback-and-history)
 - [Map view](#map-view)
 - [Sound sources](#sound-sources)
 - [Obtaining credentials](#obtaining-credentials)
@@ -19,9 +19,9 @@ Peace Hill Studios hope you find the app fun and educational with soothing backg
 - [Status and troubleshooting](#status-and-troubleshooting)
 - [Location privacy](#location-privacy)
 
-## Dashboard, playback, and history
+## Playback and history
 
-Use **Dashboard** for playback controls and history. Open Settings with the large, borderless **gear (⚙)**. On desktop, the gear and **Dashboard / Map** selector sit to the right of the title in a centered header. Settings contains **Sound sources**, **Sound Choices**, **Sound locations**, and **Theme**. The version appears above the Settings heading.
+The main view is the map, with the animated themed background behind it. Use the **Play / Pause / Next** control strip beside the title. Playback status and errors appear beside the controls. Open Settings with the **gear (⚙)** in its themed pill, centered beneath the playback strip. Settings contains **Sound sources**, **Sound Choices**, **Sound locations**, **Theme**, and finally **Event History**. The version appears above the Settings heading.
 
 ### Listening from another device
 
@@ -29,7 +29,7 @@ Open `http://<Gaiascapes-host-IP>:8768` from a device on the same LAN, then tap
 **Listen on this device** in **Settings → Sound Choices**, at the right of the Sound Choices heading. **Mute this device** stops playback
 in that browser without stopping the performance, the host speakers, or other
 listeners. New remote pages start silent; tap Listen again after reloading.
-**Start** and **Stop** still control the shared performance on the host.
+**Play** and **Pause** control the shared soundscape on the host.
 
 The host must be running and reachable from the listening device. Use the host’s LAN address, not `localhost` or `127.0.0.1`, on another device. The supplied launchers accept LAN connections on port **8768**; if the page will not open, check the host address, firewall, and whether the Wi-Fi network isolates clients. See [Ports and LAN access](README.md#ports) for host binding details. Listening uses the same web connection; no separate audio port needs to be opened on the LAN.
 
@@ -48,36 +48,27 @@ an echo. Remote listeners do not advance the host's recording rotation.
 
 Listening and muting take effect immediately and do not require **Save settings**. Closing Settings leaves device playback active. The relay supports up to **16 simultaneous listeners**; if it is full, mute an unused listener and retry.
 
-![Dashboard in Capture mode, showing the history window, performance length, and Start and Stop controls](docs/images/user-guide/01-dashboard-capture.png)
+### Playback controls
 
-### Mode and playback controls
-
-| Control | What it does |
-| --- | --- |
-| **Mode: Capture** | Enabled environmental feeds continue collecting observations. **Start** creates a finite performance from stored observations in the selected history window. It does not start an ongoing wildlife-recording rotation. |
-| **History window** | How far back to look for stored events, in hours. The range is **0.05–24 hours** (3 minutes–24 hours); the usual starting value is 2 hours. Changing it also refreshes the history list. |
-| **Performance length** | How long the history replay lasts, in seconds. The range is **1–3,600 seconds**; the usual starting value is 120 seconds. Events are placed into this performance timeline. |
-| **Mode: Continuous** | Plays new event sounds over one rotating background. Selecting this mode starts continuous playback. The history-window and performance-length fields are hidden because they apply to replay. |
-| **Start** | In Capture mode, starts a history replay. In Continuous mode, starts or resumes ongoing playback. |
-| **Stop** | Stops the current replay or pauses continuous sound. Enabled environmental feeds can continue collecting data. |
-
-![Dashboard in Continuous mode, with the replay-only fields hidden](docs/images/user-guide/04-dashboard-continuous.png)
+Playback uses continuous sound: new event voices play over a rotating background.
+**Play** starts or resumes the soundscape; **Pause** pauses it while enabled feeds
+continue collecting observations. **Next** stages the next animal image and pauses
+without playing its recording. Capture/replay remains available through the API;
+the UI has no mode selector or replay controls.
 
 Ocean Swells and Storm Outlook normally advance to another background location approximately every **23 seconds**. Wildlife recordings use their audio length instead. Network searches and downloads can take longer. Wildlife recordings are archived audio, even while the app is in Continuous mode.
 
-For **Birdsong, Frog Calls, Whale Song, and Dolphin Calls**, each location visit plays one complete recording once. Short recordings do not loop, and long recordings are not cut off after 23 seconds. The player requests the next location during the final **three seconds**, or final **10%** of a short clip, and fades between recordings while the outgoing clip finishes. A first-time download can leave a gap between clips. Keep a browser opened locally on the host, or the host’s desktop player, open for the recording rotation to advance. A remote listening browser does not advance that rotation. **Preview** remains an eight-second sample; **Stop** or changing the background can interrupt a recording.
+For **Birdsong, Frog Calls, Whale Song, and Dolphin Calls**, each location visit plays one complete recording once. Short recordings do not loop, and long recordings are not cut off after 23 seconds. The player requests the next location during the final **three seconds**, or final **10%** of a short clip, and fades between recordings while the outgoing clip finishes. A first-time download can leave a gap between clips. Keep a browser opened locally on the host, or the host’s desktop player, open for the recording rotation to advance. A remote listening browser does not advance that rotation. **Preview** remains an eight-second sample; **Pause** or changing the background can interrupt a recording.
 
 Every recorded-sound catalog has **19 default locations**: Wikimedia Commons Birdsong, Xeno-canto Birdsong, Frog Calls, Whale Song, and Dolphin Calls. The first pass plays the first available recording at each location. The next pass plays the second recording at each location, and later passes continue through each location's list before wrapping. A location with one verified recording repeats it on each pass. Marine playback follows the included subset when you exclude sites.
 
 ### Event History
 
-Select **Event History** to inspect recent activity. Rows show the event type, place, measurements or recording title, associated sound, and time. The list is a presentation of recent activity, not a complete inventory of downloaded recordings. Individual lightning flashes are omitted from the visible history list; they can still trigger sound and map activity.
-
-![Event History with two clearly labeled demonstration earthquakes](docs/images/user-guide/02-event-history.png)
+Open **Settings → Event History**, the last menu option, to inspect recent activity. Rows show the event type, place, measurements or recording title, associated sound, and time. The list is a presentation of recent activity, not a complete inventory of downloaded recordings. Individual lightning flashes are omitted from the visible history list; they can still trigger sound and map activity.
 
 ### Status tiles
 
-The same three separate status tiles appear below Dashboard and Map. On desktop they sit side by side along the bottom; on mobile they stack vertically:
+Three separate status tiles appear below the map. On desktop they sit side by side along the bottom; on mobile they stack vertically:
 
 | Card | Meaning |
 | --- | --- |
@@ -89,11 +80,11 @@ A dash or **Not yet** means there is no matching event to display yet. A previou
 
 ## Map view
 
-Select **Map** at the top of the window. Select **Dashboard** to return to the playback controls.
+The map is always visible in the main window, with the themed animation behind it.
 
 ![Map view with a greater roadrunner image, recording-location pointer, Play/Pause/Next controls, and status tiles](docs/images/user-guide/03-map.png)
 
-The legend distinguishes background locations, event locations, and **My location**. Moving the pointer over the map displays coordinates. The system-location marker, when available, shows the host’s approximate location derived from its public IP address. Background locations come from **Sound locations**; the host location can seed location 1 for Xeno-canto Birdsong and Storm Outlook at startup (see [Location privacy](#location-privacy)). The chosen Dashboard/Map view is remembered.
+The legend distinguishes background locations, event locations, and **My location**. Moving the pointer over the map displays coordinates. The system-location marker, when available, shows the host’s approximate location derived from its public IP address. Background locations come from **Sound locations**; the host location can seed location 1 for Xeno-canto Birdsong and Storm Outlook at startup (see [Location privacy](#location-privacy)).
 
 ## Sound sources
 
@@ -332,13 +323,11 @@ Click **Save settings** after editing Sound sources, Sound Choices, or Sound loc
 
 Use the **×** in the dialog header to close Settings; there is no Close button beside Save. Escape or clicking outside the dialog also closes it. Closing is not a save action. Unsaved edits may remain visible when you reopen Settings in the same page, so they should not be treated as a saved configuration. Reloading the page restores the saved settings.
 
-Mode and Dashboard/Map view changes are applied and saved immediately through their own controls. Theme is saved immediately in this browser. Listen/Mute applies only to the current page session. History-window and performance-length values control the current replay request and are not saved by the Settings dialog.
+Theme is saved immediately in this browser. Listen/Mute applies only to the current page session. Event History is read-only and requires no save.
 
 ## Mobile and iPhone Home Screen
 
-On narrow screens, the gear and Dashboard/Map selector appear in a centered row below the title. The status tiles stack beneath the main content. Scroll down to see all three tiles when they extend below the screen.
-
-![Mobile Dashboard with centered header controls and vertically stacked status tiles](docs/images/user-guide/15-mobile-dashboard.png)
+On narrow screens, the playback controls and gear remain stacked and centered below the title. The status tiles stack beneath the main content. Scroll down to see all three tiles when they extend below the screen.
 
 ![Mobile Map with its legend and vertically stacked status tiles](docs/images/user-guide/16-mobile-map.png)
 
@@ -376,8 +365,7 @@ Complete setup before showing the screen to the players.
    Random changes the order of sites within the selected background collection;
    it does not mix different background sound choices. Mammal sources keep their
    fixed recording sites.
-4. On the Dashboard, select **Continuous** mode, then **Pause**. Switch to
-   **Map** if you want the recording location to be a visual clue.
+4. Press **Pause**. The map shows the recording location as a visual clue.
 5. Set the background status tile’s **Reveal / Hide** selector to **Hide**.
 6. Press **Next** to prepare the first animal without playing its sound. Once
    the picture card appears, set its selector to **Hide** too. The picture and
@@ -410,15 +398,12 @@ in Sound Choices, save, and prepare the next round with Next.
 
 ### Game controls
 
-Use the Play, Pause, and Next icons beneath Dashboard/Map to start or pause the selected
-Gaiascapes session from either view. It follows the existing mode: Continuous
-starts/stops the live soundscape; Capture starts a history replay and Pause stops
-it (Play starts a new replay). Device listening remains a separate setting.
+Use the Play, Pause, and Next icons beside the title to control the continuous
+soundscape. Device listening remains a separate setting.
 
 Each status tile has a **Reveal / Hide** selector beside its title. Reveal is the
 default. Hide conceals its information, links, and detail tooltip while keeping
-the title and equal-sized tile visible. Choices stay synchronized between Map
-and Dashboard for the current page; reloading returns to Reveal. New status
+the title and equal-sized tile visible. Choices apply to the current page; reloading returns to Reveal. New status
 updates remain hidden until the player selects Reveal.
 
 ### Sound location order
@@ -437,7 +422,7 @@ map pointer visible; it stays selected
 as animals change. **Next** stages the next animal in the configured Sequential
 or Random order and pauses without playing its announcement or recording. Once
 the image is ready, Pause is highlighted. **Play** plays that staged animal.
-Next requires Continuous mode and an enabled animal recording background.
+Next requires an enabled animal recording background.
 
 ![Game map with the bird image and pointer visible while its caption, credits, and background status information are hidden](docs/images/user-guide/19-map-hidden-information.png)
 

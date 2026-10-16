@@ -1038,8 +1038,6 @@ class GaiascapesService:
         """Pause playback and stage the next animal for image-only inspection."""
         async with self._settings_lock:
             kind = self.config.instrument_slots()["background"]
-            if self.config.live_mode != "continuous":
-                raise ValueError("Select Continuous mode to step through animal recordings")
             if kind not in self._recording_status or not self._instruments_for_kind(kind):
                 raise ValueError("Select an enabled animal recording background to use Next")
             await self.stop_continuous()

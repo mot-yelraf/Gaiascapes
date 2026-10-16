@@ -570,8 +570,9 @@ voices. The
 Settings menu selects capture sources, three independent event voices, and one continuous
 background, including Birdsong Atlas. Each musical role can also be set to None. The persisted Units setting
 displays swell and tide heights in meters or feet and earthquake depth in kilometers
-or miles. The Dashboard or Map selection is also stored with the installation and
-restored when Gaiascapes starts. Both views show three separate status tiles, side by side at the bottom on desktop
+or miles. The main view is the map with the animated themed background and
+continuous playback controls. Event History is the last Settings menu option.
+The map shows three separate status tiles, side by side at the bottom on desktop
 and stacked on mobile, with the
 selected background's location and forecast characteristics, the latest event's type
 with its coordinates and event time, and a separately retained latest earthquake area

@@ -592,13 +592,6 @@ function animateMapEvent(event, instrument, role, animationDuration, audio = nul
   }
 }
 
-function applyLiveMode(mode) {
-  const continuous = mode === "continuous";
-  document.querySelectorAll(".capture-only").forEach((element) => { element.hidden = continuous; });
-  document.querySelectorAll(".continuous-only").forEach((element) => { element.hidden = !continuous; });
-  byId("startButton").textContent = "Start";
-}
-
 async function request(path, options = {}) {
   const controller = new AbortController();
   const externalSignal = options.signal;
@@ -1153,7 +1146,6 @@ function animateCapturedEvent(event, instrument = "", role = "event", cueDuratio
   if (!RECORDED_BACKGROUNDS.includes(event?.kind) || !event.traits?.media_url) {
     animateMapEvent(event, instrument, role, animationDuration);
   }
-  if (!byId("mapView")?.hidden) return;
   const layer = byId("eventPulseLayer");
   if (!layer) return;
   const longitude = Number(event?.longitude ?? 0);
@@ -1206,13 +1198,8 @@ async function updateStatus() {
         || byId("backgroundInstrument")?.value !== recordingKind) && !previewingRecording)) {
       stopRecordingPlayback();
     }
-    byId("liveMode").value = status.live.mode;
-    applyLiveMode(status.live.mode);
-    const active = continuous ? status.live.running : status.performance.running;
-    byId("performanceBadge").textContent = continuous
-      ? (status.live.running ? `Continuous · ${status.live.played_count} cues` : "Paused")
-      : (status.performance.running ? `Playing ${status.performance.played_count}/${status.performance.cue_count}` : "Capture");
-    byId("performanceBadge").classList.toggle("running", active);
+    const active = continuous && status.live.running;
+    byId("cueCount").textContent = `${status.live.played_count} cues`;
     globalThis.gaiascapesControls?.setPlaying(active);
     if (historyChanged) await updateEvents();
   } catch (error) {
@@ -1291,7 +1278,7 @@ async function recoverAfterWake() {
 
 async function updateEvents() {
   try {
-    const hours = Number(byId("hours").value);
+    const hours = Number(byId("eventList").dataset.historyHours);
     const payload = await request(`/api/events?hours=${encodeURIComponent(hours)}&limit=100`);
     const events = payload.events;
     renderMapHistory(events);
@@ -1468,16 +1455,8 @@ async function startPlayback() {
         && RECORDED_BACKGROUNDS.includes(byId("backgroundInstrument")?.value)) {
       await recordingNormalizer.resume();
     }
-    if (byId("liveMode").value === "continuous") {
-      await request("/api/live/start", {method: "POST", body: "{}"});
-      message("Continuous environmental sound is running with the selected global background.");
-    } else {
-      const payload = await request("/api/performance/replay", {
-        method: "POST",
-        body: JSON.stringify({hours: Number(byId("hours").value), performance_seconds: Number(byId("duration").value)}),
-      });
-      message(`Started ${payload.cue_count} cues from ${payload.event_count} captured events.`);
-    }
+    await request("/api/live/start", {method: "POST", body: "{}"});
+    message("Continuous environmental sound is running with the selected global background.");
     await updateStatus();
     return true;
   } catch (error) {
@@ -1486,14 +1465,12 @@ async function startPlayback() {
     return false;
   }
 }
-byId("startButton").addEventListener("click", startPlayback);
 
 async function stopPlayback() {
   try {
-    const continuous = byId("liveMode").value === "continuous";
-    await request(continuous ? "/api/live/stop" : "/api/performance/stop", {method: "POST", body: "{}"});
+    await request("/api/live/stop", {method: "POST", body: "{}"});
     stopRecordingPlayback(1);
-    message(continuous ? "Continuous environmental sound paused." : "Performance stopped.");
+    message("Continuous environmental sound paused.");
     await updateStatus();
     return true;
   } catch (error) {
@@ -1502,76 +1479,6 @@ async function stopPlayback() {
     return false;
   }
 }
-byId("stopButton").addEventListener("click", stopPlayback);
-
-byId("liveMode").addEventListener("change", async (event) => {
-  const mode = event.target.value;
-  applyLiveMode(mode);
-  try {
-    const live = await request("/api/live/mode", {
-      method: "PUT", body: JSON.stringify({mode}),
-    });
-    message(mode === "continuous"
-      ? "Continuous mode started: live event voices over the selected rotating global background."
-      : "Capture mode selected. Start replays stored history while capture continues automatically.");
-    byId("performanceBadge").textContent = live.running ? "Continuous" : "Capture";
-    await updateStatus();
-  } catch (error) { message(error.message, true); }
-});
-
-applyLiveMode(byId("liveMode").value);
-
-byId("hours").addEventListener("change", updateEvents);
-
-const appViewButtons = Array.from(document.querySelectorAll("[data-app-view-button]"));
-const appViews = Array.from(document.querySelectorAll("[data-app-view]"));
-const APP_VIEW_STORAGE_KEY = "gaia-scape-app-view";
-
-function savedAppView() {
-  const configuredView = appViews.some((view) => view.dataset.appView === document.body.dataset.initialAppView)
-    ? document.body.dataset.initialAppView
-    : "dashboard";
-  try {
-    const name = window.localStorage.getItem(APP_VIEW_STORAGE_KEY);
-    return appViews.some((view) => view.dataset.appView === name) ? name : configuredView;
-  } catch (_error) {
-    return configuredView;
-  }
-}
-
-function saveAppView(name) {
-  try {
-    window.localStorage.setItem(APP_VIEW_STORAGE_KEY, name);
-  } catch (_error) {
-    // The view still works when storage is disabled or unavailable.
-  }
-  request("/api/settings/view", {
-    method: "PUT",
-    body: JSON.stringify({view: name}),
-  }).catch((error) => message(`Could not save view preference: ${error.message}`, true));
-}
-
-function activateAppView(name, persist = false) {
-  globalThis.animalWikipedia?.refreshPointer();
-  const selectedName = appViews.some((view) => view.dataset.appView === name)
-    ? name
-    : "dashboard";
-  appViewButtons.forEach((button) => {
-    const active = button.dataset.appViewButton === selectedName;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", String(active));
-  });
-  appViews.forEach((view) => { view.hidden = view.dataset.appView !== selectedName; });
-  document.body.dataset.activeAppView = selectedName;
-  if (persist) saveAppView(selectedName);
-}
-
-appViewButtons.forEach((button) => {
-  button.addEventListener("click", () => activateAppView(button.dataset.appViewButton, true));
-});
-// Sync any preference retained by an older browser-only release into config.json.
-activateAppView(savedAppView(), true);
-
 const worldMap = byId("worldMap");
 if (worldMap) {
   renderMapProjection();
@@ -1591,36 +1498,6 @@ if (worldMap) {
   });
   worldMap.addEventListener("pointerleave", () => { byId("mapCoordinateReadout").textContent = "Move over the map to inspect coordinates"; });
 }
-
-const workspaceTabs = Array.from(document.querySelectorAll("[data-workspace-tab]"));
-const workspacePanes = Array.from(document.querySelectorAll("[data-workspace-pane]"));
-
-function activateWorkspacePane(name, focusTab = false) {
-  workspaceTabs.forEach((tab) => {
-    const active = tab.dataset.workspaceTab === name;
-    tab.classList.toggle("is-active", active);
-    tab.setAttribute("aria-selected", String(active));
-    tab.tabIndex = active ? 0 : -1;
-    if (active && focusTab) tab.focus();
-  });
-  workspacePanes.forEach((pane) => {
-    const active = pane.dataset.workspacePane === name;
-    pane.classList.toggle("is-active", active);
-    pane.hidden = !active;
-  });
-}
-
-workspaceTabs.forEach((tab, index) => {
-  tab.addEventListener("click", () => activateWorkspacePane(tab.dataset.workspaceTab));
-  tab.addEventListener("keydown", (event) => {
-    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-    event.preventDefault();
-    let next = event.key === "Home" ? 0 : event.key === "End" ? workspaceTabs.length - 1 : index;
-    if (event.key === "ArrowLeft") next = (index - 1 + workspaceTabs.length) % workspaceTabs.length;
-    if (event.key === "ArrowRight") next = (index + 1) % workspaceTabs.length;
-    activateWorkspacePane(workspaceTabs[next].dataset.workspaceTab, true);
-  });
-});
 
 let settingsToastTimer = null;
 
