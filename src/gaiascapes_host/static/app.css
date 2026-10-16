@@ -67,8 +67,8 @@ h2 { font-family: Georgia, serif; font-weight: 400; font-size: 1.45rem; }
 .title-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
 .eyebrow { margin-bottom: 10px; color: var(--earth); font-size: .71rem; font-weight: 800; letter-spacing: .19em; text-transform: uppercase; }
 .header-actions { align-self: flex-start; display: flex; align-items: center; gap: 10px; }
-.settings-trigger { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; white-space: nowrap; }
-.settings-trigger > span { font-size: 2.25em; line-height: 1; }
+.settings-trigger { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); white-space: nowrap; }
+.settings-trigger > svg { display: block; flex: 0 0 auto; fill: currentColor; }
 .view-selector { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: rgba(11,18,15,.8); }
 .view-option { padding: 7px 13px; border: 0; border-radius: 999px; color: var(--muted); background: transparent; font-size: .78rem; font-weight: 700; }
 .view-option:hover { border-color: transparent; color: var(--ink); background: rgba(255,255,255,.04); }
@@ -163,14 +163,14 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .event-list { max-height: 360px; margin-top: 22px; overflow: auto; }
 .event { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; padding: 13px 2px; border-top: 1px solid var(--line); }
 .event:first-child { border-top: 0; }
-.magnitude { color: var(--earth); font-family: Georgia, serif; font-size: 1.4rem; }
+.magnitude { color: var(--earth); font-family: Georgia, serif; font-size: .7rem; }
 .event strong { display: block; margin-bottom: 4px; font-size: .91rem; font-weight: 620; }
 .event small, .empty { color: var(--muted); }
 .event time { color: var(--muted); font-size: .78rem; white-space: nowrap; }
 
 .map-view { margin-top: 12px; }
-.map-heading { display: flex; align-items: end; justify-content: space-between; width: 70%; gap: 18px; margin: 16px auto 0; }
-.map-heading--legend-only { justify-content: center; }
+.map-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; width: 70%; gap: 18px; margin: 16px auto 0; }
+.cue-count { color: var(--muted); font-size: .75rem; white-space: nowrap; }
 .map-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; color: var(--muted); font-size: .75rem; }
 .map-legend span { display: inline-flex; align-items: center; gap: 7px; }
 .map-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
@@ -476,14 +476,11 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
   .theme-options { grid-template-columns: 1fr; }
 }
 
-/* Both desktop views share a fixed header and bottom-aligned status strip. */
+/* The map shares a fixed header and bottom-aligned status strip. */
 @media (min-width: 801px) {
   main { display: flex; flex-direction: column; height: 100dvh; padding-block: 24px 16px; }
   main > .app-header { flex: 0 0 auto; }
   #mapView:not([hidden]) { display: grid; grid-template-rows: minmax(0, 1fr) auto auto; flex: 1 1 auto; min-height: 0; gap: 12px; }
-  #dashboardView:not([hidden]) { display: grid; grid-template-rows: minmax(0, 1fr) auto; flex: 1 1 auto; min-height: 0; gap: 12px; margin-top: 12px; }
-  #dashboardView .workspace { min-height: 0; margin-block: 0; overflow-y: auto; }
-  #dashboardView .metrics { margin-block: 0; }
   #mapView .map-stage { height: 100%; min-height: 0; }
   #worldMap { height: 100%; min-height: 0; }
   #mapView .map-heading, #mapView .map-status { margin-block: 0; }
@@ -504,7 +501,8 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 #listenStatus.error { color: var(--danger); }
 #listenButton[aria-pressed="true"] { border-color: var(--moss); }
 
-[data-theme] .settings-trigger, [data-theme] .settings-trigger:hover { border: 0; background: transparent; }
+[data-theme] .settings-trigger { background: var(--panel); }
+[data-theme] .settings-trigger:hover { border-color: var(--moss); background: var(--surface); }
 
 /* A recording companion occupies its own column beside either application view. */
 main.has-animal {
@@ -582,3 +580,7 @@ main.has-animal > [data-app-view] { grid-column: 2; grid-row: 2; min-width: 0; }
 #animalImageDetails[hidden] { display: none; }
 
 .dialog-toast { display: block; pointer-events: auto; cursor: pointer; text-align: left; font-family: inherit; font-weight: normal; }
+
+.playback-message { max-width: 20rem; margin: 0; font-size: .72rem; text-align: center; }
+.playback-message:empty { display: none; }
+.settings-pane[data-pane="history"] .event-list { max-height: none; }

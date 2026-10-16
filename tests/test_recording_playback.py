@@ -42,7 +42,7 @@ const context = vm.createContext({
   setTimeout: () => {throw new Error('Recording ring must use playback time');},
 });
 vm.runInContext(source.slice(source.indexOf('function animateMapEvent('),
-  source.indexOf('\nfunction applyLiveMode(')), context);
+  source.indexOf('\nasync function request(')), context);
 vm.runInContext("animateMapEvent({kind: 'whale_song', traits: {}}, '', 'background', 24.5, audio)", context);
 const [group, pulse] = elements;
 assert.equal(pulse.style.visibility, 'hidden');

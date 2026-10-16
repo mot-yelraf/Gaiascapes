@@ -146,18 +146,16 @@ def test_start_unlocks_recording_context_before_network_request():
     run_node(r'''
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const source=fs.readFileSync(process.argv[1],'utf8'),order=[];
-let click;
 const scope=vm.createContext({
- byId:id=>id==='startButton'?{addEventListener:(name,fn)=>{click=fn}}:
-   {value:id==='backgroundInstrument'?'birdsong':'continuous'},
+ byId:()=>({value:'birdsong'}),
  deviceMuted:false,localRecordingPlayback:true,deviceListening:false,RECORDED_BACKGROUNDS:['birdsong'],
  recordingNormalizer:{resume:async()=>{order.push('resume')}},
  request:async()=>{order.push('request')},message(){},updateStatus:async()=>{},
 });
 vm.runInContext(source.slice(source.indexOf('async function startPlayback()'),
- source.indexOf('byId("stopButton").addEventListener')),scope);
+ source.indexOf('const worldMap =')),scope);
 (async()=>{
- const pending=click();
+ const pending=vm.runInContext('startPlayback()',scope);
  assert.deepEqual(order,['resume']); // Unlock inside the original user gesture.
  await pending;
  assert.deepEqual(order,['resume','request']);
@@ -289,7 +287,7 @@ const scope=vm.createContext({
  Date:{now:()=>now},setInterval:fn=>{tick=fn},recoverAfterWake:()=>{recoveries++},
 });
 vm.runInContext(source.slice(source.indexOf('window.addEventListener("pageshow"'),
- source.indexOf('byId("startButton").addEventListener')),scope);
+ source.indexOf('const worldMap =')),scope);
 now=5000;tick();assert.equal(recoveries,0);
 now=65000;tick();assert.equal(recoveries,1);
 now=70000;tick();assert.equal(recoveries,1);

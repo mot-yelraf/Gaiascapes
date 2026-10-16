@@ -1,7 +1,7 @@
 """FastAPI application and local web control surface.
 
 The application factory binds validated installation settings to the service
-layer and exposes the dashboard, status, capture, playback, and settings APIs.
+layer and exposes the map, status, capture, playback, and settings APIs.
 """
 
 from __future__ import annotations
@@ -167,16 +167,13 @@ def create_app(
 
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):
-        """Render the dashboard with the installation's current settings."""
+        """Render the map with the installation's current settings."""
         template = TEMPLATES.get_template("index.html")
         return template.render(
             request=request,
             version=_version(),
             local_playback=request.client is not None and request.client.host in {"127.0.0.1", "::1"},
             default_hours=config.replay_hours,
-            default_duration=config.performance_seconds,
-            live_mode=config.live_mode,
-            app_view=config.app_view,
             map_projection=config.map_projection,
             sound_location_order=config.sound_location_order,
             system_location_enabled=config.system_location_enabled,
@@ -397,10 +394,14 @@ def create_app(
 
     @app.post("/api/live/start")
     async def start_live():
-        """Start continuous environmental playback when that mode is selected."""
-        if config.live_mode != "continuous":
-            raise HTTPException(status_code=409, detail="Select Continuous mode first")
-        await service.start_continuous()
+        """Start continuous playback, selecting it for older capture configurations."""
+        try:
+            if config.live_mode != "continuous":
+                await service.update_settings({"live_mode": "continuous"}, config_path)
+            else:
+                await service.start_continuous()
+        except (OSError, RuntimeError) as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         return (await service.status())["live"]
 
     @app.post("/api/live/stop")

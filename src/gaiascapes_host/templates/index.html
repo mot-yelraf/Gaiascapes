@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="/static/app.css?v={{ version }}">
   <link rel="icon" href="/static/gaia-scape-icon.png?v={{ version }}" type="image/png">
 </head>
-<body data-local-playback="{{ 'true' if local_playback else 'false' }}" data-initial-app-view="{{ app_view }}">
+<body data-local-playback="{{ 'true' if local_playback else 'false' }}">
   <div class="event-pulse-layer" id="eventPulseLayer" aria-hidden="true"></div>
   <aside class="recovery-toast-stack" id="recoveryToasts" aria-live="polite" aria-label="Data source recovery status"></aside>
   <svg id="animalLocationPointer" class="animal-location-pointer" aria-hidden="true" hidden>
@@ -34,17 +34,14 @@
         </div>
       </div>
       <div class="header-actions">
-        <button class="settings-trigger" type="button" data-open-settings aria-label="Settings" title="Settings"><span aria-hidden="true">⚙</span></button>
         <div class="view-playback-controls">
-        <div class="view-selector" role="group" aria-label="Application view">
-          <button class="view-option{% if app_view == 'dashboard' %} is-active{% endif %}" id="dashboardViewButton" type="button" aria-pressed="{{ 'true' if app_view == 'dashboard' else 'false' }}" data-app-view-button="dashboard">Dashboard</button>
-          <button class="view-option{% if app_view == 'map' %} is-active{% endif %}" id="mapViewButton" type="button" aria-pressed="{{ 'true' if app_view == 'map' else 'false' }}" data-app-view-button="map">Map</button>
-        </div>
         <div class="playback-selector" role="group" aria-label="Gaiascapes playback">
           <button id="playButton" type="button" data-playback-action="play" aria-label="Play Gaiascapes" title="Play" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 4 L20 12 L7 20 Z"/></svg></button>
           <button id="pauseButton" type="button" data-playback-action="pause" aria-label="Pause Gaiascapes" title="Pause" aria-pressed="true"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 4 H10 V20 H6 Z M14 4 H18 V20 H14 Z"/></svg></button>
           <button id="nextButton" type="button" data-playback-action="next" aria-label="Next animal image and pause" title="Next animal image and pause" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 4 L16 12 L4 20 Z M17 4 H21 V20 H17 Z"/></svg></button>
         </div>
+        <button class="settings-trigger" type="button" data-open-settings aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill-rule="evenodd" d="M19.39,8.94 L19.79,10.20 L21.85,10.26 L21.85,13.74 L19.79,13.80 L19.39,15.06 L18.78,16.24 L20.19,17.74 L17.74,20.19 L16.24,18.78 L15.06,19.39 L13.80,19.79 L13.74,21.85 L10.26,21.85 L10.20,19.79 L8.94,19.39 L7.76,18.78 L6.26,20.19 L3.81,17.74 L5.22,16.24 L4.61,15.06 L4.21,13.80 L2.15,13.74 L2.15,10.26 L4.21,10.20 L4.61,8.94 L5.22,7.76 L3.81,6.26 L6.26,3.81 L7.76,5.22 L8.94,4.61 L10.20,4.21 L10.26,2.15 L13.74,2.15 L13.80,4.21 L15.06,4.61 L16.24,5.22 L17.74,3.81 L20.19,6.26 L18.78,7.76 Z M15.5,12 a3.5,3.5 0 1,0 -7,0 a3.5,3.5 0 1,0 7,0 Z"/></svg></button>
+        <span class="message playback-message" id="message" role="status"></span>
         <span id="playbackControlStatus" class="playback-control-status" role="status"></span>
         </div>
       </div>
@@ -61,55 +58,7 @@
       </div>
     </aside>
 
-    <div id="dashboardView" data-app-view="dashboard"{% if app_view != 'dashboard' %} hidden{% endif %}>
-      <section class="workspace">
-        <article class="panel stream-panel">
-        <nav class="workspace-tabs" aria-label="Environmental stream views" role="tablist">
-          <button class="workspace-tab is-active" id="workspace-tab-live" type="button" role="tab" aria-selected="true" aria-controls="workspace-pane-live" tabindex="0" data-workspace-tab="live">Live Events</button>
-          <button class="workspace-tab" id="workspace-tab-history" type="button" role="tab" aria-selected="false" aria-controls="workspace-pane-history" tabindex="-1" data-workspace-tab="history">Event History</button>
-        </nav>
-
-        <section class="workspace-pane performance-panel is-active" id="workspace-pane-live" role="tabpanel" aria-labelledby="workspace-tab-live" data-workspace-pane="live">
-          <div class="panel-title">
-            <div><p class="eyebrow">Environmental stream</p><h2>Live Events</h2></div>
-            <span class="badge" id="performanceBadge">Idle</span>
-          </div>
-          <div class="controls">
-            <label>Mode
-              <select id="liveMode"><option value="capture" {% if live_mode == "capture" %}selected{% endif %}>Capture</option><option value="continuous" {% if live_mode == "continuous" %}selected{% endif %}>Continuous</option></select>
-            </label>
-            <label class="capture-only">History window
-              <span><input id="hours" type="number" min="0.05" max="24" step="0.25" value="{{ default_hours }}"> hours</span>
-            </label>
-            <label class="capture-only">Performance length
-              <span><input id="duration" type="number" min="1" max="3600" step="1" value="{{ default_duration }}"> seconds</span>
-            </label>
-          </div>
-          <div class="actions">
-            <button class="primary" id="startButton">Start</button>
-            <button id="stopButton">Stop</button>
-          </div>
-          <p class="mode-note continuous-only" hidden>The selected background instruments evolves continuously while new event voices layer over rotating global locations of the background instrument.</p>
-          <p class="message" id="message" aria-live="polite"></p>
-        </section>
-
-        <section class="workspace-pane events-panel" id="workspace-pane-history" role="tabpanel" aria-labelledby="workspace-tab-history" data-workspace-pane="history" hidden>
-          <div class="panel-title">
-            <div><p class="eyebrow">Recent activity</p><h2>Environmental event history</h2></div>
-          </div>
-          <div class="event-list" id="eventList"><p class="empty">No captured events yet.</p></div>
-        </section>
-        </article>
-      </section>
-
-      <section class="metrics" aria-label="Application status">
-        <article class="status-card status-card--background" data-status-card="background"><div class="status-card-heading"><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "whale_song" %}Whale Song{% elif instrument_slots.background == "dolphin_calls" %}Dolphin Calls{% elif instrument_slots.background == "frog_calls" %}Frog Calls{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% elif instrument_slots.background in mammal_labels %}{{ mammal_labels[instrument_slots.background] }}{% else %}Background Sounds{% endif %}</span><select data-status-visibility="background" aria-label="Background information" aria-controls="statusDetails1"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails1"><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></div></article>
-        <article class="status-card status-card--event" data-status-card="event"><div class="status-card-heading"><span>Last Event</span><select data-status-visibility="event" aria-label="Last event information" aria-controls="statusDetails2"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails2"><strong id="lastEventType" data-status-field="last-event-type">—</strong><small id="lastEventTime" data-status-field="last-event-time">Not yet</small></div></article>
-        <article class="status-card status-card--earthquake" data-status-card="earthquake"><div class="status-card-heading"><span>Last Earthquake Event</span><select data-status-visibility="earthquake" aria-label="Last earthquake information" aria-controls="statusDetails3"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails3"><strong id="lastEarthquakeLocation" data-status-field="last-earthquake-location">—</strong><small id="lastEarthquakeDetail" data-status-field="last-earthquake-detail">Not yet</small></div></article>
-      </section>
-    </div>
-
-    <section class="map-view" id="mapView" data-app-view="map" aria-label="Global event map"{% if app_view != 'map' %} hidden{% endif %}>
+    <section class="map-view" id="mapView" data-app-view="map" aria-label="Global event map">
       <div class="map-stage">
         <svg id="worldMap" viewBox="0 170 1024 684" role="img" aria-labelledby="worldMapTitle worldMapDescription">
           <title id="worldMapTitle">Live Gaiascapes world map</title>
@@ -130,13 +79,14 @@
         </svg>
         <output class="map-coordinate-readout" id="mapCoordinateReadout" aria-live="polite">Move over the map to inspect coordinates</output>
       </div>
-      <div class="map-heading map-heading--legend-only">
+      <div class="map-heading">
         <div class="map-legend" aria-label="Map marker legend"><span><i class="map-legend-background"></i>Background</span><span><i class="map-legend-event"></i>Event</span><span><b class="map-legend-system" aria-hidden="true"></b>My location</span></div>
+        <span class="cue-count" id="cueCount">0 cues</span>
       </div>
       <section class="metrics map-status" aria-label="Map application status">
-        <article class="status-card status-card--background" data-status-card="background"><div class="status-card-heading"><span data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "whale_song" %}Whale Song{% elif instrument_slots.background == "dolphin_calls" %}Dolphin Calls{% elif instrument_slots.background == "frog_calls" %}Frog Calls{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% elif instrument_slots.background in mammal_labels %}{{ mammal_labels[instrument_slots.background] }}{% else %}Background Sounds{% endif %}</span><select data-status-visibility="background" aria-label="Background information" aria-controls="statusDetails4"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails4"><strong data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></div></article>
-        <article class="status-card status-card--event" data-status-card="event"><div class="status-card-heading"><span>Last Event</span><select data-status-visibility="event" aria-label="Last event information" aria-controls="statusDetails5"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails5"><strong data-status-field="last-event-type">—</strong><small data-status-field="last-event-time">Not yet</small></div></article>
-        <article class="status-card status-card--earthquake" data-status-card="earthquake"><div class="status-card-heading"><span>Last Earthquake Event</span><select data-status-visibility="earthquake" aria-label="Last earthquake information" aria-controls="statusDetails6"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails6"><strong data-status-field="last-earthquake-location">—</strong><small data-status-field="last-earthquake-detail">Not yet</small></div></article>
+        <article class="status-card status-card--background" data-status-card="background"><div class="status-card-heading"><span id="backgroundSoundsTitle" data-status-field="background-title">{% if instrument_slots.background == "ocean_swell" %}Ocean Swells{% elif instrument_slots.background == "storm_potential" %}Storm Outlook{% elif instrument_slots.background == "whale_song" %}Whale Song{% elif instrument_slots.background == "dolphin_calls" %}Dolphin Calls{% elif instrument_slots.background == "frog_calls" %}Frog Calls{% elif instrument_slots.background == "birdsong" %}Birdsong Atlas{% elif instrument_slots.background in mammal_labels %}{{ mammal_labels[instrument_slots.background] }}{% else %}Background Sounds{% endif %}</span><select data-status-visibility="background" aria-label="Background information" aria-controls="statusDetails4"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails4"><strong id="backgroundSoundsStatus" data-status-field="background-location">—</strong><small data-status-field="background-characteristics">Awaiting background</small></div></article>
+        <article class="status-card status-card--event" data-status-card="event"><div class="status-card-heading"><span>Last Event</span><select data-status-visibility="event" aria-label="Last event information" aria-controls="statusDetails5"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails5"><strong id="lastEventType" data-status-field="last-event-type">—</strong><small id="lastEventTime" data-status-field="last-event-time">Not yet</small></div></article>
+        <article class="status-card status-card--earthquake" data-status-card="earthquake"><div class="status-card-heading"><span>Last Earthquake Event</span><select data-status-visibility="earthquake" aria-label="Last earthquake information" aria-controls="statusDetails6"><option value="reveal" selected>Reveal</option><option value="hide">Hide</option></select></div><div class="status-card-details" id="statusDetails6"><strong id="lastEarthquakeLocation" data-status-field="last-earthquake-location">—</strong><small id="lastEarthquakeDetail" data-status-field="last-earthquake-detail">Not yet</small></div></article>
       </section>
     </section>
 
@@ -163,9 +113,14 @@
           <button type="button" class="settings-tab" data-settings-pane="instruments">Sound Choices</button>
           <button type="button" class="settings-tab" data-settings-pane="locations">Sound locations</button>
           <button type="button" class="settings-tab" data-settings-pane="theme">Theme</button>
+          <button type="button" class="settings-tab" data-settings-pane="history">Event History</button>
           <img class="settings-studio-logo" src="/static/peace-hill-studios-512.png?v={{ version }}" alt="Created by Peace Hill Studios" width="512" height="512">
         </nav>
         <div class="settings-content">
+          <section class="settings-pane" data-pane="history" hidden>
+            <div class="pane-heading"><div><h3>Event History</h3><p>Recent environmental events collected while Gaiascapes runs.</p></div></div>
+            <div class="event-list" id="eventList" data-history-hours="{{ default_hours }}"><p class="empty">No captured events yet.</p></div>
+          </section>
           <section class="settings-pane" data-pane="theme" hidden>
             <div class="pane-heading"><div><h3>Theme</h3><p>Choose a light palette for Gaiascapes and its dialogs.</p></div></div>
             <fieldset class="theme-options">
