@@ -7,6 +7,7 @@ coordinate picking, and event markers share the same geographic positions.
 """
 
 import argparse
+from itertools import product
 from pathlib import Path
 import re
 import zipfile
@@ -34,7 +35,7 @@ def build_terrain(archive: Path) -> None:
     # Pixel centers in SVG coordinates; both images cover x=69..955, y=222..802.
     x, y = np.meshgrid(69 + (np.arange(1772) + .5) / 2,
                        222 + (np.arange(1160) + .5) / 2)
-    for model in ("robinson", "eckert_iv"):
+    for model, center in product(("robinson", "eckert_iv"), (0, 90, -90, 180)):
         if model == "robinson":
             vertical = (512 - y) / 290
             latitude = np.sign(vertical) * np.interp(
@@ -50,7 +51,8 @@ def build_terrain(archive: Path) -> None:
             half_width = 443 * (1 + np.cos(theta)) / 2
         longitude = (x - 512) / half_width * 180
         visible = (np.abs(vertical) <= 1) & (np.abs(longitude) <= 180)
-        source_x = np.clip((longitude + 180) / 360 * 3600 - .5, 0, 3599)
+        source_longitude = (longitude + center + 180) % 360 - 180 if center else longitude
+        source_x = np.clip((source_longitude + 180) / 360 * 3600 - .5, 0, 3599)
         source_y = np.clip((90 - latitude) / 180 * 1800 - .5, 0, 1799)
         left, top = source_x.astype(int), source_y.astype(int)
         right, bottom = np.minimum(left + 1, 3599), np.minimum(top + 1, 1799)
@@ -60,7 +62,7 @@ def build_terrain(archive: Path) -> None:
         result = np.zeros((*visible.shape, 4), dtype=np.uint8)
         result[..., :3] = np.where(visible[..., None], colors, 0).astype(np.uint8)
         result[..., 3] = visible * 255
-        Image.fromarray(result).save(static / f"world-terrain-{model}.png", optimize=True)
+        Image.fromarray(result).save(static / f"world-terrain-{model}{f'-{center}' if center else ''}.png", optimize=True)
 
 
 if __name__ == "__main__":

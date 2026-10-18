@@ -175,6 +175,7 @@ def create_app(
             local_playback=request.client is not None and request.client.host in {"127.0.0.1", "::1"},
             default_hours=config.replay_hours,
             map_projection=config.map_projection,
+            map_center_longitude=config.map_center_longitude,
             sound_location_order=config.sound_location_order,
             system_location_enabled=config.system_location_enabled,
             enabled_sources=set(config.enabled_sources),
@@ -491,7 +492,7 @@ def create_app(
 
     @app.put("/api/settings/locations")
     async def update_forecast_locations(request: Request):
-        """Persist sound locations and the shared map projection."""
+        """Persist sound locations and shared map display settings."""
         body = await _json_body(request)
         try:
             if any(f"{kind}_{suffix}" in body for kind in MAMMAL_KINDS
@@ -503,6 +504,7 @@ def create_app(
                 "frog_calls_locations": body.get("frog_calls_locations", config.frog_calls_locations),
                 "birdsong_locations": body.get("birdsong_locations", config.birdsong_locations),
                 "map_projection": body.get("map_projection", config.map_projection),
+                "map_center_longitude": body.get("map_center_longitude", config.map_center_longitude),
                 "sound_location_order": body.get("sound_location_order", config.sound_location_order),
                 "ocean_swell_locations": body.get("ocean_swell_locations", config.ocean_swell_locations),
                 "storm_outlook_locations": body.get("storm_outlook_locations", config.storm_outlook_locations),
@@ -513,6 +515,7 @@ def create_app(
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {
             "map_projection": config.map_projection,
+            "map_center_longitude": config.map_center_longitude,
             "sound_location_order": config.sound_location_order,
             **{f"{kind}_regions": getattr(config, f"{kind}_regions") for kind in MARINE_KINDS},
             "frog_calls_locations": config.frog_calls_locations,

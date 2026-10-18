@@ -22,7 +22,7 @@ const fs = require("fs");
 const vm = require("vm");
 const assert = require("assert/strict");
 const source = fs.readFileSync(process.argv[1], "utf8");
-const context = vm.createContext({byId: () => ({value: "robinson"}), assert});
+const context = vm.createContext({byId: (id) => ({value: id === "mapProjection" ? "robinson" : "0"}), assert});
 vm.runInContext(source.slice(source.indexOf("let mapProjection ="), source.indexOf("function mapMarkerTitle")), context);
 vm.runInContext(`
   for (const model of ["robinson", "eckert_iv"]) {
@@ -40,6 +40,36 @@ vm.runInContext(`
     assert(!mapContainsPoint(512, 200));
     assert.equal(projectCoordinates(180, 0).x, 955);
   }
+  for (const model of ["robinson", "eckert_iv"]) {
+    mapProjection = model;
+    for (const center of [180, 90, -90]) {
+      mapCenterLongitude = center;
+      assert.equal(projectCoordinates(center, 0).x, 512);
+      if (center === 180) {
+        assert.equal(projectCoordinates(180, 0).x, 512);
+        assert.equal(projectCoordinates(-180, 0).x, 512);
+        assert.equal(projectCoordinates(0, 0).x, 69);
+        assert(projectCoordinates(179, 0).x < 512);
+        assert(projectCoordinates(-179, 0).x > 512);
+      }
+      for (const latitude of [-90, -60, 0, 60, 90]) {
+        for (const longitude of [-180, -179, -120, -90, -1, 0, 1, 90, 120, 179, 180]) {
+          const point = projectCoordinates(longitude, latitude);
+          const inverse = inverseProjectCoordinates(point.x, point.y);
+          assert(Math.abs(inverse.latitude - latitude) < 1e-5);
+          const error = ((inverse.longitude - longitude + 540) % 360) - 180;
+          assert(Math.abs(error) < 1e-5);
+          assert(mapContainsPoint(point.x, point.y));
+        }
+      }
+      assert(mapContainsPoint(954, 512));
+      assert(!mapContainsPoint(956, 512));
+      assert.equal(projectMapOffset(180, 0).x, 955);
+      assert.equal(projectMapOffset(-180, 0).x, 69);
+      assert(mapProjectionBoundary().includes("955.00,512.00"));
+    }
+  }
+  mapCenterLongitude = 0;
   assert.equal(projectCoordinates(180, 90).x, 733.5);
   assert.equal(projectCoordinates(0, 90).y, 290.5);
   const areaScale = (latitude) => {

@@ -208,6 +208,7 @@ class AppConfig:
     app_view: str = "dashboard"
     sound_location_order: str = "sequential"
     map_projection: str = "robinson"
+    map_center_longitude: int = 0
     system_location_enabled: bool = True
     continuous_interval_seconds: float = 23.0
     osc_host: str = "127.0.0.1"
@@ -359,6 +360,8 @@ class AppConfig:
         self.map_projection = str(self.map_projection).strip().lower()
         if self.map_projection not in {"robinson", "eckert_iv"}:
             raise ValueError("Projection model must be Robinson or Eckert IV")
+        if type(self.map_center_longitude) is not int or self.map_center_longitude not in {0, 90, -90, 180}:
+            raise ValueError("Map center longitude must be 0, 90, -90, or 180")
         self.continuous_interval_seconds = max(
             5.0, min(300.0, float(self.continuous_interval_seconds))
         )

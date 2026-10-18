@@ -1,8 +1,10 @@
 # Gaiascapes user guide
 
-This guide explains the controls in Gaiascapes **v0.26.255.22**. Installation and system setup are covered separately in the [README](README.md).
+This guide explains the controls in Gaiascapes **v0.26.291.2**. Installation and system setup are covered separately in the [README](README.md).
 
 Peace Hill Studios hope you find the app fun and educational with soothing background sounds.
+
+Screenshots were captured from this version on 18 October 2026 using a separate temporary installation. Enabled sources and selected sounds are examples, not the factory defaults. The mobile images show Safari’s 390 × 844 responsive viewport.
 
 ## Contents
 
@@ -12,7 +14,7 @@ Peace Hill Studios hope you find the app fun and educational with soothing backg
 - [Obtaining credentials](#obtaining-credentials)
 - [Sound Choices](#sound-choices)
 - [Sound locations](#sound-locations)
-- [Theme](#theme)
+- [Display](#display)
 - [Saving settings](#saving-settings)
 - [Mobile and iPhone Home Screen](#mobile-and-iphone-home-screen)
 - [Gaiascapes Game](#gaiascapes-game)
@@ -21,7 +23,17 @@ Peace Hill Studios hope you find the app fun and educational with soothing backg
 
 ## Playback and history
 
-The main view is the map, with the animated themed background behind it. Use the **Play / Pause / Next** control strip beside the title. Playback status and errors appear beside the controls. Open Settings with the **gear (⚙)** in its themed pill, centered beneath the playback strip. Settings contains **Sound sources**, **Sound Choices**, **Sound locations**, **Theme**, and finally **Event History**. The version appears above the Settings heading.
+The main view is the map, with the animated themed background behind it. Use the **Play / Pause / Next** control strip beside the title. Playback status and errors appear beside the controls. Open Settings with the **gear (⚙)** in its themed pill, centered beneath the playback strip. Settings contains **Sound sources**, **Sound Choices**, **Sound locations**, **Display**, and finally **Event History**. The version appears above the Settings heading.
+
+### Start a soundscape
+
+1. Open Gaiascapes and select the **gear (⚙)** to open Settings.
+2. In **Sound sources**, enable the source you want. **Birdsong → Wikimedia Commons** works without an API key. Sources that need credentials show their fields when enabled.
+3. In **Sound Choices**, use the arrows under **Background** to choose a sound, and set its volume. Choose event sounds independently, or select **None** for quiet event slots.
+4. Select **Save settings** and wait for **Settings saved.** Close Settings with **×**.
+5. Press **Play**. On another device, also enable **Settings → Sound Choices → Listen on this device**. Press **Pause** to stop the shared soundscape; **Mute this device** affects only that listening browser.
+
+For synthesized backgrounds or event voices, the host’s SuperCollider renderer must be running. Recorded animal sounds, the map, settings, and event history can operate without it.
 
 ### Listening from another device
 
@@ -60,11 +72,13 @@ Ocean Swells and Storm Outlook normally advance to another background location a
 
 For **Birdsong, Frog Calls, Whale Song, and Dolphin Calls**, each location visit plays one complete recording once. Short recordings do not loop, and long recordings are not cut off after 23 seconds. The player requests the next location during the final **three seconds**, or final **10%** of a short clip, and fades between recordings while the outgoing clip finishes. A first-time download can leave a gap between clips. Keep a browser opened locally on the host, or the host’s desktop player, open for the recording rotation to advance. A remote listening browser does not advance that rotation. **Preview** remains an eight-second sample; **Pause** or changing the background can interrupt a recording.
 
-Every recorded-sound catalog has **19 default locations**: Wikimedia Commons Birdsong, Xeno-canto Birdsong, Frog Calls, Whale Song, and Dolphin Calls. The first pass plays the first available recording at each location. The next pass plays the second recording at each location, and later passes continue through each location's list before wrapping. A location with one verified recording repeats it on each pass. Marine playback follows the included subset when you exclude sites.
+Wikimedia Commons Birdsong, Xeno-canto Birdsong, Frog Calls, Whale Song, and Dolphin Calls each have **19 default locations**. Mammal collections use their smaller, fixed site lists. The first pass plays the first available recording at each location. The next pass plays the second recording at each location, and later passes continue through each location's list before wrapping. A location with one verified recording repeats it on each pass. Marine playback follows the included subset when you exclude sites.
 
 ### Event History
 
-Open **Settings → Event History**, the last menu option, to inspect recent activity. Rows show the event type, place, measurements or recording title, associated sound, and time. The list is a presentation of recent activity, not a complete inventory of downloaded recordings. Individual lightning flashes are omitted from the visible history list; they can still trigger sound and map activity.
+Open **Settings → Event History**, the last menu option, to inspect recent activity. Rows show the event type, place, measurements or recording title, associated sound, and time. The list is a presentation of recent activity, not a complete inventory of downloaded recordings. Individual lightning flashes are omitted from the visible history list; they can still trigger sound and map activity. **No events in this history window** means there is no activity to list for the current window.
+
+![Event History in a new session with no captured events](docs/images/user-guide/02-event-history.png)
 
 ### Status tiles
 
@@ -82,15 +96,15 @@ A dash or **Not yet** means there is no matching event to display yet. A previou
 
 The map is always visible in the main window, with the themed animation behind it.
 
-![Map view with a greater roadrunner image, recording-location pointer, Play/Pause/Next controls, and status tiles](docs/images/user-guide/03-map.png)
+![Pacific-centered map with a staged Redpoll image, its recording-location pointer, Play/Pause/Next controls, and status tiles](docs/images/user-guide/03-map.png)
 
 The legend distinguishes background locations, event locations, and **My location**. Moving the pointer over the map displays coordinates. The system-location marker, when available, shows the host’s approximate location derived from its public IP address. Background locations come from **Sound locations**; the host location can seed location 1 for Xeno-canto Birdsong and Storm Outlook at startup (see [Location privacy](#location-privacy)).
 
 ## Sound sources
 
-Open **Settings → Sound sources**. Background sources appear above event sources, and tiles are alphabetized within each group. Click a checkbox or its artwork to enable or disable that source. Hover over a title, or focus its checkbox, for its explanation.
+Open **Settings → Sound sources**. Background sources appear first: Birdsong through Whale Song, followed by the four mammal groups and Announce Recording. Event sound sources appear below them. Click a checkbox or its artwork to enable or disable that source. Hover over a title, or focus its checkbox, for its explanation.
 
-![Sound sources with Xeno-canto credential fields and enabled demonstration source tiles](docs/images/user-guide/05-sound-sources.png)
+![Sound sources with Xeno-canto selected for Birdsong and empty shared API-key fields for Birdsong and Frog Calls](docs/images/user-guide/05-sound-sources.png)
 
 **Sound sources** determines which providers are available. **Sound Choices** determines which of their sounds play. Enabling several background sources does not mix them together: there is one Background sound selection. Save source changes before using Preview.
 
@@ -125,6 +139,10 @@ animal labels are used where species identification is unresolved. See the
 | **Open-Meteo Storm Outlook** | Forecast conditions used to generate a storm background. | No key. Uses the 19 Storm Outlook locations. This is forecast convection, not observed lightning. |
 | **Open-Meteo surf & tides** | Modeled ocean swells and tide turns. | No key. Uses the 19 Ocean Swells locations. Supplies both the Ocean Swells background and events for Tidal Tone. |
 | **Whale Song** | NOAA whale songs and calls from several species at 19 locations. | No key. Select included sites in Sound locations. |
+| **Feline Calls** | Bundled lion and tiger recordings at fixed sites. | No key or download; no editable location catalog. |
+| **Canine Calls** | Bundled dingo, fox, and coyote recordings at fixed sites. | No key or download; no editable location catalog. |
+| **Elephants** | One bundled soundscape at a fixed site; see the proof-of-concept limitation above. | No key or download; disabled by default. |
+| **Primates** | Bundled bonnet macaque and howler monkey recordings at fixed sites. | No key or download; no editable location catalog. |
 
 NOAA marine recordings come from the [NCEI passive acoustic archive](https://www.ncei.noaa.gov/products/passive-acoustic-data). Gaiascapes caches selected recordings locally and retains their source attribution. A first use can require a download; subsequent uses can reuse the cache.
 
@@ -221,13 +239,17 @@ extra process. Repeated announcements may use the in-memory speech cache.
 | --- | --- |
 | **None** | No continuous background. Event voices can still play. |
 | **Birdsong** | Plays recordings from the provider chosen in the Birdsong source tile. |
+| **Canine Calls** | Plays bundled canine recordings; enable Canine Calls in Sound sources. |
 | **Dolphin Calls** | Plays curated dolphin recordings from the included sites. |
+| **Elephants** | Plays the bundled elephant soundscape; enable Elephants and review the limitation above. |
+| **Feline Calls** | Plays bundled lion and tiger recordings; enable Feline Calls. |
 | **Frog Calls** | Plays Xeno-canto frog recordings from the configured regions. |
 | **Ocean Swells** | Generates a background from modeled swell conditions; requires Open-Meteo surf & tides. |
+| **Primates** | Plays bundled primate recordings; enable Primates. |
 | **Storm Outlook** | Generates a background from forecast storm conditions; requires Open-Meteo Storm Outlook. |
 | **Whale Song** | Plays curated whale songs and calls from the included sites. |
 
-Birdsong, Frog Calls, Whale Song, and Dolphin Calls play through the browser or desktop web view. Ocean Swells, Storm Outlook, and the event voices use the configured SuperCollider renderer. A working recording preview therefore does not by itself confirm that synthesized sounds are available.
+Animal recordings, including the four mammal groups, play through the browser or desktop web view. Ocean Swells, Storm Outlook, and the event voices use the configured SuperCollider renderer. A working recording preview therefore does not by itself confirm that synthesized sounds are available.
 
 ### Event 1, Event 2, and Event 3
 
@@ -257,7 +279,7 @@ Open **Settings → Sound locations**. The catalog tabs are alphabetized: Birdso
 
 ### Editable location catalogs
 
-![Ocean Swells location editor with numbered markers, names, coordinates, and side-by-side projection and location order settings](docs/images/user-guide/07-ocean-locations.png)
+![Pacific-centered Ocean Swells location editor with numbered markers, names, coordinates, and Sound location order below the map](docs/images/user-guide/07-ocean-locations.png)
 
 Ocean Swells, Storm Outlook, Frog Calls, and Birdsong using Xeno-canto each have **19 locations**. These catalogs are independent.
 
@@ -294,11 +316,23 @@ These tabs list verified archive sites, not movable search centers. Use **Includ
 
 Map points identify documented recording locations or approximate study regions, not exact animal positions. Site codes such as HI01 distinguish NOAA recording stations. Each site lists its recording count; single-recording sites repeat on each pass. Playback visits included sites and rotates through available clips at a site. These recordings are archived examples; they are not live hydrophone streams or worldwide searches.
 
-### Restore defaults and Projection Model
+### Restore defaults
 
 **Restore defaults** resets the active catalog in the editor. For editable catalogs, it restores the default 19 points. For Whale Song and Dolphin Calls, it includes every available site again. Click **Save settings** to persist the reset. It does not reset every sound’s catalog at once.
 
-**Projection Model** changes both the main map and the location editor:
+## Display
+
+### Theme
+
+Open **Settings → Display** and choose **Earth** (light brown), **Wind** (light yellow), **Fire** (light red), or **Ocean** (light blue). The palette applies to the main view and dialogs immediately, and a **Theme applied.** notification confirms the change.
+
+![Display pane with the Theme palettes above Map controls for Projection Model and Map View](docs/images/user-guide/13-display.png)
+
+Theme is remembered in this browser’s local storage and does not require **Save settings**. Each browser can use its own theme. If browser storage is unavailable, the notification explains that the selection cannot be remembered after reload.
+
+### Map
+
+Below Theme, **Projection Model** changes both the main map and the location editor:
 
 | Projection | Appearance |
 | --- | --- |
@@ -307,19 +341,26 @@ Map points identify documented recording locations or approximate study regions,
 
 Changing projection does not move stored geographic coordinates or change which region supplies sound. Save settings to retain the preference.
 
-## Theme
+In **Settings → Display → Map**, choose a **Projection Model** and a **Map View**:
 
-Open **Settings → Theme** and choose **Earth** (light brown), **Wind** (light yellow), **Fire** (light red), or **Ocean** (light blue). The palette applies to the main view and dialogs immediately, and a **Theme applied.** notification confirms the change.
+| Map View | Center longitude |
+| --- | --- |
+| **0° longitude centered** | Greenwich meridian; the default. |
+| **90° east longitude centered** | 90° E. |
+| **90° west longitude centered** | 90° W. |
+| **180° longitude centered** | The antimeridian, centering the Pacific. |
 
-![Theme settings with Earth, Wind, Fire, and Ocean palettes](docs/images/user-guide/13-theme.png)
+![Map View expanded to show all four center-longitude choices](docs/images/user-guide/20-map-view-options.png)
 
-Theme is remembered in this browser’s local storage and does not require **Save settings**. Each browser can use its own theme. If browser storage is unavailable, the notification explains that the selection cannot be remembered after reload.
+Changing either selector updates both maps immediately. Terrain, grid lines, markers, and coordinate picking follow the selected view; the location catalogs keep their geographic coordinates. Click **Save settings** to remember the map preferences for this installation. Closing without saving leaves the preview visible in the current page; reloading restores the saved settings.
+
+![Main map with 180° longitude at its center](docs/images/user-guide/21-pacific-map.png)
 
 ## Saving settings
 
-Click **Save settings** after editing Sound sources, Sound Choices, or Sound locations. The button saves changes across all three sections, not just the visible one. The button shows **Saving…** while the request is in progress. Look for the **Settings saved.** toast before closing the dialog. Success and failure notifications for saving, previewing, restoring defaults, and changing theme dismiss automatically after **five seconds**, or immediately when clicked. Source recovery toasts follow the same behavior. A newer result replaces the previous notification and starts a fresh five-second interval. Errors begin with **Error:**; resolve the reported problem and save again. Earlier parts of a save may already have been applied.
+Click **Save settings** after editing Sound sources, Sound Choices, Sound locations, or the Map section in Display. The button saves changes across these sections, not just the visible one. The button shows **Saving…** while the request is in progress. Look for the **Settings saved.** toast before closing the dialog. Success and failure notifications for saving, previewing, restoring defaults, and changing theme dismiss automatically after **five seconds**, or immediately when clicked. Source recovery toasts follow the same behavior. A newer result replaces the previous notification and starts a fresh five-second interval. Errors begin with **Error:**; resolve the reported problem and save again. Earlier parts of a save may already have been applied.
 
-![Settings saved notification above the dialog footer](docs/images/user-guide/14-settings-saved.png)
+![Settings saved notification in Display after saving a Pacific-centered map](docs/images/user-guide/14-settings-saved.png)
 
 Use the **×** in the dialog header to close Settings; there is no Close button beside Save. Escape or clicking outside the dialog also closes it. Closing is not a save action. Unsaved edits may remain visible when you reopen Settings in the same page, so they should not be treated as a saved configuration. Reloading the page restores the saved settings.
 
@@ -329,7 +370,9 @@ Theme is saved immediately in this browser. Listen/Mute applies only to the curr
 
 On narrow screens, the playback controls and gear remain stacked and centered below the title. The status tiles stack beneath the main content. Scroll down to see all three tiles when they extend below the screen.
 
-![Mobile Map with its legend and vertically stacked status tiles](docs/images/user-guide/16-mobile-map.png)
+![Narrow-screen map with the playback controls, staged animal image, and Pacific-centered map](docs/images/user-guide/16-mobile-map.png)
+
+![The same narrow-screen page scrolled down to its three stacked status tiles](docs/images/user-guide/22-mobile-status.png)
 
 In Settings, the section buttons move above the content. The listening button is in the Sound Choices heading. Units, Announce Recorded Sounds, Background, and the event tiles stack below it. Scroll inside the settings content to reach the lower controls. The **×** remains in the dialog header and **Save settings** in its footer.
 
@@ -408,12 +451,11 @@ updates remain hidden until the player selects Reveal.
 
 ### Sound location order
 
-In **Sound locations**, choose **Sequential** (the default) or **Random** beside
-Projection Model, then save settings. Random visits each background location once
+In **Settings → Sound locations**, choose **Sequential** (the default) or **Random** in **Sound location order**, below the map and location list, then save settings. Projection Model is in **Display → Map**. Random visits each background location once
 per shuffled round, then reshuffles; recordings continue to the next clip at each
 site on subsequent rounds. It applies to birds, frogs, whales, dolphins, the mammal collections, ocean
 swell, and storm outlook. Actual recording coordinates remain unchanged.
-Realtime volcano, seismic, thunder/lightning, and tidal events are not randomized.
+Realtime earthquake, thunder/lightning, and tidal events are not randomized.
 Changes take effect on the next background visit without interrupting a recording.
 
 The animal image tile has its own top-center **Reveal / Hide** selector, initially
@@ -424,7 +466,7 @@ or Random order and pauses without playing its announcement or recording. Once
 the image is ready, Pause is highlighted. **Play** plays that staged animal.
 Next requires an enabled animal recording background.
 
-![Game map with the bird image and pointer visible while its caption, credits, and background status information are hidden](docs/images/user-guide/19-map-hidden-information.png)
+![Quiz view with the Redpoll image and location pointer visible while its caption, credits, and background status details are hidden](docs/images/user-guide/19-map-hidden-information.png)
 
 ## Status and troubleshooting
 
@@ -455,10 +497,15 @@ a previously displayed marker. See [Privacy](PRIVACY.md) for details.
 
 ## Screenshot image credit
 
-The bird image visible in the map screenshots is
+The Redpoll photograph in the refreshed map, mobile, and quiz screenshots is
+[Carduelis flammea CT6](https://commons.wikimedia.org/wiki/File:Carduelis_flammea_CT6.jpg)
+by [Cephas](https://commons.wikimedia.org/wiki/User:Cephas), used under
+[CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
+It is scaled and cropped by the application’s image card. The photograph retains
+its license. The photograph’s location is separate from the recording location
+shown on the map; the screenshot uses the Commons recording selected by Next.
+
+The older, unreferenced screenshots retained in the image directory may show
 [Greater Roadrunner Tingley Beach](https://commons.wikimedia.org/wiki/File:Greater_Roadrunner_Tingley_Beach.jpg)
 by Polinova (Daniel Polin), licensed under
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
-It is shown scaled within the application without other photographic edits.
-The photograph retains its license; the demonstration map location does not
-identify the location of a verified sound recording.
