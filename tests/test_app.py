@@ -2026,6 +2026,45 @@ def test_map_projection_persists_and_rejects_unknown_models(tmp_path):
     assert restarted.state.config.map_projection == "eckert_iv"
 
 
+@pytest.mark.parametrize("model", ["robinson", "eckert_iv"])
+@pytest.mark.parametrize("center", [180, 90, -90])
+def test_map_center_persists_and_validates_without_changing_locations(tmp_path, model, center):
+    """Keep the display center independent of stored geographic coordinates."""
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    assert app.state.config.map_center_longitude == 0
+    locations = list(app.state.config.ocean_swell_locations)
+    with TestClient(app) as client:
+        response = client.put("/api/settings/locations", json={
+            "map_projection": model, "map_center_longitude": center,
+        })
+        assert response.status_code == 200
+        assert response.json()["map_center_longitude"] == center
+        assert app.state.config.ocean_swell_locations == locations
+        home = client.get("/").text
+        assert 'data-settings-pane="theme">Display</button>' in home
+        display = home.split('data-pane="theme" hidden>')[1].split('</section>')[0]
+        assert display.index('<h3>Theme</h3>') < display.index('<h3>Map</h3>')
+        assert 'id="mapProjection"' in display
+        assert 'id="mapCenterLongitude"' in display
+        location_pane = home.split('data-pane="locations" hidden>')[1].split('</section>')[0]
+        assert 'id="mapProjection"' not in location_pane
+        assert f'<option value="{center}" selected>' in home
+        assert home.count(f"world-terrain-{model}-{center}.png") == 2
+        assert client.get(f"/static/world-terrain-{model}-{center}.png").status_code == 200
+        saved = (tmp_path / "config.json").read_text()
+        for value in [-180, 45, -45, "90", "180", True, None, 180.5]:
+            response = client.put("/api/settings/locations", json={"map_center_longitude": value})
+            assert response.status_code == 422
+            assert (tmp_path / "config.json").read_text() == saved
+        assert client.put("/api/settings/locations", json={}).status_code == 200
+        assert app.state.config.map_center_longitude == center
+    restarted = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    assert restarted.state.config.map_center_longitude == center
+    with TestClient(restarted) as client:
+        assert client.put("/api/settings/locations", json={"map_center_longitude": 0}).status_code == 200
+        assert client.get("/").text.count(f"world-terrain-{model}.png") == 2
+
+
 def test_birdsong_location_catalog_persists_and_replaces_live_client(tmp_path):
     from gaiascapes_host.config import AppConfig
     from gaiascapes_host.xeno_canto import XenoCantoClient

@@ -584,3 +584,5 @@ main.has-animal > [data-app-view] { grid-column: 2; grid-row: 2; min-width: 0; }
 .playback-message { max-width: 20rem; margin: 0; font-size: .72rem; text-align: center; }
 .playback-message:empty { display: none; }
 .settings-pane[data-pane="history"] .event-list { max-height: none; }
+
+.theme-options + .pane-heading { margin-top: 1.5rem; }

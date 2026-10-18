@@ -69,7 +69,7 @@
           </defs>
           <path class="map-glow" id="mapGlowPath"/>
           <path class="map-ocean" id="mapOceanPath"/>
-          <image data-map-terrain href="/static/world-terrain-{{ map_projection }}.png" x="69" y="222" width="886" height="580" clip-path="url(#mapGlobeClip)" aria-hidden="true"/>
+          <image data-map-terrain href="/static/world-terrain-{{ map_projection }}{{ "-" ~ map_center_longitude if map_center_longitude else "" }}.png" x="69" y="222" width="886" height="580" clip-path="url(#mapGlobeClip)" aria-hidden="true"/>
           <g id="mapGridLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
           <g id="mapHistoryLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
           <g id="mapBackgroundLayer" clip-path="url(#mapGlobeClip)" aria-hidden="true"></g>
@@ -112,7 +112,7 @@
           <button type="button" class="settings-tab is-active" data-settings-pane="sources">Sound sources</button>
           <button type="button" class="settings-tab" data-settings-pane="instruments">Sound Choices</button>
           <button type="button" class="settings-tab" data-settings-pane="locations">Sound locations</button>
-          <button type="button" class="settings-tab" data-settings-pane="theme">Theme</button>
+          <button type="button" class="settings-tab" data-settings-pane="theme">Display</button>
           <button type="button" class="settings-tab" data-settings-pane="history">Event History</button>
           <img class="settings-studio-logo" src="/static/peace-hill-studios-512.png?v={{ version }}" alt="Created by Peace Hill Studios" width="512" height="512">
         </nav>
@@ -130,6 +130,19 @@
               <label class="theme-option" data-theme-swatch="fire"><input type="radio" name="theme" value="fire"><span><strong>Fire</strong><small>Light red</small></span></label>
               <label class="theme-option" data-theme-swatch="ocean"><input type="radio" name="theme" value="ocean"><span><strong>Ocean</strong><small>Light blue</small></span></label>
             </fieldset>
+            <div class="pane-heading"><div><h3>Map</h3><p>Choose the projection and center longitude for both maps.</p></div></div>
+            <div class="location-editor-options">
+              <label class="settings-field" for="mapProjection"><span>Projection Model</span><select id="mapProjection">
+                <option value="robinson" {% if map_projection == "robinson" %}selected{% endif %}>Robinson</option>
+                <option value="eckert_iv" {% if map_projection == "eckert_iv" %}selected{% endif %}>Eckert IV</option>
+              </select></label>
+              <label class="settings-field" for="mapCenterLongitude"><span>Map View</span><select id="mapCenterLongitude">
+                <option value="0" {% if map_center_longitude == 0 %}selected{% endif %}>0° longitude centered</option>
+                <option value="90" {% if map_center_longitude == 90 %}selected{% endif %}>90° east longitude centered</option>
+                <option value="-90" {% if map_center_longitude == -90 %}selected{% endif %}>90° west longitude centered</option>
+                <option value="180" {% if map_center_longitude == 180 %}selected{% endif %}>180° longitude centered</option>
+              </select></label>
+            </div>
           </section>
           <section class="settings-pane is-active" data-pane="sources">
             <div class="pane-heading"><div><h3>Captured sound sources</h3><p>Choose live Earth data feeds and archived animal recordings.</p></div></div>
@@ -314,7 +327,7 @@
                     <clipPath id="forecastMapClip"><path id="forecastMapClipPath"/></clipPath>
                   </defs>
                   <path class="map-ocean" id="forecastMapOceanPath"/>
-                  <image data-map-terrain href="/static/world-terrain-{{ map_projection }}.png" x="69" y="222" width="886" height="580" clip-path="url(#forecastMapClip)" aria-hidden="true"/>
+                  <image data-map-terrain href="/static/world-terrain-{{ map_projection }}{{ "-" ~ map_center_longitude if map_center_longitude else "" }}.png" x="69" y="222" width="886" height="580" clip-path="url(#forecastMapClip)" aria-hidden="true"/>
                   <g id="forecastLocationMarkerLayer" clip-path="url(#forecastMapClip)"></g>
                 </svg>
                 <output id="forecastLocationReadout" aria-live="polite">Location 1 selected. Click the map to move it.</output>
@@ -322,10 +335,6 @@
               <div class="forecast-location-list" id="forecastLocationList" aria-label="Editable sound locations"></div>
             </div>
             <div class="location-editor-options">
-              <label class="settings-field" for="mapProjection"><span>Projection Model</span><select id="mapProjection">
-                <option value="robinson" {% if map_projection == "robinson" %}selected{% endif %}>Robinson</option>
-                <option value="eckert_iv" {% if map_projection == "eckert_iv" %}selected{% endif %}>Eckert IV</option>
-              </select></label>
               <label class="settings-field" for="soundLocationOrder"><span>Sound location order</span><select id="soundLocationOrder">
                 <option value="sequential" {% if sound_location_order == "sequential" %}selected{% endif %}>Sequential</option>
                 <option value="random" {% if sound_location_order == "random" %}selected{% endif %}>Random</option>

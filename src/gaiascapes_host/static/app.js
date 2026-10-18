@@ -349,6 +349,7 @@ async function playRecordingCue(cue) {
 }
 
 let mapProjection = byId("mapProjection")?.value || "robinson";
+let mapCenterLongitude = Number(byId("mapCenterLongitude")?.value) || 0;
 
 const ROBINSON_X = [1, .9986, .9954, .99, .9822, .973, .96, .9427, .9216, .8962, .8679, .835, .7986, .7597, .7186, .6732, .6213, .5722, .5322];
 const ROBINSON_Y = [0, .062, .124, .186, .248, .31, .372, .434, .4958, .5571, .6176, .6769, .7346, .7903, .8435, .8936, .9394, .9761, 1];
@@ -360,7 +361,16 @@ function interpolateRobinson(table, latitude) {
   return table[lower] + ((table[upper] - table[lower]) * (position - lower));
 }
 
+function centeredLongitude(longitude) {
+  return mapCenterLongitude !== 0 ? ((longitude + 540) % 360) - 180 : longitude;
+}
+
 function projectCoordinates(longitude, latitude) {
+  const safeLongitude = Math.max(-180, Math.min(180, Number(longitude) || 0));
+  return projectMapOffset(centeredLongitude(safeLongitude - mapCenterLongitude), latitude);
+}
+
+function projectMapOffset(longitude, latitude) {
   const safeLongitude = Math.max(-180, Math.min(180, Number(longitude) || 0));
   const safeLatitude = Math.max(-90, Math.min(90, Number(latitude) || 0));
   if (mapProjection === "eckert_iv") {
@@ -395,7 +405,7 @@ function inverseProjectCoordinates(x, y) {
     const latitudeSine = (theta + sine * (Math.cos(theta) + 2)) / (2 + Math.PI / 2);
     return {
       latitude: Math.asin(Math.max(-1, Math.min(1, latitudeSine))) * 180 / Math.PI,
-      longitude: ((x - 512) / (443 * (1 + Math.cos(theta)) / 2)) * 180,
+      longitude: centeredLongitude(((x - 512) / (443 * (1 + Math.cos(theta)) / 2)) * 180 + mapCenterLongitude),
     };
   }
   const normalizedY = Math.max(-1, Math.min(1, (512 - y) / 290));
@@ -406,7 +416,7 @@ function inverseProjectCoordinates(x, y) {
   const latitude = Math.sign(normalizedY) * ((band + ((targetY - ROBINSON_Y[band]) / span)) * 5);
   const xScale = interpolateRobinson(ROBINSON_X, latitude);
   const longitude = ((x - 512) / (443 * xScale)) * 180;
-  return {latitude, longitude};
+  return {latitude, longitude: centeredLongitude(longitude + mapCenterLongitude)};
 }
 
 function createSvgElement(name, attributes = {}) {
@@ -421,8 +431,8 @@ function mapPath(points) {
 
 function mapProjectionBoundary() {
   const points = [];
-  for (let latitude = -90; latitude <= 90; latitude += 2) points.push(projectCoordinates(180, latitude));
-  for (let latitude = 90; latitude >= -90; latitude -= 2) points.push(projectCoordinates(-180, latitude));
+  for (let latitude = -90; latitude <= 90; latitude += 2) points.push(projectMapOffset(180, latitude));
+  for (let latitude = 90; latitude >= -90; latitude -= 2) points.push(projectMapOffset(-180, latitude));
   return `${mapPath(points)} Z`;
 }
 
@@ -438,7 +448,7 @@ function mapContainsPoint(x, y) {
   const normalizedY = (512 - Number(y)) / (mapProjection === "eckert_iv" ? 221.5 : 290);
   if (Math.abs(normalizedY) > 1) return false;
   const latitude = inverseProjectCoordinates(512, y).latitude;
-  const halfWidth = projectCoordinates(180, latitude).x - 512;
+  const halfWidth = projectMapOffset(180, latitude).x - 512;
   return Math.abs(Number(x) - 512) <= halfWidth;
 }
 
@@ -450,10 +460,10 @@ function renderMapGrid() {
   labels.replaceChildren();
   for (let latitude = -60; latitude <= 60; latitude += 30) {
     const points = [];
-    for (let longitude = -180; longitude <= 180; longitude += 4) points.push(projectCoordinates(longitude, latitude));
+    for (let longitude = -180; longitude <= 180; longitude += 4) points.push(projectMapOffset(longitude, latitude));
     layer.append(createSvgElement("path", {d: mapPath(points), class: `map-grid-line${latitude === 0 ? " map-grid-equator" : ""}`}));
     if (latitude !== 0) {
-      const position = projectCoordinates(-180, latitude);
+      const position = projectMapOffset(-180, latitude);
       const label = createSvgElement("text", {x: position.x - 8, y: position.y + 4, class: "map-coordinate-label", "text-anchor": "end"});
       label.textContent = `${Math.abs(latitude)}°${latitude > 0 ? "N" : "S"}`;
       labels.append(label);
@@ -461,12 +471,13 @@ function renderMapGrid() {
   }
   for (let longitude = -180; longitude <= 180; longitude += 30) {
     const points = [];
-    for (let latitude = -90; latitude <= 90; latitude += 3) points.push(projectCoordinates(longitude, latitude));
-    layer.append(createSvgElement("path", {d: mapPath(points), class: `map-grid-line${longitude === 0 ? " map-grid-prime" : ""}`}));
+    for (let latitude = -90; latitude <= 90; latitude += 3) points.push(projectMapOffset(longitude, latitude));
+    const geographicLongitude = centeredLongitude(longitude + mapCenterLongitude);
+    layer.append(createSvgElement("path", {d: mapPath(points), class: `map-grid-line${geographicLongitude === 0 ? " map-grid-prime" : ""}`}));
     if (longitude % 60 === 0) {
-      const position = projectCoordinates(longitude, -90);
+      const position = projectMapOffset(longitude, -90);
       const label = createSvgElement("text", {x: position.x, y: position.y + 24, class: "map-coordinate-label", "text-anchor": "middle"});
-      label.textContent = longitude === 0 ? "0°" : `${Math.abs(longitude)}°${longitude > 0 ? "E" : "W"}`;
+      label.textContent = geographicLongitude === 0 ? "0°" : `${Math.abs(geographicLongitude)}°${geographicLongitude > 0 ? "E" : "W"}`;
       labels.append(label);
     }
   }
@@ -1729,7 +1740,7 @@ if (settingsDialog && settingsForm) {
     renderForecastLocationList();
   }
 
-  byId("mapProjection").addEventListener("change", () => {
+  function updateMapDisplay() {
     const markers = Array.from(document.querySelectorAll(
       "#mapHistoryLayer circle, #mapBackgroundLayer circle, #mapPulseLayer circle, #mapSystemLocationLayer circle"
     )).map((marker) => ({
@@ -1737,20 +1748,23 @@ if (settingsDialog && settingsForm) {
       coordinates: inverseProjectCoordinates(Number(marker.getAttribute("cx")), Number(marker.getAttribute("cy"))),
     }));
     mapProjection = byId("mapProjection").value;
+    mapCenterLongitude = Number(byId("mapCenterLongitude").value);
     markers.forEach(({marker, coordinates}) => {
       const position = projectCoordinates(coordinates.longitude, coordinates.latitude);
       marker.setAttribute("cx", position.x);
       marker.setAttribute("cy", position.y);
     });
     document.querySelectorAll("[data-map-terrain]").forEach((terrain) => {
-      terrain.setAttribute("href", `/static/world-terrain-${mapProjection}.png`);
+      terrain.setAttribute("href", `/static/world-terrain-${mapProjection}${mapCenterLongitude ? `-${mapCenterLongitude}` : ""}.png`);
     });
     byId("worldMapDescription").textContent = `${mapProjection === "eckert_iv" ? "Eckert IV" : "Robinson"} projection with land cover, mountain relief, ocean depth shading, a space background, latitude and longitude grid, approximate system location, recent environmental locations, and animated sound cues.`;
     byId("mapCoordinateReadout").textContent = "Move over the map to inspect coordinates";
     renderMapProjection();
     renderMapGrid();
     renderForecastMarkers();
-  });
+  }
+  byId("mapProjection").addEventListener("change", updateMapDisplay);
+  byId("mapCenterLongitude").addEventListener("change", updateMapDisplay);
 
   const forecastLocationMap = byId("forecastLocationMap");
   if (forecastLocationMap) {
@@ -2039,6 +2053,7 @@ if (settingsDialog && settingsForm) {
         method: "PUT",
         body: JSON.stringify({
           map_projection: mapProjection,
+          map_center_longitude: mapCenterLongitude,
           sound_location_order: byId("soundLocationOrder").value,
           birdsong_locations: forecastLocationCatalogs.birdsong,
           frog_calls_locations: forecastLocationCatalogs.frog_calls,
