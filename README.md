@@ -648,3 +648,8 @@ Keep that checkout available. If it has moved or is missing, run `install.sh`
 from a current source checkout with `GAIA_SCAPE_INSTALL_DIR` set explicitly.
 When moving an installation, recreate its `.venv` from the source checkout;
 virtual environments contain absolute paths. Keep the `data/` folder.
+
+## Attribution
+
+- System Architecture: TW Farley
+- Implementation and Coding: TW Farley and ChatGPT/Codex
