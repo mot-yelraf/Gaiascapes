@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ctypes
 import os
+import platform
 import plistlib
 import shutil
 import subprocess
@@ -433,6 +434,23 @@ def set_windows_app_icon(window: Any) -> None:
         print(f"Gaiascapes could not set its Windows app icon: {exc}", file=sys.stderr)
 
 
+def configure_gui_environment() -> None:
+    """Apply Pi/Trixie rendering defaults before GTK and WebKit initialize."""
+    os.environ.setdefault("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
+    if not sys.platform.startswith("linux"):
+        return
+    os.environ.setdefault("GDK_BACKEND", "wayland,x11")
+    try:
+        model = Path("/proc/device-tree/model").read_text()
+        release = platform.freedesktop_os_release()
+    except (OSError, UnicodeError):
+        return
+    if "Raspberry Pi" in model and release.get("VERSION_CODENAME") == "trixie":
+        # Match Sensorius' workaround for corrupted WebKitGTK/Mesa surfaces.
+        os.environ.setdefault("WEBKIT_SKIA_ENABLE_CPU_RENDERING", "1")
+        os.environ.setdefault("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
+
+
 def main() -> int:
     """Start or attach to Gaiascapes and display its native desktop window."""
     if relaunch_for_macos_app_identity():
@@ -440,7 +458,7 @@ def main() -> int:
     base_url = _base_url()
     owned_server: subprocess.Popen[Any] | None = None
     server_stop_lock = threading.Lock()
-    os.environ.setdefault("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
+    configure_gui_environment()
 
     def stop_owned_server() -> None:
         """Stop the server once when either the window or event loop closes."""
@@ -451,7 +469,6 @@ def main() -> int:
         _stop_owned_server(process)
 
     if sys.platform.startswith("linux"):
-        os.environ.setdefault("GDK_BACKEND", "wayland,x11")
         if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
             print(
                 "Gaiascapes GUI not started: no DISPLAY or WAYLAND_DISPLAY is set.",

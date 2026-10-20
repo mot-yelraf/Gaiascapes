@@ -19,6 +19,11 @@ and WebKitGTK bindings:
 sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
 ```
 
+On Raspberry Pi OS Trixie, the desktop launcher defaults to WebKit CPU rendering
+and disables DMA-BUF rendering to avoid corrupted or streaked window content.
+These defaults apply before GTK initializes and preserve explicitly supplied
+`WEBKIT_SKIA_ENABLE_CPU_RENDERING` and `WEBKIT_DISABLE_DMABUF_RENDERER` values.
+
 Windows uses the Microsoft Edge WebView2 Evergreen Runtime and .NET Framework
 4.8. Python 3.13 x64 is recommended. `install.cmd` checks the Runtime before
 installing desktop dependencies; `install.cmd -Mode Headless` skips this
@@ -82,3 +87,7 @@ The supplied launchers default to `0.0.0.0`, making the web UI available on the 
 Browse to `http://<gaia-host-ip>:8768` from another computer on the same network.
 
 Port 8768/TCP must be allowed by the host firewall. OSC remains local on UDP 57130.
+Port 8768 must also be free of other applications. Some Nodus WeeWX installations
+use it for their separate discovery/settings service, even when their dashboard
+uses another port. Relocate that service and its dashboard links before starting
+Gaiascapes on the same host.
