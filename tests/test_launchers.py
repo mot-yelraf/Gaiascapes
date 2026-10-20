@@ -332,7 +332,7 @@ def test_desktop_starts_native_window_and_stops_owned_server(tmp_path, monkeypat
     assert calls[0][0] == "create"
     assert calls[0][1][:2] == (
         "Gaiascapes · Living Earth",
-        "http://127.0.0.1:8768/",
+        "http://127.0.0.1:8769/",
     )
     assert calls[0][2]["width"] == 1500
     assert calls[0][2]["min_size"] == (960, 640)
@@ -455,8 +455,8 @@ def test_desktop_health_probe_bypasses_http_proxy(monkeypatch):
         ),
     )
 
-    assert desktop._is_healthy("http://127.0.0.1:8768/", timeout=2.0)
-    assert calls == [("http://127.0.0.1:8768/healthz", 2.0)]
+    assert desktop._is_healthy("http://127.0.0.1:8769/", timeout=2.0)
+    assert calls == [("http://127.0.0.1:8769/healthz", 2.0)]
 
 
 def test_linux_identity_installs_matching_icon(tmp_path: Path, monkeypatch):

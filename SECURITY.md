@@ -14,7 +14,7 @@ with fake keys. No response-time guarantee is offered.
 
 ## Intended deployment
 
-The app is designed for a trusted host and LAN. HTTP port 8768 intentionally
+The app is designed for a trusted host and LAN. HTTP port 8769 intentionally
 allows unauthenticated browsing, listening, and settings changes from LAN
 devices. This is not an internet-facing or multi-user access-control service.
 See [Privacy](PRIVACY.md) for credential storage, geolocation, and network behavior.

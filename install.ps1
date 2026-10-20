@@ -104,7 +104,7 @@ try {
         }
     }
     Write-Host "Gaiascapes installed in $InstallDir"
-    Write-Host 'Open the Gaiascapes shortcut. Browser UI: http://127.0.0.1:8768'
+    Write-Host 'Open the Gaiascapes shortcut. Browser UI: http://127.0.0.1:8769'
     Write-Host 'SuperCollider is optional; install it separately for synthesized sound.'
     Write-Host "Application data: $(Join-Path $InstallDir 'data')"
 } catch {

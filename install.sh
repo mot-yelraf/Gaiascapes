@@ -203,6 +203,6 @@ printf '\nGaiascapes was installed in %s\n' "$INSTALL_DIR"
 printf 'Start audio: %s/scripts/run_supercollider.sh\n' "$INSTALL_DIR"
 printf 'Start the desktop app: %s/scripts/run_gaiascapes_gui.sh\n' "$INSTALL_DIR"
 printf 'Start headless: %s/scripts/run_gaiascapes.sh\n' "$INSTALL_DIR"
-printf 'Open locally: http://127.0.0.1:8768\n'
-printf 'Open on LAN: http://<gaia-host-ip>:8768\n'
+printf 'Open locally: http://127.0.0.1:8769\n'
+printf 'Open on LAN: http://<gaia-host-ip>:8769\n'
 printf 'Application data: %s/data\n' "$INSTALL_DIR"

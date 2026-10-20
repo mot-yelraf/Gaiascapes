@@ -37,13 +37,13 @@ For synthesized backgrounds or event voices, the host’s SuperCollider renderer
 
 ### Listening from another device
 
-Open `http://<Gaiascapes-host-IP>:8768` from a device on the same LAN, then tap
+Open `http://<Gaiascapes-host-IP>:8769` from a device on the same LAN, then tap
 **Listen on this device** in **Settings → Sound Choices**, at the right of the Sound Choices heading. **Mute this device** stops playback
 in that browser without stopping the performance, the host speakers, or other
 listeners. New remote pages start silent; tap Listen again after reloading.
 **Play** and **Pause** control the shared soundscape on the host.
 
-The host must be running and reachable from the listening device. Use the host’s LAN address, not `localhost` or `127.0.0.1`, on another device. The supplied launchers accept LAN connections on port **8768**; if the page will not open, check the host address, firewall, and whether the Wi-Fi network isolates clients. See [Ports and LAN access](README.md#ports) for host binding details. Listening uses the same web connection; no separate audio port needs to be opened on the LAN.
+The host must be running and reachable from the listening device. Use the host’s LAN address, not `localhost` or `127.0.0.1`, on another device. The supplied launchers accept LAN connections on port **8769**; if the page will not open, check the host address, firewall, and whether the Wi-Fi network isolates clients. See [Ports and LAN access](README.md#ports) for host binding details. Listening uses the same web connection; no separate audio port needs to be opened on the LAN.
 
 The browser combines live SuperCollider audio with the animal recordings served
 by Gaiascapes. Only Gaiascapes audio is included. Update and restart both the
@@ -472,7 +472,7 @@ Next requires an enabled animal recording background.
 
 | What you see or hear | What it means and what to check |
 | --- | --- |
-| **Remote page will not open** | Verify the host is running, use its LAN IP with port 8768, and check firewall and Wi-Fi client isolation. |
+| **Remote page will not open** | Verify the host is running, use its LAN IP with port 8769, and check firewall and Wi-Fi client isolation. |
 | **Listening stops after locking the phone or switching apps** | Return to Gaiascapes and follow the message beside Listen to reconnect. Browser audio can be suspended in the background. |
 | **No background selected** | Background is set to None. |
 | **Awaiting background** | No matching background cue is available yet. This alone does not identify a provider failure. Check that playback is running and the source is enabled. |

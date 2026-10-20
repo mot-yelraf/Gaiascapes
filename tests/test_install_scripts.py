@@ -18,7 +18,7 @@ def test_installer_uses_dedicated_ports_and_chosen_runtime():
     assert 'GAIA_SCAPE_AUDIO_DEVICE' in installer
     assert "install-location" in installer
     assert 'mkdir -p "$INSTALL_DIR/data"' in installer
-    assert "http://127.0.0.1:8768" in installer
+    assert "http://127.0.0.1:8769" in installer
     assert 'GAIA_SCAPE_DATA_DIR="$RUNTIME_DIR/data"' in launcher
     assert "8000" not in installer
     assert "8765" not in installer

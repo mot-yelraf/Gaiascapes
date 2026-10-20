@@ -263,11 +263,11 @@ chronological. Captured forecast records remain available to the replay engine.
 
 ## Ports
 
-- HTTP: `8768` (`GAIA_SCAPE_HTTP_PORT`)
+- HTTP: `8769` (`GAIA_SCAPE_HTTP_PORT`)
 - OSC UDP: `57130` (`GAIA_SCAPE_OSC_PORT`)
 
 The supplied launchers bind to `0.0.0.0` for private-LAN access by default. Browse
-to `http://<gaia-host-ip>:8768` from another computer. Set
+to `http://<gaia-host-ip>:8769` from another computer. Set
 `GAIA_SCAPE_HTTP_HOST=127.0.0.1` for access from this computer only.
 
 ## Installation
@@ -351,7 +351,7 @@ output is saved in the selected installation's `data/desktop-launch.log`.
 
 With the default local installation at `~/Gaiascapes`, desktop startup does
 not require Local Network, Automation, Accessibility, or Full Disk Access
-permission. The desktop window connects to `127.0.0.1:8768`, OSC defaults to
+permission. The desktop window connects to `127.0.0.1:8769`, OSC defaults to
 `127.0.0.1:57130`, and SuperCollider is configured with zero audio input
 channels and follows the selected output device. Gaiascapes does not capture
 microphone audio. Its environmental feeds use public internet services rather
@@ -467,7 +467,7 @@ Passing `GAIA_SCAPE_AUDIO_DEVICE` to the installer saves that selection in
 the installed data directory.
 
 For unattended operation, use `./scripts/run_gaiascapes.sh`. Open
-`http://127.0.0.1:8768` locally or `http://<computer-ip>:8768` on the same LAN.
+`http://127.0.0.1:8769` locally or `http://<computer-ip>:8769` on the same LAN.
 
 ## OSC cue contract
 
@@ -629,12 +629,12 @@ The repository is [mot-yelraf/Gaiascapes](https://github.com/mot-yelraf/Gaiascap
 
 The transition preserves `GAIA_SCAPE_*` environment variables,
 `gaia_scape.sqlite3`, browser storage keys, asset filenames, OS integration
-identifiers. HTTP remains on 8768 and OSC on 57130.
+identifiers. HTTP remains on 8769 and OSC on 57130.
 Installed runtime state is not migrated by these source changes.
 
 ## Privacy and security
 
-LAN access remains enabled by default on port 8768 so other devices can browse
+LAN access remains enabled by default on port 8769 so other devices can browse
 and listen. Devices that can reach the app can also change its settings; there
 is no login, and HTTP traffic is not encrypted. Use it on a trusted LAN and do
 not expose it directly to the internet.

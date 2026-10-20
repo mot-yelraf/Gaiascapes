@@ -79,16 +79,16 @@ To skip pywebview and the WebView2 prerequisite:
 ```
 
 The Gaiascapes shortcut then starts the server in a console. Open
-**http://127.0.0.1:8768** in your browser and use Ctrl+C to stop the server.
+**http://127.0.0.1:8769** in your browser and use Ctrl+C to stop the server.
 You can also start it from the installation directory:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_gaiascapes.ps1 -Mode Server
 ```
 
-The default HTTP port is **8768**; SuperCollider receives OSC on **57130** and
+The default HTTP port is **8769**; SuperCollider receives OSC on **57130** and
 uses **57131** for its language port. For access from other computers, allow
-TCP 8768 on your private network in Windows Firewall. OSC stays local.
+TCP 8769 on your private network in Windows Firewall. OSC stays local.
 
 ## Update, repair, and removal
 
