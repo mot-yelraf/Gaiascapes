@@ -4,7 +4,7 @@
   or temporarily relocate this directory.
 - Gaiascapes is a host-first Python application for macOS, Linux, and
   Raspberry Pi. ESP32 support may be added later as a companion device.
-- The default HTTP port is 8768. Ports 8000, 8765, and 8767 belong to sibling
+- The default HTTP port is 8769. Ports 8000, 8765, and 8767 belong to sibling
   projects and must not become defaults here.
 - Keep normalized events, score construction, and renderer interfaces
   provider-independent.
@@ -48,7 +48,7 @@
 - Do not use the installed Gaiascapes process for UI tests that can persist
   settings. After any test involving runtime overrides, verify that the
   installed configuration still uses the intended production parameters,
-  including HTTP port `8768` and OSC port `57130`, before installation or
+  including HTTP port `8769` and OSC port `57130`, before installation or
   handoff.
 - Treat settings materialization, normalized metric names, SQLite persistence,
   and gateway polling behavior as compatibility-sensitive.

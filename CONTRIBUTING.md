@@ -39,7 +39,7 @@ GAIA_SCAPE_DATA_DIR=/tmp/gaia-scape-dev \
   .venv/bin/python Gaiascapes.py
 ```
 
-The default HTTP port is `8768`. Do not change the project default to `8000`,
+The default HTTP port is `8769`. Do not change the project default to `8000`,
 `8765`, or `8767`, which belong to sibling applications. OSC defaults to UDP
 port `57130`.
 

@@ -6,7 +6,7 @@ services to fetch the environmental observations and recordings you enable.
 
 ## Network access
 
-LAN access is enabled on HTTP port 8768. Other devices that can reach this port
+LAN access is enabled on HTTP port 8769. Other devices that can reach this port
 can browse, listen, read non-secret settings and history, and change settings.
 There is no login or HTTPS in the application. Credential entry from a LAN
 browser travels over HTTP. Use a trusted network; do not forward this port to

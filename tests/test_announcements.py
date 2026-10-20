@@ -140,7 +140,7 @@ def test_settings_persist_and_speech_route_uses_retained_cues(tmp_path, monkeypa
     assert saved.announcement_volume == .4
     assert saved.announcement_variant == "female"
     assert saved.announcement_synthesizer == "espeak-ng"
-    assert saved.http_port == 8768 and saved.osc_port == 57130
+    assert saved.http_port == 8769 and saved.osc_port == 57130
     assert client.get('/api/announcements/1').status_code == 404
     app.state.service._emitted_cues.append({'sequence': 1, 'event': {
         'kind': 'birdsong', 'traits': {'title': 'Greater Roadrunner · song', 'place': 'New Mexico'},

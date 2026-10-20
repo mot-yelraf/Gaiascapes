@@ -287,7 +287,7 @@ def test_concurrent_settings_updates_preserve_both_changes_and_environment(tmp_p
     persisted = json.loads((tmp_path / 'config.json').read_text())
     assert persisted['units'] == 'imperial'
     assert persisted['app_view'] == 'map'
-    assert (persisted['http_port'], persisted['osc_port']) == (8768, 57130)
+    assert (persisted['http_port'], persisted['osc_port']) == (8769, 57130)
     assert (service.config.http_port, service.config.osc_port) == (18868, 18869)
 
 

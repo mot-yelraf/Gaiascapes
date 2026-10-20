@@ -198,7 +198,7 @@ class AppConfig:
 
     config_revision: int = 8
     http_host: str = "0.0.0.0"
-    http_port: int = 8768
+    http_port: int = 8769
     usgs_url: str = DEFAULT_USGS_URL
     poll_seconds: int = 60
     retention_days: int = 7

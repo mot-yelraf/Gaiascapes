@@ -27,7 +27,7 @@ def main() -> None:
     sentinel = data_dir / 'preserve-me.txt'
     sentinel.write_text('existing history', encoding='utf-8')
     config_path = data_dir / 'config.json'
-    config = {'http_port': 8768, 'osc_port': 57130, 'enabled_sources': [], 'osc_enabled': False}
+    config = {'http_port': 8769, 'osc_port': 57130, 'enabled_sources': [], 'osc_enabled': False}
     config_path.write_text(json.dumps(config), encoding='utf-8')
     saved_config = config_path.read_bytes()
     environment = dict(os.environ, GAIA_SCAPE_DATA_DIR=str(data_dir),
@@ -92,7 +92,7 @@ with TestClient(create_app(auto_capture=False)) as client:
     environment.pop('PYTHONPATH', None)
     subprocess.run([str(python), str(offline_check)], cwd=root, env=environment, check=True)
     saved = json.loads(config_path.read_text())
-    assert saved['http_port'] == 8768 and saved['osc_port'] == 57130
+    assert saved['http_port'] == 8769 and saved['osc_port'] == 57130
     print('Windows installation, repair, shortcuts, and installed offline APIs passed')
 
 

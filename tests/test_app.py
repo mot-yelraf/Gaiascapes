@@ -2398,7 +2398,7 @@ def test_location_opt_out_persists_and_prevents_lookup(tmp_path):
         assert 'id="systemLocationEnabled" >' in client.get('/').text
     restored = AppConfig.load(tmp_path / 'config.json')
     assert restored.system_location_enabled is False
-    assert (restored.http_host, restored.http_port, restored.osc_port) == ('0.0.0.0', 8768, 57130)
+    assert (restored.http_host, restored.http_port, restored.osc_port) == ('0.0.0.0', 8769, 57130)
 
 
 def test_eumetsat_failure_status_does_not_leak_sdk_secrets(tmp_path, monkeypatch):

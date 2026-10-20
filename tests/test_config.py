@@ -180,6 +180,19 @@ def test_existing_config_enables_glm_once_during_revision_migration(tmp_path):
     assert reloaded.enabled_sources == ["usgs", "noaa_glm"]
 
 
+@pytest.mark.parametrize("port", [8768, 8879])
+def test_saved_http_port_survives_default_change(tmp_path, monkeypatch, port):
+    monkeypatch.delenv("GAIA_SCAPE_HTTP_PORT", raising=False)
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"http_port": port}), encoding="utf-8")
+
+    config = AppConfig.load(path)
+    config.save(path)
+
+    assert config.http_port == port
+    assert json.loads(path.read_text(encoding="utf-8"))["http_port"] == port
+
+
 def test_environment_port_overrides_are_not_persisted(tmp_path, monkeypatch):
     path = tmp_path / "config.json"
     path.write_text(

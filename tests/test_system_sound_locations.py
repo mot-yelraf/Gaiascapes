@@ -87,7 +87,7 @@ def test_startup_initializes_clients_and_persisted_lists_before_polling(tmp_path
             for _slug, name, lat, lon, _file in BIRDSONG_LOCATIONS
         ]
     saved = json.loads((tmp_path / 'config.json').read_text())
-    assert saved['http_port'] == 8768 and saved['osc_port'] == 57130
+    assert saved['http_port'] == 8769 and saved['osc_port'] == 57130
     assert saved['birdsong_locations'][0] == expected
     assert saved['frog_calls_locations'] == original.frog_calls_locations
 

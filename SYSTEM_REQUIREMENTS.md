@@ -84,10 +84,10 @@ with your macOS when installing manually or resolving Homebrew failures.
 ## Network
 
 The supplied launchers default to `0.0.0.0`, making the web UI available on the LAN.
-Browse to `http://<gaia-host-ip>:8768` from another computer on the same network.
+Browse to `http://<gaia-host-ip>:8769` from another computer on the same network.
 
-Port 8768/TCP must be allowed by the host firewall. OSC remains local on UDP 57130.
-Port 8768 must also be free of other applications. Some Nodus WeeWX installations
-use it for their separate discovery/settings service, even when their dashboard
-uses another port. Relocate that service and its dashboard links before starting
-Gaiascapes on the same host.
+Port 8769/TCP must be allowed by the host firewall and free of other applications.
+OSC remains local on UDP 57130. Existing installations retain their saved
+`http_port`; changing the default does not migrate an installed `data/config.json`.
+When migrating to 8769, stop Gaiascapes, update that saved value, and restart it.
+Any Nodus service previously moved to 8769 must be relocated first.
