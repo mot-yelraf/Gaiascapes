@@ -200,7 +200,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'id="mapPulseLayer"' in home.text
         assert 'id="mapSystemLocationLayer"' in home.text
         assert "My location" in home.text
-        assert home.text.count('href="/static/world-terrain-robinson.png"') == 2
+        assert home.text.count('href="/static/world-terrain-eckert_iv.png"') == 2
         terrain = client.get("/static/world-terrain-robinson.png")
         assert terrain.status_code == 200
         assert terrain.headers["content-type"] == "image/png"
@@ -243,7 +243,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'id="scStatus"' not in home.text
         assert 'id="oscStatus"' not in home.text
         assert 'id="liveMode"' not in home.text
-        assert '/static/world-terrain-robinson.png' in home.text
+        assert '/static/world-terrain-eckert_iv.png' in home.text
         assert "Created by Peace Hill Studios" in home.text
         assert f'/static/app.js?v={app.version}' in home.text
         assert f'/static/app.css?v={app.version}' in home.text
@@ -1994,22 +1994,22 @@ def test_app_migrates_legacy_database_filename(tmp_path, legacy_name):
 
 def test_map_projection_persists_and_rejects_unknown_models(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
-    assert app.state.config.map_projection == "robinson"
+    assert app.state.config.map_projection == "eckert_iv"
     catalogs = {
         "ocean_swell_locations": app.state.config.ocean_swell_locations,
         "storm_outlook_locations": app.state.config.storm_outlook_locations,
     }
     with TestClient(app) as client:
         response = client.put("/api/settings/locations", json={
-            **catalogs, "map_projection": "eckert_iv",
+            **catalogs, "map_projection": "robinson",
         })
         assert response.status_code == 200
-        assert response.json()["map_projection"] == "eckert_iv"
+        assert response.json()["map_projection"] == "robinson"
         home = client.get("/").text
-        assert '<option value="eckert_iv" selected>' in home
-        assert home.count("world-terrain-eckert_iv.png") == 2
+        assert '<option value="robinson" selected>' in home
+        assert home.count("world-terrain-robinson.png") == 2
         assert "sea-cell preference" not in home
-        terrain = client.get("/static/world-terrain-eckert_iv.png")
+        terrain = client.get("/static/world-terrain-robinson.png")
         assert terrain.status_code == 200
         assert terrain.headers["content-type"] == "image/png"
         assert terrain.content.startswith(b"\x89PNG\r\n\x1a\n")
@@ -2021,9 +2021,9 @@ def test_map_projection_persists_and_rejects_unknown_models(tmp_path):
         assert (tmp_path / "config.json").read_text() == saved
         # Older clients that omit the new setting must preserve it.
         assert client.put("/api/settings/locations", json=catalogs).status_code == 200
-        assert app.state.config.map_projection == "eckert_iv"
+        assert app.state.config.map_projection == "robinson"
     restarted = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
-    assert restarted.state.config.map_projection == "eckert_iv"
+    assert restarted.state.config.map_projection == "robinson"
 
 
 @pytest.mark.parametrize("model", ["robinson", "eckert_iv"])

@@ -348,7 +348,7 @@ async function playRecordingCue(cue) {
   }, 50);
 }
 
-let mapProjection = byId("mapProjection")?.value || "robinson";
+let mapProjection = byId("mapProjection")?.value || "eckert_iv";
 let mapCenterLongitude = Number(byId("mapCenterLongitude")?.value) || 0;
 
 const ROBINSON_X = [1, .9986, .9954, .99, .9822, .973, .96, .9427, .9216, .8962, .8679, .835, .7986, .7597, .7186, .6732, .6213, .5722, .5322];
@@ -439,6 +439,11 @@ function mapProjectionBoundary() {
 function renderMapProjection() {
   globalThis.animalWikipedia?.refreshPointer();
   const boundary = mapProjectionBoundary();
+  const projectionMap = byId("worldMap");
+  if (projectionMap) {
+    projectionMap.setAttribute("viewBox", mapProjection === "eckert_iv" ? "20 282 984 484" : "20 214 984 622");
+    projectionMap.dataset.projection = mapProjection;
+  }
   ["mapGlobeClipPath", "mapGlowPath", "mapOceanPath", "forecastMapClipPath", "forecastMapOceanPath"].forEach((id) => {
     byId(id)?.setAttribute("d", boundary);
   });
@@ -1757,7 +1762,7 @@ if (settingsDialog && settingsForm) {
     document.querySelectorAll("[data-map-terrain]").forEach((terrain) => {
       terrain.setAttribute("href", `/static/world-terrain-${mapProjection}${mapCenterLongitude ? `-${mapCenterLongitude}` : ""}.png`);
     });
-    byId("worldMapDescription").textContent = `${mapProjection === "eckert_iv" ? "Eckert IV" : "Robinson"} projection with land cover, mountain relief, ocean depth shading, a space background, latitude and longitude grid, approximate system location, recent environmental locations, and animated sound cues.`;
+    byId("worldMapDescription").textContent = `${mapProjection === "eckert_iv" ? "Eckert IV" : "Robinson"} projection with land cover, mountain relief, ocean depth shading, latitude and longitude grid, approximate system location, recent environmental locations, and animated sound cues.`;
     byId("mapCoordinateReadout").textContent = "Move over the map to inspect coordinates";
     renderMapProjection();
     renderMapGrid();
