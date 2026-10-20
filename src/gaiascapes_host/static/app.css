@@ -177,18 +177,18 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .map-legend-background { border: 2px solid #6ab5bd; box-shadow: 0 0 8px rgba(106,181,189,.6); }
 .map-legend-event { background: var(--earth); box-shadow: 0 0 8px rgba(216,167,109,.6); }
 .map-legend-system { display: inline-block; width: 9px; height: 9px; border: 1.5px solid rgba(255,255,255,.9); border-radius: 50%; background: #53b86b; box-shadow: 0 0 5px rgba(83,184,107,.75); }
-.map-stage { position: relative; width: 70%; margin: 0 auto; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: rgba(8,16,17,.74); box-shadow: 0 22px 70px rgba(0,0,0,.2); }
-.map-stage, .forecast-map-stage {
+.map-stage { position: relative; width: 98%; margin: 0 auto; padding-bottom: 24px; overflow: hidden; }
+.forecast-map-stage {
   background-color: #050b18;
   background-image: radial-gradient(circle at 17px 29px, rgba(232,241,255,.65) .7px, transparent 1.2px), radial-gradient(circle at 73px 61px, rgba(173,204,239,.45) .6px, transparent 1.1px), radial-gradient(circle at 41px 113px, rgba(232,241,255,.3) .8px, transparent 1.3px), radial-gradient(ellipse at 25% 20%, rgba(45,65,108,.28), transparent 65%);
   background-size: 137px 151px, 211px 193px, 307px 251px, 100% 100%;
 }
-#worldMap { display: block; width: 100%; height: auto; min-height: 30rem; transform: translateY(-15px); }
+#worldMap { display: block; width: 100%; height: auto; }
 .map-glow { fill: rgba(83,167,168,.12); filter: drop-shadow(0 0 22px rgba(64,152,158,.22)); }
 .map-ocean { fill: url(#mapOcean); stroke: rgba(198,230,228,.42); stroke-width: 2; }
 .map-grid-line { fill: none; stroke: rgba(15,39,53,.23); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .map-grid-equator, .map-grid-prime { stroke: rgba(15,39,53,.36); }
-.map-coordinate-label { fill: var(--muted); font-size: 11px; font-weight: 650; letter-spacing: .04em; }
+.map-coordinate-label { fill: #000; font-size: 11px; font-weight: 650; letter-spacing: .04em; }
 .map-history-marker { stroke: rgba(234,241,232,.7); stroke-width: 1.1; opacity: .72; vector-effect: non-scaling-stroke; }
 .map-background-marker { fill: rgba(12,31,34,.85); stroke-width: 4; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 8px currentColor); }
 .map-background-core { stroke: rgba(234,241,232,.82); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
@@ -199,7 +199,7 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .map-cue--provider-eumetsat_mtg_li .map-cue-pulse { stroke-width: 3.5; stroke-dasharray: 7 4; }
 .map-cue--provider-eumetsat_mtg_li .map-cue-core { stroke: #fff1a8; stroke-width: 2.4; filter: drop-shadow(0 0 5px #ffd15a); }
 @keyframes map-cue-pulse { 0% { opacity: 0; transform: scale(.3); } 12% { opacity: .95; } 50% { opacity: .62; transform: scale(var(--map-pulse-scale, 2.8)); } 90% { opacity: .5; transform: scale(.3); } 100% { opacity: 0; transform: scale(.3); } }
-.map-coordinate-readout { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); text-align: center; padding: 6px 9px; border-radius: 6px; color: var(--muted); background: rgba(6,14,12,.82); font-size: .72rem; font-variant-numeric: tabular-nums; pointer-events: none; }
+.map-coordinate-readout { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); text-align: center; padding: 6px 9px; border-radius: 6px; color: #000; background: transparent; font-size: .72rem; font-variant-numeric: tabular-nums; pointer-events: none; }
 
 
 .event-pulse-layer { position: fixed; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
@@ -351,7 +351,6 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
   .forecast-map-stage { min-height: 20rem; }
   .forecast-location-list { max-height: 24rem; }
   .modal-footer { align-items: flex-start; flex-direction: column; }
-  #worldMap { min-height: 23rem; }
 }
 
 @media (max-width: 520px) {
@@ -457,8 +456,8 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 [data-theme] .forecast-location-row.is-selected .forecast-location-number { color: var(--ink); border-color: var(--moss); }
 [data-theme] .location-editor-tabs button.is-active { background: var(--canvas); border-color: var(--moss); }
 [data-theme] .settings-field select, [data-theme] .event-mapping-input select { border-radius: 7px; }
-/* Maps retain their space background, with light labels for contrast. */
-[data-theme] .map-stage, [data-theme] .forecast-map-stage { --muted: #d4e4e6; }
+/* The Settings map retains its space background and light readout. */
+[data-theme] .forecast-map-stage { --muted: #d4e4e6; }
 .settings-menu { overflow-y: auto; }
 .settings-studio-logo { display: block; width: 100%; max-width: 12rem; height: auto; flex: 0 0 auto; align-self: center; margin-top: auto; padding-top: 1rem; border-radius: 22px; }
 .theme-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 0; padding: 0; border: 0; }
@@ -476,14 +475,19 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
   .theme-options { grid-template-columns: 1fr; }
 }
 
-/* The map shares a fixed header and bottom-aligned status strip. */
+/* Fit the map and its supporting information into the desktop window. */
 @media (min-width: 801px) {
-  main { display: flex; flex-direction: column; height: 100dvh; padding-block: 24px 16px; }
+  main { display: flex; flex-direction: column; height: 100dvh; padding-block: 12px; }
   main > .app-header { flex: 0 0 auto; }
-  #mapView:not([hidden]) { display: grid; grid-template-rows: minmax(0, 1fr) auto auto; flex: 1 1 auto; min-height: 0; gap: 12px; }
-  #mapView .map-stage { height: 100%; min-height: 0; }
+  .heading-icon { width: clamp(52px, 10dvh, 96px); }
+  h1 { font-size: clamp(2.25rem, 8dvh, 4.5rem); }
+  #mapView:not([hidden]) { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; gap: 6px; margin-top: 6px; }
+  #mapView .map-stage { flex: 0 1 auto; min-height: 0; aspect-ratio: 984 / 646; }
+  #mapView .map-stage:has(#worldMap[data-projection="eckert_iv"]) { aspect-ratio: 984 / 508; }
   #worldMap { height: 100%; min-height: 0; }
-  #mapView .map-heading, #mapView .map-status { margin-block: 0; }
+  #mapView .map-heading, #mapView .map-status { flex: 0 0 auto; margin-block: 0; }
+  .map-heading { width: 100%; }
+  .metrics article { height: clamp(7rem, 20dvh, 12rem); padding: 12px; }
 }
 @media (max-width: 800px) {
   .app-header { grid-template-columns: minmax(0, 1fr); }
@@ -568,7 +572,8 @@ main.has-animal > [data-app-view] { grid-column: 2; grid-row: 2; min-width: 0; }
 .playback-selector button { display: grid; place-items: center; padding: 5px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); }
 .playback-selector svg { fill: currentColor; }
 .playback-selector button[aria-pressed="true"] { background: var(--moss); color: var(--panel); }
-.playback-control-status { max-width: 16rem; font-size: .72rem; color: var(--muted); }
+/* Keep playback announcements available to assistive technology. */
+.playback-control-status, .playback-message { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .playback-control-status:empty { display: none; }
 .status-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .metrics .status-card-heading > span { min-width: 0; margin: 0; text-align: left; }
@@ -581,7 +586,6 @@ main.has-animal > [data-app-view] { grid-column: 2; grid-row: 2; min-width: 0; }
 
 .dialog-toast { display: block; pointer-events: auto; cursor: pointer; text-align: left; font-family: inherit; font-weight: normal; }
 
-.playback-message { max-width: 20rem; margin: 0; font-size: .72rem; text-align: center; }
 .playback-message:empty { display: none; }
 .settings-pane[data-pane="history"] .event-list { max-height: none; }
 

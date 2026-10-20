@@ -207,7 +207,7 @@ class AppConfig:
     live_mode: str = "capture"
     app_view: str = "dashboard"
     sound_location_order: str = "sequential"
-    map_projection: str = "robinson"
+    map_projection: str = "eckert_iv"
     map_center_longitude: int = 0
     system_location_enabled: bool = True
     continuous_interval_seconds: float = 23.0
