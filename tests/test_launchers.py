@@ -388,6 +388,53 @@ def test_desktop_attaches_without_stopping_existing_server(tmp_path, monkeypatch
     assert calls[-1] == ("start", (), {})
 
 
+@pytest.mark.parametrize("model,codename,software", [
+    ("Raspberry Pi 5 Model B", "trixie", True),
+    ("Raspberry Pi 4 Model B", "trixie", True),
+    ("Raspberry Pi 5 Model B", "bookworm", False),
+    ("Other computer", "trixie", False),
+])
+def test_gui_rendering_defaults_are_scoped_to_pi_trixie(monkeypatch, model, codename, software):
+    monkeypatch.setattr(desktop.sys, "platform", "linux")
+    monkeypatch.setattr(desktop.Path, "read_text", lambda self: model)
+    monkeypatch.setattr(desktop.platform, "freedesktop_os_release",
+                        lambda: {"VERSION_CODENAME": codename})
+    for name in ("WEBKIT_SKIA_ENABLE_CPU_RENDERING", "WEBKIT_DISABLE_DMABUF_RENDERER"):
+        monkeypatch.delenv(name, raising=False)
+    desktop.configure_gui_environment()
+    for name in ("WEBKIT_SKIA_ENABLE_CPU_RENDERING", "WEBKIT_DISABLE_DMABUF_RENDERER"):
+        assert os.environ.get(name) == ("1" if software else None)
+
+
+def test_gui_rendering_preserves_operator_overrides(monkeypatch):
+    monkeypatch.setattr(desktop.sys, "platform", "linux")
+    monkeypatch.setattr(desktop.Path, "read_text", lambda self: "Raspberry Pi 5")
+    monkeypatch.setattr(desktop.platform, "freedesktop_os_release",
+                        lambda: {"VERSION_CODENAME": "trixie"})
+    names = ("WEBKIT_SKIA_ENABLE_CPU_RENDERING", "WEBKIT_DISABLE_DMABUF_RENDERER",
+             "WEBKIT_DISABLE_COMPOSITING_MODE")
+    for name in names:
+        monkeypatch.setenv(name, "0")
+    monkeypatch.setenv("GDK_BACKEND", "x11")
+    desktop.configure_gui_environment()
+    assert all(os.environ[name] == "0" for name in names)
+    assert os.environ["GDK_BACKEND"] == "x11"
+
+
+def test_gui_rendering_without_pi_model(monkeypatch):
+    monkeypatch.setattr(desktop.sys, "platform", "linux")
+
+    def missing_model(self):
+        raise FileNotFoundError
+
+    monkeypatch.setattr(desktop.Path, "read_text", missing_model)
+    monkeypatch.delenv("WEBKIT_SKIA_ENABLE_CPU_RENDERING", raising=False)
+    monkeypatch.delenv("WEBKIT_DISABLE_DMABUF_RENDERER", raising=False)
+    desktop.configure_gui_environment()
+    assert "WEBKIT_SKIA_ENABLE_CPU_RENDERING" not in os.environ
+    assert "WEBKIT_DISABLE_DMABUF_RENDERER" not in os.environ
+
+
 def test_desktop_health_probe_bypasses_http_proxy(monkeypatch):
     calls = []
 
