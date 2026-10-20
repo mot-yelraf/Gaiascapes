@@ -54,8 +54,9 @@ def _macos_application_support_dir() -> Path:
 
 
 def _path_is_in_app_bundle(path: Path) -> bool:
-    """Return whether a lexical path is inside a macOS application bundle."""
-    return any(parent.suffix.lower() == ".app" for parent in path.parents)
+    """Return whether a lexical path is inside a Gaiascapes application bundle."""
+    bundle_names = {f"{MACOS_APP_NAME}.app".lower(), "gaia scape.app"}
+    return any(parent.name.lower() in bundle_names for parent in path.parents)
 
 
 def _should_relaunch_for_macos_identity() -> bool:
@@ -193,6 +194,21 @@ def relaunch_for_macos_app_identity() -> bool:
         )
         return False
     return True
+
+
+def configure_macos_app_name() -> None:
+    """Set Cocoa's application name before pywebview initializes its menus."""
+    try:
+        from Foundation import NSBundle, NSProcessInfo
+
+        # Framework Python can retain Python.app's identity after a relaunch.
+        # These overrides affect this process only, not the Python installation.
+        info = NSBundle.mainBundle().infoDictionary()
+        info["CFBundleName"] = MACOS_APP_NAME
+        info["CFBundleDisplayName"] = MACOS_APP_NAME
+        NSProcessInfo.processInfo().setProcessName_(MACOS_APP_NAME)
+    except Exception as exc:
+        print(f"Gaiascapes could not set its macOS app name: {exc}", file=sys.stderr)
 
 
 def _base_url() -> str:
@@ -443,6 +459,9 @@ def main() -> int:
             )
             return 1
         configure_linux_app_identity()
+
+    if sys.platform == "darwin":
+        configure_macos_app_name()
 
     try:
         import webview
