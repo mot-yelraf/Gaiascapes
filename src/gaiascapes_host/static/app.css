@@ -575,13 +575,19 @@ main.has-animal > [data-app-view] { grid-column: 2; grid-row: 2; min-width: 0; }
 /* Keep playback announcements available to assistive technology. */
 .playback-control-status, .playback-message { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .playback-control-status:empty { display: none; }
-.status-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.status-card-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .metrics .status-card-heading > span { min-width: 0; margin: 0; text-align: left; }
-.status-card-heading select { flex: 0 0 auto; max-width: 100%; font: inherit; font-size: .72rem; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--panel); }
+.visibility-selector { display: inline-flex; flex: 0 0 auto; width: fit-content; margin-left: auto; padding: 2px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); }
+.visibility-selector label { display: flex; position: relative; cursor: pointer; }
+.visibility-selector input { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; overflow: hidden; clip-path: inset(50%); }
+.visibility-selector label span { display: block; margin: 0; padding: 3px 6px; border-radius: 999px; color: var(--muted); font-size: .68rem; font-weight: 600; letter-spacing: normal; text-transform: none; white-space: nowrap; }
+.visibility-selector input:checked + span { color: var(--panel); background: var(--moss); }
+.visibility-selector input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+.visibility-selector label:hover span { box-shadow: inset 0 0 0 1px var(--moss); }
 .status-card-details[hidden] { display: none; }
 
 
-#animalImageVisibility { display: block; width: auto; margin: 0 auto 8px; font: inherit; font-size: .72rem; border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
+#animalImageVisibility { display: flex; margin: 0 0 8px auto; }
 #animalImageDetails[hidden] { display: none; }
 
 .dialog-toast { display: block; pointer-events: auto; cursor: pointer; text-align: left; font-family: inherit; font-weight: normal; }

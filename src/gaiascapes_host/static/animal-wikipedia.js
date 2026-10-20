@@ -13,8 +13,8 @@ globalThis.animalWikipedia = (() => {
   const source = document.getElementById("animalArticleSource");
   const visibility = document.getElementById("animalImageVisibility");
   const details = document.getElementById("animalImageDetails");
-  visibility?.addEventListener("change", () => {
-    details.hidden = visibility.value === "hide";
+  visibility?.addEventListener("change", (event) => {
+    details.hidden = event.target.value === "hide";
     if (details.hidden) close();
     refreshPointer();
   });
