@@ -15,7 +15,8 @@ const [playButton,pauseButton,nextButton]=buttons;
 const status={textContent:''},details={};
 const selectors=['background','event','earthquake','background','event','earthquake'].map((kind,i)=>{
  details[i]={hidden:false};
- return {value:'reveal',dataset:{statusVisibility:kind},handlers:{},
+ return {inputs:[{value:'reveal',checked:true},{value:'hide',checked:false}],dataset:{statusVisibility:kind},handlers:{},
+ querySelectorAll(){return this.inputs},
  addEventListener(k,v){this.handlers[k]=v},getAttribute(){return i},
  closest(){return {removeAttribute(){}}}};
 });
@@ -42,10 +43,10 @@ vm.runInContext(fs.readFileSync(process.argv[1],'utf8'),scope);
  assert.equal(playButton.attrs['aria-pressed'],'true');
  await pauseButton.handlers.click();assert.equal(stops,1);
  assert.equal(pauseButton.attrs['aria-pressed'],'true');
- selectors[0].value='hide';selectors[0].handlers.change();
+ selectors[0].handlers.change({target:{value:'hide'}});
  assert.equal(details[0].hidden,true);assert.equal(details[3].hidden,true);
- assert.equal(selectors[3].value,'hide');assert.equal(details[1].hidden,false);
- selectors[3].value='reveal';selectors[3].handlers.change();
- assert.equal(details[0].hidden,false);assert.equal(selectors[0].value,'reveal');
+ assert.equal(selectors[3].inputs[1].checked,true);assert.equal(selectors[3].inputs[0].checked,false);assert.equal(details[1].hidden,false);
+ selectors[3].handlers.change({target:{value:'reveal'}});
+ assert.equal(details[0].hidden,false);assert.equal(selectors[0].inputs[0].checked,true);assert.equal(selectors[0].inputs[1].checked,false);
 })().catch(error=>{console.error(error);process.exitCode=1});
 ''', 'game-controls.js')

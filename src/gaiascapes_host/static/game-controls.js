@@ -58,12 +58,14 @@
 
   const selectors = Array.from(document.querySelectorAll("[data-status-visibility]"));
   selectors.forEach((selector) => {
-    selector.addEventListener("change", () => {
+    selector.addEventListener("change", (event) => {
       selectors.filter(other => other.dataset.statusVisibility === selector.dataset.statusVisibility)
         .forEach((other) => {
-          other.value = selector.value;
+          other.querySelectorAll('input[type="radio"]').forEach((input) => {
+            input.checked = input.value === event.target.value;
+          });
           other.closest(".status-card").removeAttribute("title");
-          document.getElementById(other.getAttribute("aria-controls")).hidden = selector.value === "hide";
+          document.getElementById(other.getAttribute("aria-controls")).hidden = event.target.value === "hide";
         });
     });
   });
