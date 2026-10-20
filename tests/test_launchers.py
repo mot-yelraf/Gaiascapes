@@ -220,6 +220,16 @@ def test_macos_identity_registers_bundle_with_launch_services(tmp_path, monkeypa
             False,
         ),
         ("darwin", False, False, "/usr/bin/python3", True),
+        (
+            "darwin", False, False,
+            "/Library/Frameworks/Python.framework/Versions/3.13/Resources/Python.app/Contents/MacOS/Python",
+            True,
+        ),
+        (
+            "darwin", False, False,
+            "/Applications/Gaiascapes.app/Contents/MacOS/Gaiascapes",
+            False,
+        ),
     ),
 )
 def test_macos_identity_relaunch_platform_headless_and_package_guards(
@@ -309,6 +319,7 @@ def test_desktop_starts_native_window_and_stops_owned_server(tmp_path, monkeypat
     monkeypatch.setitem(sys.modules, "webview", fake_webview)
     monkeypatch.setattr(desktop.sys, "platform", "darwin")
     monkeypatch.setenv(desktop.MACOS_RELAUNCH_MARKER, "1")
+    monkeypatch.setattr(desktop, "configure_macos_app_name", lambda: calls.append(("name",)))
     monkeypatch.setattr(desktop, "_is_healthy", lambda _url: False)
     monkeypatch.setattr(desktop, "_wait_for_health", lambda _url, _process: True)
     monkeypatch.setattr(desktop, "_start_server", lambda: process)
@@ -317,6 +328,7 @@ def test_desktop_starts_native_window_and_stops_owned_server(tmp_path, monkeypat
     assert desktop.main() == 0
 
     assert process.terminated is True
+    assert calls.pop(0) == ("name",)
     assert calls[0][0] == "create"
     assert calls[0][1][:2] == (
         "Gaiascapes · Living Earth",
@@ -455,3 +467,22 @@ def test_macos_icon_callback_uses_desktop_png(monkeypatch):
     desktop.set_macos_app_icon()
 
     assert calls == [("load", str(desktop.DESKTOP_ICON_PATH)), ("set", icon)]
+
+
+def test_macos_app_name_overrides_python_identity_in_process(monkeypatch):
+    info = {"CFBundleName": "Python", "CFBundleDisplayName": "Python"}
+    names = []
+    foundation = ModuleType("Foundation")
+    foundation.NSBundle = SimpleNamespace(
+        mainBundle=lambda: SimpleNamespace(infoDictionary=lambda: info)
+    )
+    foundation.NSProcessInfo = SimpleNamespace(
+        processInfo=lambda: SimpleNamespace(setProcessName_=names.append)
+    )
+    monkeypatch.setitem(sys.modules, "Foundation", foundation)
+
+    desktop.configure_macos_app_name()
+
+    assert info["CFBundleName"] == desktop.MACOS_APP_NAME
+    assert info["CFBundleDisplayName"] == desktop.MACOS_APP_NAME
+    assert names == [desktop.MACOS_APP_NAME]
