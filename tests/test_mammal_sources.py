@@ -12,6 +12,7 @@ from gaiascapes_host.mammals import MAMMAL_KINDS, MAMMAL_LABELS
 @pytest.mark.parametrize("kind", MAMMAL_KINDS)
 def test_mammal_selection_persists_and_previews_bundled_audio(tmp_path, kind):
     config = AppConfig(system_location_enabled=False, enabled_sources=[], osc_enabled=False)
+    setattr(config, f"{kind}_enabled", False)
     config.save(tmp_path / "config.json")
     app = create_app(tmp_path, auto_capture=False)
     with TestClient(app) as client:

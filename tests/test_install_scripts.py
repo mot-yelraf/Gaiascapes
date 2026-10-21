@@ -52,7 +52,8 @@ def test_gui_launcher_supervises_audio_and_audio_device_is_configurable():
     audio = Path("scripts/run_supercollider.sh").read_text(encoding="utf-8")
     synth = Path("supercollider/gaia-scape.scd").read_text(encoding="utf-8")
 
-    assert '"$RUNTIME_DIR/scripts/run_supercollider.sh" &' in gui
+    assert 'renderer_command=("$RUNTIME_DIR/scripts/run_supercollider.sh")' in gui
+    assert '"${renderer_command[@]}" &' in gui
     assert 'desktop_pid=$!' in gui
     assert 'kill -TERM "$desktop_pid"' in gui
     assert 'pgrep -P "$supercollider_pid"' in gui

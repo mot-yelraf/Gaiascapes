@@ -11,6 +11,8 @@ import urllib.request
 
 from gaiascapes.events import GaiaEvent
 
+from .http_transport import open_url
+
 
 MAX_DOCUMENT_BYTES = 4 * 1024 * 1024
 
@@ -90,7 +92,7 @@ class UsgsClient:
             self.url,
             headers={"User-Agent": "Gaiascapes/0.1 (+local environmental music app)"},
         )
-        with urllib.request.urlopen(request, timeout=self.timeout) as response:
+        with open_url(request, timeout=self.timeout) as response:
             content_length = response.headers.get("Content-Length")
             if content_length and int(content_length) > MAX_DOCUMENT_BYTES:
                 raise ValueError("USGS response exceeds size limit")

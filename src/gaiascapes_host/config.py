@@ -63,9 +63,9 @@ EVENT_KIND_BY_VOICE = {
 }
 DEFAULT_INSTRUMENT_SLOTS = {
     "event_1": "earthquake",
-    "event_2": "tidal_bell",
-    "event_3": "lightning_glass",
-    "background": "ocean_swell",
+    "event_2": "natural_thunder",
+    "event_3": "none",
+    "background": "birdsong",
 }
 DEFAULT_INSTRUMENT_VOLUMES = {
     "event_1": 1.0,
@@ -220,7 +220,9 @@ class AppConfig:
     announcement_voice: str = "en-us"
     announcement_variant: str = "default"
     announcement_volume: float = 0.7
-    enabled_sources: list[str] = field(default_factory=lambda: ["usgs", "noaa_glm"])
+    enabled_sources: list[str] = field(
+        default_factory=lambda: ["usgs", "open_meteo_marine", "open_meteo_storm", "noaa_glm"]
+    )
     event_instruments: dict[str, str] = field(
         default_factory=lambda: dict(DEFAULT_INSTRUMENT_SLOTS)
     )
@@ -230,15 +232,15 @@ class AppConfig:
     lightning_sample_rate: int = 1
     eumetsat_consumer_key: str = field(default="", repr=False)
     eumetsat_consumer_secret: str = field(default="", repr=False)
-    whale_song_enabled: bool = False
-    dolphin_calls_enabled: bool = False
+    whale_song_enabled: bool = True
+    dolphin_calls_enabled: bool = True
     whale_song_regions: list[str] = field(default_factory=lambda: default_regions("whale_song"))
     dolphin_calls_regions: list[str] = field(default_factory=lambda: default_regions("dolphin_calls"))
-    feline_calls_enabled: bool = False
-    canine_calls_enabled: bool = False
-    elephant_calls_enabled: bool = False
-    primate_calls_enabled: bool = False
-    frog_calls_enabled: bool = False
+    feline_calls_enabled: bool = True
+    canine_calls_enabled: bool = True
+    elephant_calls_enabled: bool = True
+    primate_calls_enabled: bool = True
+    frog_calls_enabled: bool = True
     frog_calls_locations: list[dict] = field(default_factory=default_frog_locations)
     birdsong_enabled: bool = True
     birdsong_provider: str = "wikimedia_commons"
@@ -412,8 +414,13 @@ class AppConfig:
         self.xeno_canto_api_key = _credential(self.xeno_canto_api_key, "Xeno-canto API key")
         if self.birdsong_provider not in {"wikimedia_commons", "xeno_canto"}:
             raise ValueError("Unsupported birdsong provider")
-        if (self.birdsong_provider == "xeno_canto" or self.frog_calls_enabled) and not self.xeno_canto_api_key:
-            raise ValueError("Xeno-canto requires an API key")
+        background = self.event_instruments["background"]
+        if not self.xeno_canto_api_key:
+            if background == "frog_calls" and self.frog_calls_enabled:
+                raise ValueError("Frog Calls requires a Xeno-canto API key")
+            if (background == "birdsong" and self.birdsong_enabled
+                    and self.birdsong_provider == "xeno_canto"):
+                raise ValueError("Xeno-canto Birdsong requires an API key")
         if "eumetsat_mtg_li" in self.enabled_sources and not (
             self.eumetsat_consumer_key and self.eumetsat_consumer_secret
         ):

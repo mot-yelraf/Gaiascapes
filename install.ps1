@@ -103,6 +103,14 @@ try {
             $shortcut.Save()
         }
     }
+    if ($env:GAIA_SCAPE_INSTALL_BIRDSONG -ne 'no') {
+        & $runtimePython -m gaiascapes_host.birdsong_cache --data-dir (Join-Path $InstallDir 'data')
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning 'Some Birdsong recordings could not be installed locally. Rerun this installer to finish downloading them; other Gaiascapes features remain available.'
+        }
+    } else {
+        Write-Host 'Birdsong catalog download skipped by GAIA_SCAPE_INSTALL_BIRDSONG=no.'
+    }
     Write-Host "Gaiascapes installed in $InstallDir"
     Write-Host 'Open the Gaiascapes shortcut. Browser UI: http://127.0.0.1:8769'
     Write-Host 'SuperCollider is optional; install it separately for synthesized sound.'

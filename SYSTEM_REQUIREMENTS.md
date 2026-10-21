@@ -12,11 +12,12 @@ the current validation scope.
 ## Desktop window
 
 The native desktop launcher uses pywebview. macOS supplies its web view through
-the operating system. On Debian, Ubuntu, and Raspberry Pi OS, install the GTK 3
-and WebKitGTK bindings:
+the operating system. On Debian, Ubuntu, and Raspberry Pi OS, the installer
+installs Python, venv, pip, GTK 3, WebKitGTK bindings, and WirePlumber for desktop
+mode. These packages can also be installed manually:
 
 ```sh
-sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+sudo apt install python3 python3-venv python3-pip python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 wireplumber
 ```
 
 On Raspberry Pi OS Trixie, the desktop launcher defaults to WebKit CPU rendering
@@ -42,7 +43,10 @@ history, the web UI, or browser playback of animal recordings. The macOS Say
 quark needs SuperCollider; eSpeak NG can provide announcements independently.
 
 - macOS: install the SuperCollider application in `/Applications`.
-- Debian, Ubuntu, or Raspberry Pi OS: install the `supercollider` package.
+- Debian, Ubuntu, or Raspberry Pi OS: the installer installs
+  `supercollider-language`, `supercollider-server`, and `pipewire-jack` through
+  `apt-get` with `sudo` when needed, and verifies `sclang`, `scsynth`, and `pw-jack`. Other Linux
+  distributions require manual package installation.
 - Windows: install the Windows SuperCollider package in its standard
   `Program Files` location, or set `GAIA_SCAPE_SCLANG` to `sclang.exe`.
 
@@ -56,8 +60,14 @@ On Debian-family systems:
 
 ```sh
 sudo apt update
-sudo apt install python3 python3-venv python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 supercollider
+sudo apt install python3 python3-venv python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 supercollider-language supercollider-server pipewire-jack wireplumber
 ```
+
+On Linux, the GUI launcher automatically uses `pw-jack` for the renderer when
+`wpctl status` confirms an active PipeWire session. This uses the desktop audio
+service instead of starting a separate JACK server against the ALSA device.
+Without an active PipeWire session, the launcher retains standalone JACK. See
+[PipeWire JACK support](https://pipewire.pages.freedesktop.org/pipewire/page_man_pw-jack_1.html).
 
 On macOS, `install.sh` (also invoked by `scripts/install_macos.sh`) checks Python
 before changing the installation. If it is missing or older than 3.10, the
@@ -67,14 +77,16 @@ uses that Homebrew interpreter for the rest of installation, even if an older
 interpreter stops installation with manual setup instructions; all host features
 require supported Python.
 
-The installer also offers `brew install --cask supercollider` when `sclang` is
-absent from PATH, `/Applications`, and `~/Applications`. Declining or failing this
-optional step continues installation with the functionality described above.
+The installer automatically runs `brew install --cask supercollider` when a
+complete SuperCollider installation (`sclang` and `scsynth`) is absent from PATH,
+`/Applications`, and `~/Applications`. On Linux and macOS, set
+`GAIA_SCAPE_INSTALL_SUPERCOLLIDER=no` to skip this step. Failing this optional
+step continues installation with the functionality described above.
 Homebrew itself is never installed automatically. If it is unavailable, follow
 [Homebrew's installation instructions](https://brew.sh), or obtain compatible
 installers directly from [Python](https://www.python.org/downloads/macos/) and
 [SuperCollider](https://supercollider.github.io/downloads). Noninteractive runs
-do not install dependencies automatically; rerun in Terminal to accept offers.
+can install SuperCollider; Python and Say offers still require a Terminal.
 
 The Homebrew packages used are [Python 3.13](https://formulae.brew.sh/formula/python@3.13)
 and [SuperCollider](https://formulae.brew.sh/cask/supercollider). Their platform

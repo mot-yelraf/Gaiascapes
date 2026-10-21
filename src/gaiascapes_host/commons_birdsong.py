@@ -1,8 +1,8 @@
 """Keyless Wikimedia Commons birdsong discovery and local media caching.
 
-The client searches one curated global listening point at a time, accepts only
-freely reusable Commons audio, and retains both the original file and the
-attribution metadata beneath the selected installation's data directory.
+The installer downloads freely reusable Commons audio and attribution beneath
+the selected installation's data directory. Playback reads those local files
+without making network requests.
 """
 
 from __future__ import annotations
@@ -55,10 +55,12 @@ BIRDSONG_LOCATIONS = tuple(
 class CommonsBirdsongClient:
     """Resolve and cache freely licensed audio for 19 global locations."""
 
-    def __init__(self, data_dir: Path, opener=None):
+    def __init__(self, data_dir: Path, opener=None, allow_downloads: bool = False):
+        """Use local recordings, allowing network retrieval only during setup."""
         self.media_dir = Path(data_dir) / "media" / "birdsong"
         self.media_dir.mkdir(parents=True, exist_ok=True)
         self._opener = opener or urllib.request.urlopen
+        self.allow_downloads = allow_downloads
 
     @property
     def location_count(self) -> int:
@@ -66,7 +68,7 @@ class CommonsBirdsongClient:
         return len(COMMONS_CATALOG)
 
     def event_at(self, index: int) -> GaiaEvent:
-        """Return a normalized birdsong event, downloading its audio once."""
+        """Return a normalized event backed by an installed local recording."""
         index = int(index)
         location = COMMONS_CATALOG[index % len(COMMONS_CATALOG)]
         recordings = location["recordings"]
@@ -75,16 +77,18 @@ class CommonsBirdsongClient:
         file_title = recording["title"]
         metadata_path = self.media_dir / f"{slug}.json"
         metadata = self._read_cached_metadata(metadata_path)
-        if metadata is None:
-            metadata = self._discover(file_title)
+        if not self._local_audio_available(metadata):
+            if not self.allow_downloads:
+                raise FileNotFoundError(
+                    f"Birdsong recording is not installed locally: {file_title}. "
+                    "Rerun the Gaiascapes installer to download the Birdsong catalog."
+                )
+            if metadata is None:
+                metadata = self._discover(file_title)
             media_path = self._download(slug, metadata)
             metadata["file"] = media_path.name
             self._write_metadata(metadata_path, metadata)
         media_path = self.media_dir / metadata["file"]
-        if not media_path.is_file():
-            media_path = self._download(slug, metadata)
-            metadata["file"] = media_path.name
-            self._write_metadata(metadata_path, metadata)
         now = time.time()
         return GaiaEvent(
             provider="wikimedia_commons",
@@ -184,8 +188,20 @@ class CommonsBirdsongClient:
         if temporary.stat().st_size > MAX_AUDIO_BYTES:
             temporary.unlink()
             raise RuntimeError("Wikimedia Commons audio exceeds the 64 MiB limit")
+        if metadata.get("size") and temporary.stat().st_size != metadata["size"]:
+            temporary.unlink()
+            raise RuntimeError("Wikimedia Commons audio download is incomplete; rerun the installer")
         temporary.replace(destination)
         return destination
+
+    def _local_audio_available(self, metadata: dict | None) -> bool:
+        if metadata is None:
+            return False
+        try:
+            size = (self.media_dir / metadata["file"]).stat().st_size
+        except OSError:
+            return False
+        return size > 0 and (not metadata.get("size") or size == metadata["size"])
 
     def _read_cached_metadata(self, path: Path) -> dict | None:
         if not path.is_file():

@@ -402,3 +402,46 @@ def test_legacy_complete_marine_catalogs_expand_without_changing_custom_selectio
     config = AppConfig.load(path)
     assert config.whale_song_regions == ["hi01"]
     assert config.dolphin_calls_regions == ["fk03", "hi04"]
+
+
+def test_new_sound_defaults_and_saved_choices_are_preserved(tmp_path):
+    config = AppConfig.load(tmp_path / 'config.json')
+    assert config.enabled_sources == ['usgs', 'open_meteo_marine', 'open_meteo_storm', 'noaa_glm']
+    assert all(getattr(config, f'{kind}_enabled') for kind in (
+        'birdsong', 'frog_calls', 'whale_song', 'dolphin_calls',
+        'feline_calls', 'canine_calls', 'elephant_calls', 'primate_calls',
+    ))
+    assert config.birdsong_provider == 'wikimedia_commons'
+    assert config.announcements_enabled is False
+    assert config.units == 'metric'
+    assert config.system_location_enabled is True
+    assert config.instrument_slots() == {
+        'background': 'birdsong', 'event_1': 'earthquake',
+        'event_2': 'natural_thunder', 'event_3': 'none',
+    }
+    config.event_instruments['background'] = 'ocean_swell'
+    config.frog_calls_enabled = False
+    config.units = 'imperial'
+    config.save(tmp_path / 'config.json')
+    restored = AppConfig.load(tmp_path / 'config.json')
+    assert restored.instrument_slots()['background'] == 'ocean_swell'
+    assert restored.frog_calls_enabled is False
+    assert restored.units == 'imperial'
+
+
+@pytest.mark.parametrize('background,provider,enabled,requires_key', [
+    ('birdsong', 'wikimedia_commons', True, False),
+    ('birdsong', 'xeno_canto', True, True),
+    ('birdsong', 'xeno_canto', False, False),
+    ('frog_calls', 'wikimedia_commons', True, True),
+    ('frog_calls', 'wikimedia_commons', False, False),
+    ('ocean_swell', 'xeno_canto', True, False),
+])
+def test_xeno_key_is_required_only_for_selected_enabled_background(background, provider, enabled, requires_key):
+    config = AppConfig(birdsong_provider=provider, birdsong_enabled=enabled, frog_calls_enabled=enabled)
+    config.event_instruments['background'] = background
+    if requires_key:
+        with pytest.raises(ValueError, match='Xeno-canto'):
+            config.validate()
+    else:
+        config.validate()
