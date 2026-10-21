@@ -39,6 +39,7 @@ def test_stop_blocks_new_cues_but_capture_continues(tmp_path):
         usgs_client=Provider((GaiaEvent('usgs', 'quake', 'earthquake', now),)),
         glm_client=Provider((GaiaEvent('noaa_glm', 'flash', 'lightning_flash', now),)),
     )
+    app.state.config.enabled_sources = ['usgs', 'noaa_glm']
     with TestClient(app) as client:
         assert client.put('/api/live/mode', json={'mode': 'continuous'}).status_code == 200
         assert client.post('/api/live/stop').json()['running'] is False

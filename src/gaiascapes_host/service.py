@@ -965,6 +965,11 @@ class GaiascapesService:
                      "whale_song": "Whale Song", "dolphin_calls": "Dolphin Calls", **MAMMAL_LABELS}[kind]
             if not getattr(self.config, f"{kind}_enabled"):
                 raise ValueError(f"Enable {label} in Sound Sources before previewing")
+            if (not self.config.xeno_canto_api_key
+                    and (kind == "frog_calls" or (
+                        kind == "birdsong" and self.config.birdsong_provider == "xeno_canto"
+                    ))):
+                raise ValueError(f"{label} requires a Xeno-canto API key in Sound Sources")
             volume = _preview_volume(volume)
             recording_client = getattr(self, kind)
             event = await self._fetch_recording(recording_client, 0)

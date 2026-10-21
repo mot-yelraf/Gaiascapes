@@ -31,7 +31,8 @@ def main() -> None:
     config_path.write_text(json.dumps(config), encoding='utf-8')
     saved_config = config_path.read_bytes()
     environment = dict(os.environ, GAIA_SCAPE_DATA_DIR=str(data_dir),
-                       GAIA_SCAPE_HTTP_PORT='18868', GAIA_SCAPE_OSC_PORT='19130')
+                       GAIA_SCAPE_HTTP_PORT='18868', GAIA_SCAPE_OSC_PORT='19130',
+                       GAIA_SCAPE_INSTALL_BIRDSONG='no')
 
     def powershell(script: Path, *args: str) -> None:
         subprocess.run(['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass',

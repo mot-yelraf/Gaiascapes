@@ -170,8 +170,8 @@ def test_web_app_captures_and_reports_status(tmp_path):
         ]
         assert re.findall(r'<option value="([^"]+)"', event_1_markup) == expected_event_choices
         assert re.findall(r'<option value="([^"]+)"', event_2_markup) == expected_event_choices
-        assert re.findall(r'<option value="([^"]+)"', event_3_markup) == expected_event_choices[:2] + ["lightning_glass"] + expected_event_choices[2:]
-        assert 'selected data-legacy' in event_3_markup
+        assert re.findall(r'<option value="([^"]+)"', event_3_markup) == expected_event_choices
+        assert '<option value="none" selected' in event_3_markup
         assert "Lightning R2D2" not in home.text
         assert home.text.count("Thunder") == 3
         assert "440 Hz Test Tone" not in home.text
@@ -222,7 +222,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'id="lastEventTime"' in home.text
         assert 'id="lastEarthquakeLocation"' in home.text
         assert 'id="lastEarthquakeDetail"' in home.text
-        assert 'id="backgroundSoundsTitle" data-status-field="background-title">Ocean Swells</span>' in home.text
+        assert 'id="backgroundSoundsTitle" data-status-field="background-title">Birdsong Atlas</span>' in home.text
         assert home.text.count('data-status-field="background-location"') == 1
         assert home.text.count('data-status-field="background-characteristics"') == 1
         assert home.text.count('data-status-field="last-event-type"') == 1
@@ -237,7 +237,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert 'aria-label="Map application status"' in home.text
         assert "Open-Meteo Storm Outlook" in home.text
         assert '<option value="storm_potential" >Storm Outlook</option>' in home.text
-        assert '<option value="birdsong" >Birdsong</option>' in home.text
+        assert '<option value="birdsong" selected>Birdsong</option>' in home.text
         assert "Event Time" not in home.text
         assert "Event Sounds" not in home.text
         assert 'id="scStatus"' not in home.text
@@ -356,6 +356,7 @@ def test_web_app_captures_and_reports_status(tmp_path):
         assert "grid-template-columns: minmax(7.5rem, 1fr) 6rem" in stylesheet
         assert ".workspace { width: 100%; }" in stylesheet
         assert "50% { opacity: .62; transform: scale(var(--map-pulse-scale, 2.8)); }" in stylesheet
+        app.state.config.enabled_sources = ["usgs"]
         capture = client.post("/api/capture", json={})
         events = client.get("/api/events")
         status = client.get("/api/status")
@@ -614,6 +615,7 @@ def test_live_mode_persists_and_controls_continuous_task(tmp_path):
 
 def test_continuous_cycle_overlays_independent_ambient_layers(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.config.event_instruments.update(background="ocean_swell", event_2="tidal_bell")
     app.state.service.playback.start()
     now = time.time()
     events = (
@@ -671,6 +673,7 @@ def test_continuous_cycle_overlays_independent_ambient_layers(tmp_path):
 
 def test_ambient_rotation_ignores_unrelated_event_query_volume(tmp_path):
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.config.event_instruments.update(background="ocean_swell", event_2="tidal_bell")
     app.state.service.playback.start()
     now = time.time()
     unrelated = tuple(
@@ -1606,6 +1609,7 @@ def test_glm_capture_reports_raw_counts_and_sounds_each_satellite(
     app = create_app(
         tmp_path, auto_capture=False, usgs_client=FakeUsgs(), glm_client=glm
     )
+    app.state.config.event_instruments.update(event_2="none", event_3="lightning_glass")
     app.state.service.playback.start()
     app.state.config.live_mode = "continuous"
     played = []
@@ -1667,6 +1671,7 @@ def test_mtg_capture_schedules_each_flash_once_on_delayed_timeline(
         usgs_client=FakeUsgs(),
         mtg_li_client=mtg_li,
     )
+    app.state.config.event_instruments.update(event_2="none", event_3="lightning_glass")
     app.state.service.playback.start()
     app.state.service.apply_audio_settings(
         ["eumetsat_mtg_li"],
@@ -1747,6 +1752,7 @@ def test_glm_sonification_can_play_a_hundred_hidden_notes(tmp_path, monkeypatch)
     app = create_app(
         tmp_path, auto_capture=False, usgs_client=FakeUsgs(), glm_client=FakeGlm()
     )
+    app.state.config.event_instruments.update(event_2="none", event_3="lightning_glass")
     app.state.service.playback.start()
     app.state.config.live_mode = "continuous"
     app.state.config.instrument_volumes["event_3"] = 0.2
@@ -1854,6 +1860,7 @@ def test_recent_glm_field_is_restored_from_persistent_history(tmp_path):
 def test_continuous_mode_stops_forecast_layers_after_fallback_expires(tmp_path):
     old = time.time() - service.FORECAST_FALLBACK_MAX_AGE_SECONDS - 1
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    app.state.config.event_instruments.update(background="ocean_swell", event_2="tidal_bell")
     app.state.service.store.add_events(
         (
             GaiaEvent(
@@ -2157,7 +2164,7 @@ def test_frog_calls_share_key_and_preserve_separate_regions(tmp_path):
 
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
     with TestClient(app) as client:
-        payload = {"enabled_sources": [], "instrument_slots": app.state.config.instrument_slots(),
+        payload = {"enabled_sources": [], "instrument_slots": {**app.state.config.instrument_slots(), "background": "frog_calls"},
                    "frog_calls_enabled": True}
         assert client.put("/api/settings/audio", json=payload).status_code == 422
         payload.update(xeno_canto_api_key="shared-first-key", birdsong_provider="xeno_canto")
@@ -2260,6 +2267,7 @@ def test_sanctsound_settings_preview_rotation_and_disable(tmp_path, kind):
             return event
 
     config = AppConfig(enabled_sources=[], osc_enabled=False)
+    setattr(config, f"{kind}_enabled", False)
     config.save(tmp_path / "config.json")
     recording = FakeMarineRecording()
     app = create_app(tmp_path, auto_capture=False, **{f"{kind}_client": recording})
@@ -2750,7 +2758,7 @@ def test_mtg_retry_does_not_repeat_successful_voice(tmp_path, monkeypatch):
     svc.playback.start()
     svc.config.live_mode = 'continuous'
     svc.config.enabled_sources = ['eumetsat_mtg_li']
-    svc.config.event_instruments.update(event_1='lightning_glass', event_3='lightning_glass')
+    svc.config.event_instruments.update(event_1='lightning_glass', event_2='none', event_3='lightning_glass')
     monkeypatch.setattr(service, 'MTG_PRESENTATION_DELAY_SECONDS', 0)
     calls = []
 
@@ -2798,3 +2806,41 @@ def test_recording_watchdog_runs_while_retrieval_is_blocked(tmp_path):
             await retrieval
 
     asyncio.run(run())
+
+
+def test_commons_birdsong_saves_and_plays_with_all_background_sources_enabled(tmp_path):
+    from gaiascapes_host.config import AppConfig
+
+    birds = FakeBirdsong()
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs(), birdsong_client=birds)
+    with TestClient(app) as client:
+        config = app.state.config
+        payload = {
+            'instrument_slots': config.instrument_slots(),
+            'birdsong_provider': 'wikimedia_commons',
+            'xeno_canto_api_key': '',
+            **{f'{kind}_enabled': True for kind in (
+                'birdsong', 'frog_calls', 'whale_song', 'dolphin_calls',
+                'feline_calls', 'canine_calls', 'elephant_calls', 'primate_calls',
+            )},
+        }
+        response = client.put('/api/settings/audio', json=payload)
+        assert response.status_code == 200, response.text
+        assert response.json()['xeno_canto_credentials_configured'] is False
+        preview = client.post('/api/instruments/preview', json={'instrument': 'birdsong', 'kind': 'birdsong'})
+        assert preview.status_code == 200, preview.text
+        assert birds.indices == [0]
+        cue = app.state.service._emitted_cues[-1]
+        assert cue['event']['provider'] == 'wikimedia_commons'
+        assert cue['event']['traits']['media_url'].startswith('/birdsong-media/')
+        frog_preview = client.post('/api/instruments/preview', json={'instrument': 'frog_calls', 'kind': 'frog_calls'})
+        assert frog_preview.status_code == 422
+        assert 'Frog Calls requires a Xeno-canto API key' in frog_preview.text
+        payload['instrument_slots'] = {**config.instrument_slots(), 'background': 'frog_calls'}
+        rejected = client.put('/api/settings/audio', json=payload)
+        assert rejected.status_code == 422
+        assert config.instrument_slots()['background'] == 'birdsong'
+    restored = AppConfig.load(tmp_path / 'config.json')
+    assert restored.birdsong_provider == 'wikimedia_commons'
+    assert restored.frog_calls_enabled is True
+    assert restored.instrument_slots()['background'] == 'birdsong'

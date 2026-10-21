@@ -122,8 +122,10 @@ or source terms that remain applicable.
 ## Wikimedia Commons birdsong
 
 Gaiascapes can resolve and locally cache birdsong recordings from Wikimedia
-Commons through its keyless public API. The recordings are downloaded at runtime
-and are not bundled with Gaiascapes. Each recording remains under the license shown
+Commons through its keyless public API. The installer downloads the curated
+recordings and their attribution into the selected installation's local data
+directory; playback uses those files without contacting Commons. The recordings
+are not bundled in the Python package. Each recording remains under the license shown
 on its Commons file page; Gaiascapes accepts only public-domain, CC0, CC BY, and
 CC BY-SA files and displays the creator, license, and source link in the interface.
 

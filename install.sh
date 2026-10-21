@@ -36,8 +36,15 @@ if [[ "$(uname -s)" == Darwin ]]; then
   ensure_macos_supercollider
   ensure_macos_say_quark
 else
+  if [[ "$(uname -s)" == Linux ]]; then
+    source "$SOURCE_DIR/scripts/linux_dependencies.sh"
+    ensure_linux_host_dependencies || fail "Required Linux host packages could not be installed. Resolve the package-manager error above and retry."
+  fi
   command -v "$PYTHON_BIN" >/dev/null 2>&1 || fail "Python 3.10 or newer was not found."
   "$PYTHON_BIN" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' || fail "Python 3.10 or newer is required."
+  if [[ "$(uname -s)" == Linux ]]; then
+    ensure_linux_supercollider
+  fi
 fi
 
 remembered="$DEFAULT_INSTALL_DIR"
@@ -139,6 +146,14 @@ if [[ "$INSTALL_MODE" == desktop ]]; then
 fi
 "$INSTALL_DIR/.venv/bin/python" -m pip uninstall --yes earth-rhythms >/dev/null 2>&1 || true
 
+if [[ "${GAIA_SCAPE_INSTALL_BIRDSONG:-yes}" != no ]]; then
+  if ! "$INSTALL_DIR/.venv/bin/python" -m gaiascapes_host.birdsong_cache --data-dir "$INSTALL_DIR/data" 2>&1 | tee -a "$LOG_FILE"; then
+    printf 'Some Birdsong recordings could not be installed locally. Rerun this installer to finish downloading them; other Gaiascapes features remain available.\n' >&2
+  fi
+else
+  printf 'Birdsong catalog download skipped by GAIA_SCAPE_INSTALL_BIRDSONG=no.\n'
+fi
+
 if [[ "$SOURCE_DIR" != "$INSTALL_DIR" ]]; then
   install -m 755 "$SOURCE_DIR/install.sh" "$INSTALL_DIR/install.sh"
   install -m 755 "$SOURCE_DIR/uninstall.sh" "$INSTALL_DIR/uninstall.sh"
@@ -193,7 +208,7 @@ fi
 
 "$PYTHON_BIN" "$SOURCE_DIR/scripts/cleanup_legacy_launchers.py" "$INSTALL_DIR"
 
-if command -v sclang >/dev/null 2>&1 || [[ -x /Applications/SuperCollider.app/Contents/MacOS/sclang ]] || [[ -x "$HOME/Applications/SuperCollider.app/Contents/MacOS/sclang" ]]; then
+if { command -v sclang >/dev/null 2>&1 && command -v scsynth >/dev/null 2>&1; } || [[ -x /Applications/SuperCollider.app/Contents/MacOS/sclang && -x /Applications/SuperCollider.app/Contents/Resources/scsynth ]] || [[ -x "$HOME/Applications/SuperCollider.app/Contents/MacOS/sclang" && -x "$HOME/Applications/SuperCollider.app/Contents/Resources/scsynth" ]]; then
   printf 'SuperCollider detected.\n'
 else
   printf 'SuperCollider was not detected; capture, history, the web UI, and browser animal recordings will still work. Synthesized audio is unavailable.\n'

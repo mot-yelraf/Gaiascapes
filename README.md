@@ -44,13 +44,28 @@ Wikimedia Commons recordings. Gaiascapes resolves files through the keyless Comm
 API, accepts only public-domain, CC0, CC BY, or CC BY-SA audio, and caches each selected
 recording under `data/media/birdsong/`. The interface displays the recording's creator,
 license, and Commons source page; no Wikimedia account or API key is required.
+The installer downloads the complete curated Commons catalog into the selected
+installation's `data/media/birdsong/` directory, alongside attribution metadata.
+Birdsong playback reads those local files without contacting Commons. Setup
+requires internet access; rerunning the installer reuses completed recordings
+and downloads missing files. A partial setup reports failures explicitly.
+Set `GAIA_SCAPE_INSTALL_BIRDSONG=no` to defer this download for an offline or
+automated installation; Commons Birdsong requires the local catalog to play.
+To populate or repair only this catalog, run the installed Python with:
+
+```sh
+"$HOME/Gaiascapes/.venv/bin/python" -m gaiascapes_host.birdsong_cache --data-dir "$HOME/Gaiascapes/data"
+```
+
 Frog Calls is another browser-played background, with its own source switch and
 19 editable global regions in Sound locations. Select Frog Calls in Instruments
 for volume and Preview controls. It uses Xeno-canto frog and toad recordings
 within 100 km of each region center, retaining the recording's actual location
 and attribution. Birdsong and Frog Calls share one Xeno-canto API key: enter or
 replace it in either source tile. Blank fields preserve the saved key. Frog Calls
-is disabled by default and caches its media under `data/media/frog_calls/`.
+is enabled as an available source by default and caches its media under
+`data/media/frog_calls/`. Its key is required when selecting Frog Calls as the
+background or previewing it; it does not block saving Commons Birdsong.
 Frog searches include ungraded recordings and calls of 1–180 seconds, accepting
 CC BY, CC BY-SA, and CC BY-NC-SA licenses. The background status strip reports loading and
 lookup failures, including regions without suitable recordings.
@@ -304,14 +319,15 @@ On macOS:
 The macOS installer offers to install **Python 3.13 through Homebrew** if the
 selected Python is missing or older than the required **3.10**. It asks before
 installing and uses the resulting interpreter for the remaining steps. It also
-offers to install **SuperCollider** for synthesized audio rendering, then the
-separate **Say quark** from its upstream Git repository for macOS announcements.
+installs **SuperCollider** through Homebrew for synthesized audio rendering, then
+offers the separate **Say quark** from its upstream Git repository for macOS announcements.
 The quark is placed in the user's SuperCollider `Extensions/say` directory;
 existing installations are preserved. Git is required for this step. If Homebrew
 is missing or a dependency installation fails, it prints manual installation
 instructions. Supported Python is required to continue; without SuperCollider,
 capture, history, the web UI, and browser animal recordings still work. Offers
-require an interactive Terminal; unattended runs never accept them automatically.
+for Python and Say require an interactive Terminal; SuperCollider installation also
+runs unattended when Homebrew is available.
 If the default `python3` is unusable, the installer checks versioned Python
 commands and existing Homebrew Python installations before offering an install.
 An existing supported Python can be selected with `GAIA_SCAPE_PYTHON=/full/path/to/python3`;
@@ -329,9 +345,20 @@ with an explanatory message. Use the launchers under `scripts/` for new shortcut
 On Linux or Raspberry Pi OS:
 
 ```sh
-sudo apt install python3 python3-venv python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
 ./scripts/install_linux.sh
 ```
+
+On Debian, Ubuntu, and Raspberry Pi OS, the installer automatically installs
+Python 3, venv, and pip, plus GTK/WebKit bindings and WirePlumber for desktop
+installs. It also installs SuperCollider language and synthesis-server packages
+and `pipewire-jack` using `apt-get` (and `sudo` when needed), for both desktop
+and headless installs. It verifies that `sclang`, `scsynth`, and `pw-jack` are
+available afterward, including when SuperCollider was already installed.
+Required host-package failures stop installation with recovery instructions;
+audio-package failures allow installation to continue without verified audio
+support. Other Linux distributions receive manual installation instructions.
+On Linux or macOS, set `GAIA_SCAPE_INSTALL_SUPERCOLLIDER=no` to skip automatic
+SuperCollider installation. Existing complete SuperCollider installations are reused.
 
 On macOS and Linux, the default installation and launch directory is `~/Gaiascapes`. The installer
 presents a folder selector, remembers the chosen location,
@@ -425,6 +452,11 @@ auto-start service while preserving captured data. To remove the data as well:
 ```sh
 GAIA_SCAPE_REMOVE_DATA=yes ./uninstall.sh
 ```
+
+On Linux with an active PipeWire session, the GUI launcher starts the renderer
+through `pw-jack` automatically so it shares the desktop audio output. Run the
+GUI from the Pi desktop session; no manual `pw-jack` prefix is needed. Systems
+without an active PipeWire session retain the standalone JACK startup path.
 
 The GUI launcher starts and supervises SuperCollider automatically, starts the
 local web service when needed, and opens Gaiascapes in a native pywebview window:
@@ -579,8 +611,11 @@ with its coordinates and event time, and a separately retained latest earthquake
 followed by its magnitude, coordinates, and event time.
 Independent 0–100%
 volume sliders sit beneath each Preview button for
-Event 1, Event 2, Event 3, and Background; the Lightning R2D2 default in Event 3
-starts at 45% to leave headroom for dense flash fields. OSC host and port can be overridden with
+Event 1, Event 2, Event 3, and Background. New installations enable all background
+sources and USGS/NOAA event sources, with Commons Birdsong as Background,
+Earthquake in Event 1, Thunder in Event 2, and None in Event 3. Units default to
+Metric, host location is shown, and Announce Recording is disabled. Saved choices
+are preserved during upgrades. OSC host and port can be overridden with
 `GAIA_SCAPE_OSC_HOST` and `GAIA_SCAPE_OSC_PORT`; change `oscPort` in the
 SuperCollider script when selecting another receive port.
 

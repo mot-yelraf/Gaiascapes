@@ -16,7 +16,16 @@ cd "$RUNTIME_DIR"
 supercollider_pid=""
 desktop_pid=""
 if ! pgrep -f "$RUNTIME_DIR/supercollider/gaia-scape.scd" >/dev/null 2>&1; then
-  "$RUNTIME_DIR/scripts/run_supercollider.sh" &
+  renderer_command=("$RUNTIME_DIR/scripts/run_supercollider.sh")
+  if [[ "$(uname -s)" == Linux ]] && command -v wpctl >/dev/null 2>&1 && wpctl status >/dev/null 2>&1; then
+    if command -v pw-jack >/dev/null 2>&1; then
+      printf 'Starting SuperCollider through PipeWire JACK.\n'
+      renderer_command=(pw-jack "${renderer_command[@]}")
+    else
+      printf 'PipeWire is active but pw-jack is missing. Rerun the installer or install pipewire-jack for synthesized audio.\n' >&2
+    fi
+  fi
+  "${renderer_command[@]}" &
   supercollider_pid=$!
   sleep 2
   if ! kill -0 "$supercollider_pid" >/dev/null 2>&1; then

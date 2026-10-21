@@ -87,13 +87,14 @@ ensure_macos_python
     assert "UNEXPECTED" not in result.stdout
 
 
-@pytest.mark.parametrize("scenario", ["present", "accept", "decline", "no_brew", "failed", "not_detected"])
+@pytest.mark.parametrize("scenario", ["present", "accept", "skip", "no_brew", "failed", "not_detected"])
 def test_supercollider_is_optional_and_install_is_verified(tmp_path, scenario):
     result = run_checks(tmp_path, f'''
 installed={'yes' if scenario == 'present' else 'no'}
+GAIA_SCAPE_INSTALL_SUPERCOLLIDER={'no' if scenario == 'skip' else 'yes'}
 supercollider_installed() {{ [[ "$installed" == yes ]]; }}
 find_homebrew() {{ BREW_BIN=fake_brew; return {1 if scenario == 'no_brew' else 0}; }}
-confirm_dependency() {{ echo "OFFER:$1"; return {1 if scenario == 'decline' else 0}; }}
+confirm_dependency() {{ echo UNEXPECTED_PROMPT; return 1; }}
 fake_brew() {{
   echo "BREW:$*"
   installed={'yes' if scenario == 'accept' else 'no'}
@@ -104,6 +105,7 @@ echo CONTINUING
 ''')
     assert result.returncode == 0, result.stderr
     assert "CONTINUING" in result.stdout
+    assert "UNEXPECTED_PROMPT" not in result.stdout
     if scenario in {"accept", "failed", "not_detected"}:
         assert "BREW:install --cask supercollider" in result.stdout
     else:

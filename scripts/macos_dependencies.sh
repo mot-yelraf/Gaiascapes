@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # macOS prerequisite checks, sourced by install.sh before runtime files change.
-# Dependency installation requires an explicit interactive answer; Homebrew itself
-# is never installed automatically. PYTHON_BIN is updated to the chosen interpreter.
+# Python and Say installation require an interactive answer; SuperCollider is
+# installed by default. Homebrew itself is never installed automatically.
 
 supported_python() {
   command -v "$PYTHON_BIN" >/dev/null 2>&1 &&
@@ -116,9 +116,9 @@ prepare_macos_venv() {
 }
 
 supercollider_installed() {
-  command -v sclang >/dev/null 2>&1 ||
-    [[ -x /Applications/SuperCollider.app/Contents/MacOS/sclang ]] ||
-    [[ -x "$HOME/Applications/SuperCollider.app/Contents/MacOS/sclang" ]]
+  { command -v sclang >/dev/null 2>&1 && command -v scsynth >/dev/null 2>&1; } ||
+    [[ -x /Applications/SuperCollider.app/Contents/MacOS/sclang && -x /Applications/SuperCollider.app/Contents/Resources/scsynth ]] ||
+    [[ -x "$HOME/Applications/SuperCollider.app/Contents/MacOS/sclang" && -x "$HOME/Applications/SuperCollider.app/Contents/Resources/scsynth" ]]
 }
 
 supercollider_install_help() {
@@ -140,20 +140,21 @@ ensure_macos_supercollider() {
     return 0
   fi
   printf 'SuperCollider is missing. It is required for synthesized audio rendering.\n' >&2
-  if ! find_homebrew; then
+  if [[ "${GAIA_SCAPE_INSTALL_SUPERCOLLIDER:-yes}" == no ]]; then
+    printf 'SuperCollider installation skipped by GAIA_SCAPE_INSTALL_SUPERCOLLIDER=no.\n' >&2
+  elif ! find_homebrew; then
     printf 'Homebrew was not found; automatic SuperCollider installation is unavailable.\n' >&2
-  elif confirm_dependency 'Install SuperCollider through Homebrew (brew install --cask supercollider)?'; then
+  else
+    printf 'Installing SuperCollider through Homebrew.\n'
     if "$BREW_BIN" install --cask supercollider; then
       if supercollider_installed; then
         printf 'SuperCollider installed and detected.\n'
         return 0
       fi
-      printf 'Homebrew completed, but SuperCollider sclang was not found in PATH or the standard Applications folders.\n' >&2
+      printf 'Homebrew completed, but SuperCollider sclang and/or scsynth were not found in PATH or the standard Applications folders.\n' >&2
     else
       printf 'Homebrew SuperCollider installation failed. Check the error above and macOS compatibility before retrying.\n' >&2
     fi
-  else
-    printf 'SuperCollider installation was not accepted.\n' >&2
   fi
   supercollider_install_help
 }
