@@ -241,8 +241,8 @@ async function playRecordingCue(cue) {
     }
   }, {once: true});
   activeRecordingAudio.add(next);
-  if (byId("mapPulseLayer")) {
-    animateMapEvent(cue.event, cue.instrument, cueRole(cue), cueDuration, next);
+  if (byId("mapPulseLayer") || byId("eventPulseLayer")) {
+    animateCapturedEvent(cue.event, cue.instrument, cueRole(cue), cueDuration, cue.volume ?? 1, next);
   }
   if (cue.recording_rotation) {
     let advancing = false;
@@ -571,6 +571,25 @@ function renderMapHistory(events) {
   });
 }
 
+function syncRecordingAnimation(element, durationProperty, audio, animationDuration, remove) {
+  element.style.animationPlayState = "paused";
+  const syncPlayback = () => {
+    if (!activeRecordingAudio.has(audio) || audio.ended) {
+      remove();
+      return;
+    }
+    const duration = audio.fullRecording ? audio.duration : Math.min(audio.duration, animationDuration);
+    const knownDuration = Number.isFinite(duration) && duration > 0;
+    element.style.visibility = knownDuration ? "" : "hidden";
+    if (knownDuration) {
+      element.style.setProperty(durationProperty, `${duration}s`);
+      element.style.animationDelay = `-${Math.min(audio.currentTime, duration)}s`;
+    }
+    requestAnimationFrame(syncPlayback);
+  };
+  syncPlayback();
+}
+
 function animateMapEvent(event, instrument, role, animationDuration, audio = null) {
   const layer = byId("mapPulseLayer");
   if (!layer) return;
@@ -588,22 +607,7 @@ function animateMapEvent(event, instrument, role, animationDuration, audio = nul
   layer.append(group);
   if (role === "background") updateMapBackgroundLocation({name: event.traits?.place || "", latitude: event.latitude, longitude: event.longitude}, colors.primary);
   if (audio) {
-    pulse.style.animationPlayState = "paused";
-    const syncPlayback = () => {
-      if (!activeRecordingAudio.has(audio) || audio.ended) {
-        group.remove();
-        return;
-      }
-      const duration = audio.fullRecording ? audio.duration : Math.min(audio.duration, animationDuration);
-      const knownDuration = Number.isFinite(duration) && duration > 0;
-      pulse.style.visibility = knownDuration ? "" : "hidden";
-      if (knownDuration) {
-        pulse.style.setProperty("--map-pulse-duration", `${duration}s`);
-        pulse.style.animationDelay = `-${Math.min(audio.currentTime, duration)}s`;
-      }
-      requestAnimationFrame(syncPlayback);
-    };
-    syncPlayback();
+    syncRecordingAnimation(pulse, "--map-pulse-duration", audio, animationDuration, () => group.remove());
   } else {
     setTimeout(() => group.remove(), (animationDuration * 1000) + 400);
   }
@@ -1156,12 +1160,16 @@ function cueRole(cue) {
   return ["ocean_swell", "storm_potential", ...RECORDED_BACKGROUNDS].includes(cue.event?.kind) ? "background" : "event";
 }
 
-function animateCapturedEvent(event, instrument = "", role = "event", cueDuration = 3.6, volume = 1) {
+function animateCapturedEvent(event, instrument = "", role = "event", cueDuration = 3.6, volume = 1, audio = null) {
+  const recordedBackground = role === "background"
+    && RECORDED_BACKGROUNDS.includes(event?.kind) && event.traits?.media_url;
+  // Recording visuals start together once playback is ready.
+  if (recordedBackground && !audio) return;
   const animationDuration = role === "background"
     ? Math.max(3.6, Number(cueDuration) || 3.6)
     : 3.6;
-  if (!RECORDED_BACKGROUNDS.includes(event?.kind) || !event.traits?.media_url) {
-    animateMapEvent(event, instrument, role, animationDuration);
+  if (audio || !RECORDED_BACKGROUNDS.includes(event?.kind) || !event.traits?.media_url) {
+    animateMapEvent(event, instrument, role, animationDuration, audio);
   }
   const layer = byId("eventPulseLayer");
   if (!layer) return;
@@ -1191,8 +1199,12 @@ function animateCapturedEvent(event, instrument = "", role = "event", cueDuratio
       document.body.classList.remove("preview-pulse-visible");
     }
   };
-  wave.addEventListener("animationend", removeWave, {once: true});
-  setTimeout(removeWave, (animationDuration * 1000) + 400);
+  if (audio) {
+    syncRecordingAnimation(wave, "--wave-duration", audio, animationDuration, removeWave);
+  } else {
+    wave.addEventListener("animationend", removeWave, {once: true});
+    setTimeout(removeWave, (animationDuration * 1000) + 400);
+  }
 }
 
 async function updateStatus() {

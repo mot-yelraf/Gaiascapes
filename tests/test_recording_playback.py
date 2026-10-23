@@ -41,7 +41,7 @@ const context = vm.createContext({
   requestAnimationFrame: callback => {frame = callback;},
   setTimeout: () => {throw new Error('Recording ring must use playback time');},
 });
-vm.runInContext(source.slice(source.indexOf('function animateMapEvent('),
+vm.runInContext(source.slice(source.indexOf('function syncRecordingAnimation('),
   source.indexOf('\nasync function request(')), context);
 vm.runInContext("animateMapEvent({kind: 'whale_song', traits: {}}, '', 'background', 24.5, audio)", context);
 const [group, pulse] = elements;
@@ -72,6 +72,73 @@ assert.equal(previewPulse.style.animationDelay, '-4s');
 activeRecordingAudio.delete(audio);
 frame();
 assert.equal(previewGroup.removed, true);
+'''
+    result = subprocess.run([node, "-e", script, str(source)],
+                            capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stderr
+
+
+def test_recording_color_burst_tracks_playback_and_preserves_event_timing():
+    """Keep recording bursts on the audio clock and event bursts on their timer."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is needed to exercise the background animation")
+    source = Path(__file__).parents[1] / "src/gaiascapes_host/static/app.js"
+    script = r'''
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const source = fs.readFileSync(process.argv[1], 'utf8');
+const waves = [], timers = [], frames = [];
+const audio = {duration: 120, currentTime: 30, fullRecording: true, ended: false};
+const activeRecordingAudio = new Set([audio]);
+const layer = {append: wave => waves.push(wave), querySelector: () => null};
+const context = vm.createContext({
+  audio, activeRecordingAudio, RECORDED_BACKGROUNDS: ['whale_song'],
+  byId: id => id === 'eventPulseLayer' ? layer : null,
+  eventColors: () => ({kind: 'whale_song', primary: '#123456', inner: '#123456'}),
+  animateMapEvent() {},
+  document: {
+    body: {classList: {remove() {}}},
+    createElement: () => ({dataset: {}, remove() {this.removed = true;},
+      addEventListener() {}, style: {setProperty(name, value) {this[name] = value;}}}),
+  },
+  requestAnimationFrame: callback => frames.push(callback),
+  setTimeout: (callback, delay) => timers.push(delay),
+});
+vm.runInContext(source.slice(source.indexOf('function syncRecordingAnimation('),
+  source.indexOf('function animateMapEvent(')), context);
+vm.runInContext(source.slice(source.indexOf('function animateCapturedEvent('),
+  source.indexOf('async function updateStatus(')), context);
+context.event = {kind: 'whale_song', traits: {media_url: '/test.wav'}};
+vm.runInContext("animateCapturedEvent(event, '', 'background', 24.5)", context);
+assert.equal(waves.length, 0); // Wait for playback readiness.
+vm.runInContext("animateCapturedEvent(event, '', 'background', 24.5, 1, audio)", context);
+const wave = waves[0];
+assert.equal(wave.style['--wave-duration'], '120s');
+assert.equal(wave.style.animationPlayState, 'paused');
+assert.equal(wave.style.animationDelay, '-30s');
+assert.equal(timers.length, 0);
+frames.shift()(); // A stalled recording leaves the burst at the same point.
+assert.equal(wave.style.animationDelay, '-30s');
+audio.currentTime = 90;
+frames.shift()();
+assert.equal(wave.style.animationDelay, '-90s');
+audio.ended = true;
+frames.shift()();
+assert.equal(wave.removed, true);
+audio.ended = false;
+audio.fullRecording = false;
+audio.currentTime = 4;
+vm.runInContext("animateCapturedEvent(event, '', 'background', 8, 1, audio)", context);
+assert.equal(waves[1].style['--wave-duration'], '8s');
+assert.equal(waves[1].style.animationDelay, '-4s');
+activeRecordingAudio.delete(audio);
+frames.shift()();
+assert.equal(waves[1].removed, true);
+vm.runInContext("animateCapturedEvent({kind: 'earthquake'}, '', 'event', 60)", context);
+assert.equal(waves[2].style['--wave-duration'], '3.6s');
+assert.deepEqual(timers, [4000]);
 '''
     result = subprocess.run([node, "-e", script, str(source)],
                             capture_output=True, text=True, timeout=10)
