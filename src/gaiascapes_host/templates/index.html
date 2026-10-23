@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="earth">
+<html lang="en" data-theme="{{ display_settings.theme }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -129,6 +129,24 @@
               <label class="theme-option" data-theme-swatch="wind"><input type="radio" name="theme" value="wind"><span><strong>Wind</strong><small>Light yellow</small></span></label>
               <label class="theme-option" data-theme-swatch="fire"><input type="radio" name="theme" value="fire"><span><strong>Fire</strong><small>Light red</small></span></label>
               <label class="theme-option" data-theme-swatch="ocean"><input type="radio" name="theme" value="ocean"><span><strong>Ocean</strong><small>Light blue</small></span></label>
+            </fieldset>
+            <div class="pane-heading"><div><h3 id="backgroundAnimationHeading">Background Animation</h3><p>Let colors burst or paint the background around the map.</p></div></div>
+            <fieldset class="background-animation-options" aria-labelledby="backgroundAnimationHeading">
+              <label class="theme-option"><input type="radio" name="backgroundAnimation" value="burst" checked><span><strong>Burst</strong><small>Colors rise and fade with each sound.</small></span></label>
+              <div class="background-paint-choice">
+                <label class="theme-option"><input type="radio" name="backgroundAnimation" value="paint"><span><strong>Paint</strong><small>Layer colors for 19 locations, then start fresh.</small></span></label>
+                <div class="background-paint-options">
+                  <label class="settings-field" for="backgroundPalette"><span>Color Palette</span><select id="backgroundPalette">
+                    <option value="natural">Natural</option><option value="aurora">Aurora</option><option value="wildflower">Wildflower</option><option value="pastel">Pastel</option><option value="random">Random</option>
+                  </select></label>
+                  <label class="settings-field" for="backgroundPaintShape"><span>Paint Shape</span><select id="backgroundPaintShape" aria-describedby="backgroundPaintShapeHint">
+                    <option value="bloom">Bloom</option><option value="watercolor">Watercolor</option><option value="ribbon">Ribbon</option><option value="random">Random</option>
+                  </select><small id="backgroundPaintShapeHint">Used with Paint animation.</small></label>
+                  <label class="settings-field background-event-options" for="backgroundEvents"><span>Events</span><select id="backgroundEvents">
+                    <option value="both">Events &amp; Background</option><option value="events">Events</option><option value="background">Background</option>
+                  </select></label>
+                </div>
+              </div>
             </fieldset>
             <div class="pane-heading"><div><h3>Map</h3><p>Choose the projection and center longitude for both maps.</p></div></div>
             <div class="location-editor-options">
@@ -346,11 +364,13 @@
       <footer class="modal-footer"><p>Changes are stored with this installation.</p><div><button class="primary" type="submit">Save settings</button></div></footer>
     </form>
   </dialog>
+  <script id="displaySettingsData" type="application/json">{{ display_settings | tojson }}</script>
   <script id="forecastLocationData" type="application/json">{{ {"current": forecast_location_catalogs, "defaults": default_forecast_location_catalogs} | tojson }}</script>
   <script src="/static/recording-audio.js?v={{ version }}"></script>
   <script src="/static/live-audio.js?v={{ version }}"></script>
   <script src="/static/animal-wikipedia.js?v={{ version }}"></script>
   <script src="/static/announcements.js?v={{ version }}"></script>
+  <script src="/static/background-animation.js?v={{ version }}"></script>
   <script src="/static/app.js?v={{ version }}"></script>
   <script src="/static/game-controls.js?v={{ version }}"></script>
 </body>

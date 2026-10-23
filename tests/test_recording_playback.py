@@ -139,6 +139,15 @@ assert.equal(waves[1].removed, true);
 vm.runInContext("animateCapturedEvent({kind: 'earthquake'}, '', 'event', 60)", context);
 assert.equal(waves[2].style['--wave-duration'], '3.6s');
 assert.deepEqual(timers, [4000]);
+let retained = 0;
+context.backgroundAnimation = {retain: () => {retained++; return true;}};
+vm.runInContext("animateCapturedEvent(event, '', 'background', 8, 1, audio)", context);
+assert.equal(retained, 1);
+assert.equal(frames.length, 0); // Retained paint is independent of recording completion.
+assert.deepEqual(timers, [4000]); // No expiry timer is attached to paint.
+vm.runInContext("animateCapturedEvent({kind: 'earthquake'}, '', 'event', 60)", context);
+assert.equal(retained, 1); // Events keep their usual bursts in Paint mode.
+assert.deepEqual(timers, [4000, 4000]);
 '''
     result = subprocess.run([node, "-e", script, str(source)],
                             capture_output=True, text=True, timeout=10)

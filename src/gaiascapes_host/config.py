@@ -22,6 +22,13 @@ from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
 DEFAULT_USGS_URL = (
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
 )
+DISPLAY_CHOICES = {
+    "theme": ("earth", "wind", "fire", "ocean"),
+    "background_animation": ("burst", "paint"),
+    "background_palette": ("natural", "aurora", "wildflower", "pastel", "random"),
+    "background_paint_shape": ("bloom", "watercolor", "ribbon", "random"),
+    "background_events": ("both", "events", "background"),
+}
 SUPPORTED_SOURCES = (
     "usgs",
     "open_meteo_marine",
@@ -207,6 +214,11 @@ class AppConfig:
     live_mode: str = "capture"
     app_view: str = "dashboard"
     sound_location_order: str = "sequential"
+    theme: str = "earth"
+    background_animation: str = "burst"
+    background_palette: str = "natural"
+    background_paint_shape: str = "bloom"
+    background_events: str = "both"
     map_projection: str = "eckert_iv"
     map_center_longitude: int = 0
     system_location_enabled: bool = True
@@ -359,6 +371,9 @@ class AppConfig:
             raise ValueError("App view must be dashboard or map")
         if self.sound_location_order not in {"sequential", "random"}:
             raise ValueError("Sound location order must be sequential or random")
+        for name, choices in DISPLAY_CHOICES.items():
+            if getattr(self, name) not in choices:
+                raise ValueError(f"Unsupported display setting: {name}")
         self.map_projection = str(self.map_projection).strip().lower()
         if self.map_projection not in {"robinson", "eckert_iv"}:
             raise ValueError("Projection model must be Robinson or Eckert IV")

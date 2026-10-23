@@ -328,11 +328,21 @@ Open **Settings → Display** and choose **Earth** (light brown), **Wind** (ligh
 
 ![Display pane with the Theme palettes above Map controls for Projection Model and Map View](docs/images/user-guide/13-display.png)
 
-Theme is remembered in this browser’s local storage and does not require **Save settings**. Each browser can use its own theme. If browser storage is unavailable, the notification explains that the selection cannot be remembered after reload.
+Theme previews immediately. Click **Save settings** to store it in this installation’s `data/config.json`; it is restored when the desktop app restarts or a browser reconnects.
+
+### Background Animation
+
+Below Theme, choose **Burst** for colors that expand and fade with each background sound, or **Paint** to retain full-size colors around the map's perimeter. Paint layers colors over 19 background location visits, then clears them as the next round begins. Event bursts and map animations keep their usual timing.
+
+**Color Palette** offers **Natural** (the existing sound colors), **Aurora**, **Wildflower**, and **Pastel**. The additional palettes provide a different shade for each of the 19 location visits. Both selectors sit beneath **Paint** and apply only to Paint animation. **Paint Shape** offers **Bloom** (soft circles), **Watercolor** (irregular washes), and **Ribbon** (curved strokes). **Random** is available in both selectors: each new paint layer independently chooses a palette and/or shape. Existing layers keep their resolved random choices. Changing palette or shape updates existing paint immediately without restarting the round.
+
+**Events**, beneath the Paint choices, selects **Events & Background** (the default), **Events**, or **Background** for the visible color effects. It filters Paint immediately; Burst continues showing both event and background effects. Audio and map markers continue unchanged. Hidden paint still advances through the 19-location round.
+
+The animation, palette, shape, and Events choices preview immediately. Click **Save settings** to store them with the installation and restore them after restart. Switching modes clears the accumulated paint; reloading starts a fresh canvas.
 
 ### Map
 
-Below Theme, **Projection Model** changes both the main map and the location editor:
+Below Background Animation, **Projection Model** changes both the main map and the location editor:
 
 | Projection | Appearance |
 | --- | --- |
@@ -358,13 +368,13 @@ Changing either selector updates both maps immediately. Terrain, grid lines, mar
 
 ## Saving settings
 
-Click **Save settings** after editing Sound sources, Sound Choices, Sound locations, or the Map section in Display. The button saves changes across these sections, not just the visible one. The button shows **Saving…** while the request is in progress. Look for the **Settings saved.** toast before closing the dialog. Success and failure notifications for saving, previewing, restoring defaults, and changing theme dismiss automatically after **five seconds**, or immediately when clicked. Source recovery toasts follow the same behavior. A newer result replaces the previous notification and starts a fresh five-second interval. Errors begin with **Error:**; resolve the reported problem and save again. Earlier parts of a save may already have been applied.
+Click **Save settings** after editing Sound sources, Sound Choices, Sound locations, or any section in Display. The button saves changes across these sections, not just the visible one. The button shows **Saving…** while the request is in progress. Look for the **Settings saved.** toast before closing the dialog. Success and failure notifications for saving, previewing, restoring defaults, and changing theme dismiss automatically after **five seconds**, or immediately when clicked. Source recovery toasts follow the same behavior. A newer result replaces the previous notification and starts a fresh five-second interval. Errors begin with **Error:**; resolve the reported problem and save again. Earlier parts of a save may already have been applied.
 
 ![Settings saved notification in Display after saving a Pacific-centered map](docs/images/user-guide/14-settings-saved.png)
 
 Use the **×** in the dialog header to close Settings; there is no Close button beside Save. Escape or clicking outside the dialog also closes it. Closing is not a save action. Unsaved edits may remain visible when you reopen Settings in the same page, so they should not be treated as a saved configuration. Reloading the page restores the saved settings.
 
-Theme is saved immediately in this browser. Listen/Mute applies only to the current page session. Event History is read-only and requires no save.
+Theme and Background Animation are saved with the installation when you click **Save settings**. Listen/Mute applies only to the current page session. Event History is read-only and requires no save.
 
 ## Mobile and iPhone Home Screen
 

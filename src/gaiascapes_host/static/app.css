@@ -206,6 +206,12 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .event-wave { position: absolute; left: var(--wave-x, 50%); top: var(--wave-y, 50%); width: 15vmin; aspect-ratio: 1; border-radius: 50%; opacity: 0; transform: translate(-50%, -50%) scale(.12); background: radial-gradient(circle, color-mix(in srgb, var(--wave-inner, #765236) 86%, transparent) 0%, color-mix(in srgb, var(--wave-color, #93643f) 88%, transparent) 34%, color-mix(in srgb, var(--wave-color, #93643f) 34%, transparent) 64%, transparent 82%); filter: blur(.45vmin) saturate(1.18); mix-blend-mode: screen; animation: event-wave var(--wave-duration, 3.6s) cubic-bezier(.45,0,.55,1) forwards; }
 .event-wave--background { z-index: 0; }
 .event-wave--event { z-index: 1; }
+.event-wave.event-wave--paint { display: block; opacity: .48; transform: translate(-50%, -50%) scale(var(--wave-scale, 9)); mix-blend-mode: screen; animation: event-paint-in 1s ease-out; }
+.event-wave--paint[data-paint-shape="watercolor"] { border-radius: 42% 58% 64% 36% / 57% 38% 62% 43%; aspect-ratio: 1.3; transform: translate(-50%, -50%) rotate(var(--paint-angle, 0deg)) scale(var(--wave-scale, 9)) scaleX(var(--paint-variation, 1)); background: radial-gradient(ellipse at 32% 38%, color-mix(in srgb, var(--wave-inner) 74%, transparent), transparent 65%), radial-gradient(ellipse at 64% 58%, color-mix(in srgb, var(--wave-color) 80%, transparent), transparent 72%); filter: blur(.75vmin) saturate(1.25); }
+.event-wave--paint[data-paint-shape="ribbon"] { aspect-ratio: 3.5; border-radius: 55% 45% 60% 40% / 70% 35% 65% 30%; transform: translate(-50%, -50%) rotate(var(--paint-angle, 0deg)) scale(var(--wave-scale, 9)) scaleX(var(--paint-variation, 1)); background: linear-gradient(175deg, transparent 8%, color-mix(in srgb, var(--wave-inner) 65%, transparent) 32%, color-mix(in srgb, var(--wave-color) 85%, transparent) 54%, transparent 90%); filter: blur(.35vmin) saturate(1.25); }
+:root[data-background-animation="paint"][data-animation-events="events"] .event-wave--background,
+:root[data-background-animation="paint"][data-animation-events="background"] .event-wave--event { display: none; }
+@keyframes event-paint-in { from { opacity: 0; } to { opacity: .48; } }
 .event-wave--earthquake { --wave-color: #93643f; --wave-inner: #765236; }
 @keyframes event-wave { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.12); } 10% { opacity: .9; } 50% { opacity: .72; transform: translate(-50%, -50%) scale(var(--wave-scale, 9)); } 90% { opacity: .58; transform: translate(-50%, -50%) scale(.12); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(.12); } }
 
@@ -363,6 +369,7 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 @media (prefers-reduced-motion: reduce) {
   .event-wave, .map-cue-pulse, .settings-dialog[open] { animation: none; }
   .event-wave { display: none; }
+  .event-wave.event-wave--paint { animation: none; }
 }
 
 /* Compact artwork preserves tile widths and leaves room for both rows. */
@@ -460,19 +467,26 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 [data-theme] .forecast-map-stage { --muted: #d4e4e6; }
 .settings-menu { overflow-y: auto; }
 .settings-studio-logo { display: block; width: 100%; max-width: 12rem; height: auto; flex: 0 0 auto; align-self: center; margin-top: auto; padding-top: 1rem; border-radius: 22px; }
-.theme-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 0; padding: 0; border: 0; }
+.theme-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6rem; margin: 0; padding: 0; border: 0; }
 .theme-options legend { margin-bottom: 1rem; font-weight: 700; }
-.theme-option { justify-content: flex-start; gap: .8rem; min-height: 7rem; padding: 1rem; border: 2px solid var(--line); border-radius: 16px; color: var(--ink); background: var(--surface); cursor: pointer; }
+.theme-option { justify-content: flex-start; gap: .5rem; min-width: 0; min-height: 4.5rem; padding: .65rem; border: 2px solid var(--line); border-radius: 16px; color: var(--ink); background: var(--surface); cursor: pointer; }
 .theme-option:has(:checked) { border-color: var(--moss); box-shadow: inset 0 0 0 1px var(--moss); }
 .theme-option input { width: auto; margin: 0; accent-color: var(--moss); }
 .theme-option span { display: grid; gap: .35rem; color: var(--ink); }
 .theme-option small { color: var(--muted); }
+.background-paint-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: .8rem; margin-top: 1rem; }
+.background-event-options { grid-column: 1 / -1; }
+.background-paint-options small { font-size: .75rem; color: var(--muted); }
+.background-animation-options { align-items: start; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; margin: 0; padding: 0; border: 0; }
 @media (max-width: 800px) {
   .settings-menu { flex-wrap: wrap; overflow-x: hidden; }
   .settings-studio-logo { width: 3rem; margin: 0 0 0 auto; padding: 0; border-radius: 8px; }
 }
 @media (max-width: 520px) {
-  .theme-options { grid-template-columns: 1fr; }
+  .theme-option { gap: .3rem; padding: .45rem; font-size: .75rem; }
+  .theme-option small { font-size: .65rem; }
+  .theme-options .theme-option { flex-direction: column; align-items: flex-start; }
+  .background-animation-options, .background-paint-options { grid-template-columns: 1fr; }
 }
 
 /* Fit the map and its supporting information into the desktop window. */
@@ -595,4 +609,4 @@ main.has-animal > [data-app-view] { grid-column: 2; grid-row: 2; min-width: 0; }
 .playback-message:empty { display: none; }
 .settings-pane[data-pane="history"] .event-list { max-height: none; }
 
-.theme-options + .pane-heading { margin-top: 1.5rem; }
+.theme-options + .pane-heading, .background-animation-options + .pane-heading, .background-paint-options + .pane-heading { margin-top: 1.5rem; }

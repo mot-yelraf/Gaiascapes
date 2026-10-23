@@ -574,7 +574,7 @@ function renderMapHistory(events) {
 function syncRecordingAnimation(element, durationProperty, audio, animationDuration, remove) {
   element.style.animationPlayState = "paused";
   const syncPlayback = () => {
-    if (!activeRecordingAudio.has(audio) || audio.ended) {
+    if (element.isConnected === false || !activeRecordingAudio.has(audio) || audio.ended) {
       remove();
       return;
     }
@@ -1192,10 +1192,13 @@ function animateCapturedEvent(event, instrument = "", role = "event", cueDuratio
   wave.style.setProperty("--wave-inner", colors.inner);
   wave.style.setProperty("--wave-duration", `${animationDuration}s`);
   layer.append(wave);
-  if (byId("settingsDialog")?.open) document.body.classList.add("preview-pulse-visible");
+  if (role === "background" && globalThis.backgroundAnimation?.retain(wave, event)) return;
+  if (byId("settingsDialog")?.open && globalThis.backgroundAnimation?.visible?.(role) !== false) {
+    document.body.classList.add("preview-pulse-visible");
+  }
   const removeWave = () => {
     wave.remove();
-    if (!layer.querySelector(".event-wave")) {
+    if (!layer.querySelector(".event-wave:not(.event-wave--paint)")) {
       document.body.classList.remove("preview-pulse-visible");
     }
   };
@@ -2067,6 +2070,16 @@ if (settingsDialog && settingsForm) {
     saveButton.disabled = true;
     saveButton.textContent = "Saving…";
     try {
+      await request("/api/settings/display", {
+        method: "PUT",
+        body: JSON.stringify({
+          theme: document.documentElement.dataset.theme,
+          background_animation: document.querySelector('input[name="backgroundAnimation"]:checked').value,
+          background_palette: byId("backgroundPalette").value,
+          background_paint_shape: byId("backgroundPaintShape").value,
+          background_events: byId("backgroundEvents").value,
+        }),
+      });
       await request("/api/settings/locations", {
         method: "PUT",
         body: JSON.stringify({
@@ -2167,24 +2180,16 @@ Promise.all([updateStatus(), updateEvents(), updateEmittedCues(), updateSystemLo
 setInterval(updateStatus, 3000);
 setInterval(updateRecordingCountdown, 250);
 
-// Appearance is local to this browser and does not change installation settings.
+// Preview appearance immediately; Save settings persists it with this installation.
 const themeInputs = Array.from(document.querySelectorAll('input[name="theme"]'));
 function applyTheme(name) {
   const selected = themeInputs.some((input) => input.value === name) ? name : "earth";
   document.documentElement.dataset.theme = selected;
   themeInputs.forEach((input) => { input.checked = input.value === selected; });
 }
-try {
-  applyTheme(window.localStorage.getItem("gaiascapes-theme"));
-} catch (_error) {
-  applyTheme("earth");
-}
+const savedDisplaySettings = JSON.parse(byId("displaySettingsData")?.textContent || "{}");
+applyTheme(savedDisplaySettings.theme);
 themeInputs.forEach((input) => input.addEventListener("change", () => {
   applyTheme(input.value);
-  try {
-    window.localStorage.setItem("gaiascapes-theme", input.value);
-    showSettingsToast("Theme applied.");
-  } catch (_error) {
-    showSettingsToast("Theme applied. Browser storage is unavailable, so it cannot be remembered after reload.", true);
-  }
+  showSettingsToast("Theme applied. Save settings to keep it after restart.");
 }));

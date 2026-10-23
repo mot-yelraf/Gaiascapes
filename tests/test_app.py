@@ -2844,3 +2844,37 @@ def test_commons_birdsong_saves_and_plays_with_all_background_sources_enabled(tm
     assert restored.birdsong_provider == 'wikimedia_commons'
     assert restored.frog_calls_enabled is True
     assert restored.instrument_slots()['background'] == 'birdsong'
+
+
+def test_display_settings_persist_and_restore_without_browser_storage(tmp_path):
+    """Restore all saved appearance choices from the installation after restart."""
+    import json
+
+    selected = {
+        "theme": "ocean", "background_animation": "paint",
+        "background_palette": "random", "background_paint_shape": "ribbon",
+        "background_events": "background",
+    }
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    with TestClient(app) as client:
+        response = client.put("/api/settings/display", json=selected)
+        assert response.status_code == 200
+        assert response.json() == selected
+        config_path = tmp_path / "config.json"
+        saved = config_path.read_text()
+        config = json.loads(saved)
+        assert {name: config[name] for name in selected} == selected
+        for name in selected:
+            for invalid in ("invalid", None, [], True):
+                assert client.put("/api/settings/display", json={name: invalid}).status_code == 422
+                assert config_path.read_text() == saved
+        # Partial/older clients preserve omitted display preferences.
+        assert client.put("/api/settings/display", json={}).json() == selected
+    restarted = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    with TestClient(restarted) as client:
+        home = client.get("/").text
+        assert '<html lang="en" data-theme="ocean">' in home
+        match = re.search(r'<script id="displaySettingsData" type="application/json">(.*?)</script>', home)
+        assert match is not None
+        assert json.loads(match.group(1)) == selected
+        assert client.put("/api/settings/display", json={}).json() == selected
