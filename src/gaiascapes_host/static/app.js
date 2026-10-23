@@ -235,7 +235,8 @@ async function playRecordingCue(cue) {
   globalThis.animalWikipedia?.update(cue.event);
   next.addEventListener("ended", () => {
     if (recordingAudio === next) {
-      globalThis.animalWikipedia?.update(null);
+      // Keep the map's companion column in place while the next rotation loads.
+      if (!cue.recording_rotation) globalThis.animalWikipedia?.update(null);
       globalThis.recordingAnnouncements?.stop();
     }
   }, {once: true});

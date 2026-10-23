@@ -307,6 +307,70 @@ context.cue = {sequence: 42, recording_rotation: true, duration: 24.5, volume: 1
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.parametrize("rotating", [True, False])
+def test_recording_transition_retains_companion_until_replacement_or_stop(rotating):
+    """Keep the map layout stable when rotation outlasts the outgoing audio."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is needed to exercise the browser player")
+    source = Path(__file__).parents[1] / "src/gaiascapes_host/static/app.js"
+    script = r'''
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const source = fs.readFileSync(process.argv[1], 'utf8');
+const players = [], displayed = [];
+let releaseIncoming;
+const context = vm.createContext({
+  document: {getElementById: () => null}, console, AbortController, performance,
+  animalWikipedia: {update: event => displayed.push(event)},
+  recordingNormalizer: {
+    resume: async () => {},
+    prepare: async () => {
+      if (players.length === 2) await new Promise(resolve => {releaseIncoming = resolve;});
+    },
+    createPlayer: () => {
+      const player = {duration: 60, currentTime: 0, ended: false, listeners: {},
+        play: async () => {}, pause() {}, removeAttribute() {},
+        addEventListener(name, fn) {(this.listeners[name] ||= []).push(fn);},
+      };
+      players.push(player);
+      return player;
+    },
+  },
+  setInterval: () => 1, clearInterval() {}, setTimeout: () => 1, clearTimeout() {},
+  request: async () => ({}),
+});
+vm.runInContext(source.slice(0, source.indexOf('\nlet mapProjection =')), context);
+context.cue = {sequence: 42, recording_rotation: process.argv[2] === 'true', duration: 60,
+  event: {kind: 'birdsong', traits: {media_url: '/first.wav'}}};
+(async () => {
+  await vm.runInContext('playRecordingCue(cue)', context);
+  assert.equal(displayed.at(-1), context.cue.event);
+  const incoming = vm.runInContext(`playRecordingCue({...cue, sequence: 43,
+    event: {kind: 'birdsong', traits: {media_url: '/second.wav'}}})`, context);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(typeof releaseIncoming, 'function');
+  players[0].ended = true;
+  for (const listener of players[0].listeners.ended) listener();
+  if (context.cue.recording_rotation) {
+    assert.equal(displayed.length, 1); // No panel removal during the loading gap.
+    assert.equal(displayed.at(-1), context.cue.event);
+  } else {
+    assert.equal(displayed.at(-1), null); // Standalone playback still clears.
+  }
+  releaseIncoming();
+  await incoming;
+  assert.equal(displayed.at(-1).traits.media_url, '/second.wav');
+  vm.runInContext('stopRecordingPlayback()', context);
+  assert.equal(displayed.at(-1), null);
+})().catch(error => {console.error(error); process.exitCode = 1;});
+'''
+    result = subprocess.run([node, "-e", script, str(source), str(rotating).lower()],
+                            capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stderr
+
+
 def test_recording_normalization_gain_and_audio_graph():
     node = shutil.which("node")
     if node is None:
