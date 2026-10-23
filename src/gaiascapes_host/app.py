@@ -20,6 +20,7 @@ from gaiascapes import __version__
 from .config import (
     AppConfig,
     BACKGROUND_INSTRUMENT_OPTIONS,
+    DISPLAY_CHOICES,
     EVENT_VOICE_OPTIONS,
     default_forecast_locations,
     default_birdsong_locations,
@@ -172,6 +173,7 @@ def create_app(
         return template.render(
             request=request,
             version=_version(),
+            display_settings={name: getattr(config, name) for name in DISPLAY_CHOICES},
             local_playback=request.client is not None and request.client.host in {"127.0.0.1", "::1"},
             default_hours=config.replay_hours,
             map_projection=config.map_projection,
@@ -489,6 +491,20 @@ def create_app(
                 config.eumetsat_consumer_key and config.eumetsat_consumer_secret
             ),
         }
+
+    @app.put("/api/settings/display")
+    async def update_display_settings(request: Request):
+        """Save appearance choices with the selected installation's settings."""
+        body = await _json_body(request)
+        try:
+            await service.update_settings({
+                name: body.get(name, getattr(config, name)) for name in DISPLAY_CHOICES
+            }, config_path)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except (OSError, RuntimeError) as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        return {name: getattr(config, name) for name in DISPLAY_CHOICES}
 
     @app.put("/api/settings/locations")
     async def update_forecast_locations(request: Request):
