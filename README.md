@@ -1,4 +1,6 @@
-# Gaiascapes
+<h1 align="center">Gaiascapes</h1>
+
+![Gaiascapes running on samhain, showing the live world map, birdsong, and recent environmental events.](docs/images/gaiascapes-app-frame.jpg)
 
 Gaiascapes captures live terrestrial events and turns their time, location,
 and intensity into generative soundscapes. The primary runtime is
@@ -21,7 +23,7 @@ their own licenses. This statement of intended use does not change either licens
 ## Who this is for
 
 - Makers and students who want a real-world python example.
-- Contributors who want a small, readable Python codebase.
+- Those who want to hear some of the sounds of Earth, some in near real-time.
 
 The first source is the USGS all-day earthquake feed. Events are normalized,
 deduplicated in SQLite, and retained locally. The Live Events tile offers two modes:
