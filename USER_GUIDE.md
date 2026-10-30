@@ -1,27 +1,18 @@
-# Gaiascapes user guide
+<h1 align="center">Gaiascapes User Guide</h1>
 
-This guide explains the controls in Gaiascapes **v0.26.291.2**. Installation and system setup are covered separately in the [README](README.md).
+![Pacific-centered map with a staged Redpoll image, its recording-location pointer, Play/Pause/Next controls, and status tiles](docs/images/user-guide/03-map.png)
+
+This guide explains the controls in Gaiascapes. Installation and system setup are covered separately in the [README](README.md).
 
 Peace Hill Studios hope you find the app fun and educational with soothing background sounds.
 
-Screenshots were captured from this version on 18 October 2026 using a separate temporary installation. Enabled sources and selected sounds are examples, not the factory defaults. The mobile images show Safari’s 390 × 844 responsive viewport.
+All screenshots were refreshed from this version on 29 October 2026 using a separate temporary installation. Enabled sources and selected sounds are examples, not the factory defaults. The mobile images show Safari’s 390 × 844 responsive viewport.
 
-## Contents
+## Map View
 
-- [Playback and history](#playback-and-history)
-- [Map view](#map-view)
-- [Sound sources](#sound-sources)
-- [Obtaining credentials](#obtaining-credentials)
-- [Sound Choices](#sound-choices)
-- [Sound locations](#sound-locations)
-- [Display](#display)
-- [Saving settings](#saving-settings)
-- [Mobile and iPhone Home Screen](#mobile-and-iphone-home-screen)
-- [Gaiascapes Game](#gaiascapes-game)
-- [Status and troubleshooting](#status-and-troubleshooting)
-- [Location privacy](#location-privacy)
+The map is always visible in the main window, with the themed animation behind it.
 
-## Playback and history
+The legend distinguishes background locations, event locations, and **My location**. Moving the pointer over the map displays coordinates. The system-location marker, when available, shows the host’s approximate location derived from its public IP address. Background locations come from **Sound locations**; the host location can seed location 1 for Xeno-canto Birdsong and Storm Outlook at startup (see [Location privacy](#location-privacy)).
 
 The main view is the map, with the animated themed background behind it. Use the **Play / Pause / Next** control strip beside the title. Playback status and errors appear beside the controls. Open Settings with the **gear (⚙)** in its themed pill, centered beneath the playback strip. Settings contains **Sound sources**, **Sound Choices**, **Sound locations**, **Display**, and finally **Event History**. The version appears above the Settings heading.
 
@@ -34,31 +25,6 @@ The main view is the map, with the animated themed background behind it. Use the
 5. Press **Play**. On another device, also enable **Settings → Sound Choices → Listen on this device**. Press **Pause** to stop the shared soundscape; **Mute this device** affects only that listening browser.
 
 For synthesized backgrounds or event voices, the host’s SuperCollider renderer must be running. Recorded animal sounds, the map, settings, and event history can operate without it.
-
-### Listening from another device
-
-Open `http://<Gaiascapes-host-IP>:8769` from a device on the same LAN, then tap
-**Listen on this device** in **Settings → Sound Choices**, at the right of the Sound Choices heading. **Mute this device** stops playback
-in that browser without stopping the performance, the host speakers, or other
-listeners. New remote pages start silent; tap Listen again after reloading.
-**Play** and **Pause** control the shared soundscape on the host.
-
-The host must be running and reachable from the listening device. Use the host’s LAN address, not `localhost` or `127.0.0.1`, on another device. The supplied launchers accept LAN connections on port **8769**; if the page will not open, check the host address, firewall, and whether the Wi-Fi network isolates clients. See [Ports and LAN access](README.md#ports) for host binding details. Listening uses the same web connection; no separate audio port needs to be opened on the LAN.
-
-The browser combines live SuperCollider audio with the animal recordings served
-by Gaiascapes. Only Gaiascapes audio is included. Update and restart both the
-Gaiascapes server and its SuperCollider receiver before using this feature.
-SuperCollider must run on the same host as the server. No loopback audio driver
-or microphone permission is required. With SuperCollider disabled, Listen plays
-animal recordings only and explains that limitation beside the button.
-
-Keep the page open while listening. If the browser suspends audio or the
-connection drops, the message beside Listen explains how to reconnect. Remote
-playback has a short buffer and may lag the host speakers. Each browser controls
-its own playback; listening locally as well as through host speakers can produce
-an echo. Remote listeners do not advance the host's recording rotation.
-
-Listening and muting take effect immediately and do not require **Save settings**. Closing Settings leaves device playback active. The relay supports up to **16 simultaneous listeners**; if it is full, mute an unused listener and retry.
 
 ### Playback controls
 
@@ -74,12 +40,6 @@ For **Birdsong, Frog Calls, Whale Song, and Dolphin Calls**, each location visit
 
 Wikimedia Commons Birdsong, Xeno-canto Birdsong, Frog Calls, Whale Song, and Dolphin Calls each have **19 default locations**. Mammal collections use their smaller, fixed site lists. The first pass plays the first available recording at each location. The next pass plays the second recording at each location, and later passes continue through each location's list before wrapping. A location with one verified recording repeats it on each pass. Marine playback follows the included subset when you exclude sites.
 
-### Event History
-
-Open **Settings → Event History**, the last menu option, to inspect recent activity. Rows show the event type, place, measurements or recording title, associated sound, and time. The list is a presentation of recent activity, not a complete inventory of downloaded recordings. Individual lightning flashes are omitted from the visible history list; they can still trigger sound and map activity. **No events in this history window** means there is no activity to list for the current window.
-
-![Event History in a new session with no captured events](docs/images/user-guide/02-event-history.png)
-
 ### Status tiles
 
 Three separate status tiles appear below the map. On desktop they sit side by side along the bottom; on mobile they stack vertically:
@@ -91,14 +51,6 @@ Three separate status tiles appear below the map. On desktop they sit side by si
 | **Last Earthquake Event** | The latest available earthquake location and details, including captured observations. |
 
 A dash or **Not yet** means there is no matching event to display yet. A previous event can remain visible after playback stops; it is not evidence that sound is still playing.
-
-## Map view
-
-The map is always visible in the main window, with the themed animation behind it.
-
-![Pacific-centered map with a staged Redpoll image, its recording-location pointer, Play/Pause/Next controls, and status tiles](docs/images/user-guide/03-map.png)
-
-The legend distinguishes background locations, event locations, and **My location**. Moving the pointer over the map displays coordinates. The system-location marker, when available, shows the host’s approximate location derived from its public IP address. Background locations come from **Sound locations**; the host location can seed location 1 for Xeno-canto Birdsong and Storm Outlook at startup (see [Location privacy](#location-privacy)).
 
 ## Sound sources
 
@@ -156,9 +108,9 @@ NOAA marine recordings come from the [NCEI passive acoustic archive](https://www
 
 Credentials are required only for **Birdsong using Xeno-canto**, **Frog Calls**, and **EUMETSAT MTG Lightning Imager**. There is no credential field for the other sources.
 
-## Obtaining credentials
+### Obtaining credentials
 
-### Xeno-canto: one key for Birdsong and Frog Calls
+#### Xeno-canto: one key for Birdsong and Frog Calls
 
 1. Open [Xeno-canto](https://xeno-canto.org/) in your browser and sign in, or register an account. Complete any email-verification step requested by the site.
 2. Open [Your account](https://xeno-canto.org/account) and locate your API key. The [official API page](https://xeno-canto.org/explore/api) provides the provider’s current API guidance. These pages may require sign-in or a browser verification check.
@@ -170,7 +122,7 @@ Leave the key field blank when you want to keep the saved key. After a successfu
 
 The account-page link is also documented by the [rOpenSci suwo reference](https://docs.ropensci.org/suwo/articles/suwo.html). Xeno-canto blocked automated inspection of its account pages during preparation of this guide, so exact account-page wording could not be checked. No user credentials or recording API requests were used to prepare these instructions.
 
-### EUMETSAT: Consumer Key and Consumer Secret
+#### EUMETSAT: Consumer Key and Consumer Secret
 
 Scroll down in Sound sources if the credential fields are below the visible area.
 
@@ -191,6 +143,31 @@ Blank credential fields preserve their saved values. The **Saved — enter only 
 Open **Settings → Sound Choices**. The listening button is on the right of the heading. The first row contains **Units**, **Announce Recorded Sounds**, and **Background**. Below it are three independent event tiles: **Event 1**, **Event 2**, and **Event 3**. The location-privacy checkbox is beneath the sound tiles. These controls stack on narrow screens.
 
 ![Sound Choices showing listening controls, Units, announcement dialect and voice variant, Birdsong, and three event voices](docs/images/user-guide/06-sound-choices.png)
+
+### Listening from another device
+
+Open `http://<Gaiascapes-host-IP>:8769` from a device on the same LAN, then tap
+**Listen on this device** in **Settings → Sound Choices**, at the right of the Sound Choices heading. **Mute this device** stops playback
+in that browser without stopping the performance, the host speakers, or other
+listeners. New remote pages start silent; tap Listen again after reloading.
+**Play** and **Pause** control the shared soundscape on the host.
+
+The host must be running and reachable from the listening device. Use the host’s LAN address, not `localhost` or `127.0.0.1`, on another device. The supplied launchers accept LAN connections on port **8769**; if the page will not open, check the host address, firewall, and whether the Wi-Fi network isolates clients. See [Ports and LAN access](README.md#ports) for host binding details. Listening uses the same web connection; no separate audio port needs to be opened on the LAN.
+
+The browser combines live SuperCollider audio with the animal recordings served
+by Gaiascapes. Only Gaiascapes audio is included. Update and restart both the
+Gaiascapes server and its SuperCollider receiver before using this feature.
+SuperCollider must run on the same host as the server. No loopback audio driver
+or microphone permission is required. With SuperCollider disabled, Listen plays
+animal recordings only and explains that limitation beside the button.
+
+Keep the page open while listening. If the browser suspends audio or the
+connection drops, the message beside Listen explains how to reconnect. Remote
+playback has a short buffer and may lag the host speakers. Each browser controls
+its own playback; listening locally as well as through host speakers can produce
+an echo. Remote listeners do not advance the host's recording rotation.
+
+Listening and muting take effect immediately and do not require **Save settings**. Closing Settings leaves device playback active. The relay supports up to **16 simultaneous listeners**; if it is full, mute an unused listener and retry.
 
 ### Selecting a sound
 
@@ -366,6 +343,12 @@ Changing either selector updates both maps immediately. Terrain, grid lines, mar
 
 ![Main map with 180° longitude at its center](docs/images/user-guide/21-pacific-map.png)
 
+## Event History
+
+Open **Settings → Event History**, the last menu option, to inspect recent activity. Rows show the event type, place, measurements or recording title, associated sound, and time. The list is a presentation of recent activity, not a complete inventory of downloaded recordings. Individual lightning flashes are omitted from the visible history list; they can still trigger sound and map activity. **No events in this history window** means there is no activity to list for the current window.
+
+![Event History in a new session with no captured events](docs/images/user-guide/02-event-history.png)
+
 ## Saving settings
 
 Click **Save settings** after editing Sound sources, Sound Choices, Sound locations, or any section in Display. The button saves changes across these sections, not just the visible one. The button shows **Saving…** while the request is in progress. Look for the **Settings saved.** toast before closing the dialog. Success and failure notifications for saving, previewing, restoring defaults, and changing theme dismiss automatically after **five seconds**, or immediately when clicked. Source recovery toasts follow the same behavior. A newer result replaces the previous notification and starts a fresh five-second interval. Errors begin with **Error:**; resolve the reported problem and save again. Earlier parts of a save may already have been applied.
@@ -514,8 +497,3 @@ by [Cephas](https://commons.wikimedia.org/wiki/User:Cephas), used under
 It is scaled and cropped by the application’s image card. The photograph retains
 its license. The photograph’s location is separate from the recording location
 shown on the map; the screenshot uses the Commons recording selected by Next.
-
-The older, unreferenced screenshots retained in the image directory may show
-[Greater Roadrunner Tingley Beach](https://commons.wikimedia.org/wiki/File:Greater_Roadrunner_Tingley_Beach.jpg)
-by Polinova (Daniel Polin), licensed under
-[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
