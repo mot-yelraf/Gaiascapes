@@ -798,6 +798,9 @@ function backgroundCharacteristics(event) {
 }
 
 function updateBackgroundCharacteristics(event, fallbackText = null) {
+  const recordingDescription = document.querySelector('[data-status-field="background-sound"]');
+  recordingDescription.replaceChildren();
+  recordingDescription.hidden = true;
   const severityClasses = [
     "storm-cape--weak", "storm-cape--modest",
     "storm-cape--substantial", "storm-cape--strong",
@@ -868,7 +871,9 @@ function updateBackgroundCharacteristics(event, fallbackText = null) {
       }[event.provider] || event.provider || "Unknown source";
       provenance.textContent = `${sourceName} · ${traits.license || "License unavailable"}`;
       element.classList.add("forecast-characteristics");
-      element.append(description, credit, provenance);
+      recordingDescription.append(description);
+      recordingDescription.hidden = false;
+      element.append(credit, provenance);
       if (traits.context) {
         const context = document.createElement("span");
         context.className = "forecast-characteristics-details recording-attribution";
