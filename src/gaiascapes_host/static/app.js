@@ -2081,6 +2081,7 @@ if (settingsDialog && settingsForm) {
           theme: document.documentElement.dataset.theme,
           background_animation: document.querySelector('input[name="backgroundAnimation"]:checked').value,
           background_palette: byId("backgroundPalette").value,
+          background_murmuration_palette: byId("backgroundMurmurationPalette").value,
           background_paint_shape: byId("backgroundPaintShape").value,
           background_events: byId("backgroundEvents").value,
         }),

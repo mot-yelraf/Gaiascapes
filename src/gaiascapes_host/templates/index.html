@@ -130,9 +130,12 @@
               <label class="theme-option" data-theme-swatch="fire"><input type="radio" name="theme" value="fire"><span><strong>Fire</strong><small>Light red</small></span></label>
               <label class="theme-option" data-theme-swatch="ocean"><input type="radio" name="theme" value="ocean"><span><strong>Ocean</strong><small>Light blue</small></span></label>
             </fieldset>
-            <div class="pane-heading"><div><h3 id="backgroundAnimationHeading">Background Animation</h3><p>Let colors burst or paint the background around the map.</p></div></div>
+            <div class="pane-heading"><div><h3 id="backgroundAnimationHeading">Background Animation</h3><p>Choose bursts, layered paint, or a flowing cloud around the map.</p></div></div>
             <fieldset class="background-animation-options" aria-labelledby="backgroundAnimationHeading">
-              <label class="theme-option"><input type="radio" name="backgroundAnimation" value="burst" checked><span><strong>Burst</strong><small>Colors rise and fade with each sound.</small></span></label>
+              <label class="settings-field background-event-filter" for="backgroundEvents"><span>Animations</span><select id="backgroundEvents" aria-describedby="backgroundEventsHint">
+                <option value="both">Events &amp; Background</option><option value="events">Events</option><option value="background">Background</option>
+              </select><small id="backgroundEventsHint">Color effects shown in Paint and Murmuration.</small></label>
+              <label class="theme-option"><input type="radio" name="backgroundAnimation" value="burst" checked><span><strong>Bursts</strong><small>Colors rise and fade with each sound.</small></span></label>
               <div class="background-paint-choice">
                 <label class="theme-option"><input type="radio" name="backgroundAnimation" value="paint"><span><strong>Paint</strong><small>Layer colors for 19 locations, then start fresh.</small></span></label>
                 <div class="background-paint-options">
@@ -142,9 +145,14 @@
                   <label class="settings-field" for="backgroundPaintShape"><span>Paint Shape</span><select id="backgroundPaintShape" aria-describedby="backgroundPaintShapeHint">
                     <option value="bloom">Bloom</option><option value="watercolor">Watercolor</option><option value="ribbon">Ribbon</option><option value="random">Random</option>
                   </select><small id="backgroundPaintShapeHint">Used with Paint animation.</small></label>
-                  <label class="settings-field background-event-options" for="backgroundEvents"><span>Events</span><select id="backgroundEvents">
-                    <option value="both">Events &amp; Background</option><option value="events">Events</option><option value="background">Background</option>
-                  </select></label>
+                </div>
+              </div>
+              <div class="background-murmuration-choice">
+                <label class="theme-option"><input type="radio" name="backgroundAnimation" value="murmuration"><span><strong>Murmuration</strong><small>A translucent cloud flows and folds around the map.</small></span></label>
+                <div class="background-murmuration-options">
+                  <label class="settings-field" for="backgroundMurmurationPalette"><span>Color Palette</span><select id="backgroundMurmurationPalette" aria-describedby="backgroundMurmurationPaletteHint">
+                    <option value="natural">Natural</option><option value="aurora">Aurora</option><option value="wildflower">Wildflower</option><option value="pastel">Pastel</option><option value="random">Random</option>
+                  </select><small id="backgroundMurmurationPaletteHint">Cloud colors shift gradually through this palette.</small></label>
                 </div>
               </div>
             </fieldset>
@@ -370,6 +378,7 @@
   <script src="/static/live-audio.js?v={{ version }}"></script>
   <script src="/static/animal-wikipedia.js?v={{ version }}"></script>
   <script src="/static/announcements.js?v={{ version }}"></script>
+  <script src="/static/murmuration.js?v={{ version }}"></script>
   <script src="/static/background-animation.js?v={{ version }}"></script>
   <script src="/static/app.js?v={{ version }}"></script>
   <script src="/static/game-controls.js?v={{ version }}"></script>

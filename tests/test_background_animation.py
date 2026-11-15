@@ -199,3 +199,123 @@ assert.equal(controls.backgroundEvents.value, 'both');
 assert.equal(scope.backgroundAnimation.visible('event'), true);
 assert.equal(scope.backgroundAnimation.visible('background'), true);
 ''', 'background-animation.js')
+
+
+def test_murmuration_lifecycle_motion_preferences_and_finite_drawing():
+    """Keep one flock loop, pause hidden tabs, and release all resources."""
+    run_node(r'''
+const assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm');
+const frames = new Map(), listeners = new Map(), canvases = [];
+let nextFrame = 0, strokes = 0;
+let nearest = Infinity, farthest = 0;
+let centers;
+const colors = new Set();
+const listen = (type, fn) => listeners.set(type, fn);
+const unlisten = type => listeners.delete(type);
+const motion = {matches: false, addEventListener: listen, removeEventListener: unlisten};
+const context = Object.fromEntries(['setTransform', 'clearRect'].map(name =>
+ [name, (...args) => assert.ok(args.every(Number.isFinite), name)]));
+Object.assign(context, {beginPath() {}, fill() {strokes++; colors.add(this.fillStyle);},
+ clearRect() {centers = Array.from({length: 5}, () => ({x: 0, y: 0}));},
+ ellipse(x, y, rx, ry, angle) {
+  assert.ok([x, y, rx, ry, angle].every(Number.isFinite));
+  const radius = Math.hypot(x - 500, y - 300);
+  nearest = Math.min(nearest, radius); farthest = Math.max(farthest, radius);
+  const center = centers[strokes % 5];
+  center.x += x - 500; center.y += y - 300;
+  assert.ok(radius >= 175, 'Cloud overlaps only the edge of the map');
+ }});
+const scope = vm.createContext({console, getComputedStyle: () => ({color: '#253d40'}),
+ requestAnimationFrame(fn) {const id = ++nextFrame; frames.set(id, fn); return id;},
+ cancelAnimationFrame(id) {frames.delete(id);},
+ window: {innerWidth: 1000, innerHeight: 600, devicePixelRatio: 3,
+  matchMedia: () => motion, addEventListener: listen, removeEventListener: unlisten},
+ document: {hidden: false, addEventListener: listen, removeEventListener: unlisten,
+  getElementById: id => id === 'eventPulseLayer' ? {append(canvas) {canvases.push(canvas);}}
+   : id === 'worldMap' ? {getBoundingClientRect: () => ({left: 300, top: 100, width: 400, height: 400})}
+   : id === 'mapOceanPath' ? {getTotalLength: () => 2 * Math.PI * 200,
+    getScreenCTM: () => ({a: 1, b: 0, c: 0, d: 1, e: 500, f: 300}),
+    getPointAtLength: length => ({x: Math.cos(length / 200) * 200, y: Math.sin(length / 200) * 200})} : null,
+  createElement: () => ({setAttribute(key, value) {this[key] = value;},
+   getContext: () => context, remove() {this.removed = true;}})},
+});
+vm.runInContext(fs.readFileSync(process.argv[1], 'utf8'), scope);
+const flock = scope.murmuration;
+flock.start(); flock.start();
+assert.equal(canvases.length, 1);
+assert.equal(canvases[0]['aria-hidden'], 'true');
+assert.equal(canvases[0].width, 2000); // Pixel ratio is capped.
+assert.equal(frames.size, 1);
+const initialAngles = centers.map(center => Math.atan2(center.y, center.x));
+for (let now = 0; now < 12000; now += 40) {
+ const [id, callback] = frames.entries().next().value;
+ frames.delete(id); callback(now);
+ assert.equal(frames.size, 1);
+}
+const turns = centers.map((center, index) => {
+ const angle = Math.atan2(center.y, center.x) - initialAngles[index];
+ return Math.atan2(Math.sin(angle), Math.cos(angle));
+});
+assert.ok(turns[0] < -.2 && turns[1] > .2 && turns[2] < -.2 && turns[3] > .2 && turns[4] < -.2,
+ 'Five flocks travel in opposing directions');
+assert.ok(strokes > 5000 * 250);
+assert.ok(nearest < 200, 'Some particles drift behind the map edge');
+assert.ok(farthest > 300, 'Cloud billows well into the surrounding background');
+assert.ok(colors.size > 12, 'Cloud colors evolve over time');
+const previousColors = [...colors];
+colors.clear(); flock.setPalette('wildflower');
+assert.ok([...colors].some(color => !previousColors.includes(color)));
+flock.setVisible(false);
+assert.equal(frames.size, 0);
+flock.setVisible(true);
+assert.equal(frames.size, 1);
+scope.document.hidden = true; listeners.get('visibilitychange')();
+assert.equal(frames.size, 0);
+scope.document.hidden = false; listeners.get('visibilitychange')();
+assert.equal(frames.size, 1);
+motion.matches = true; listeners.get('change')();
+assert.equal(frames.size, 0);
+scope.window.innerWidth = 400; listeners.get('resize')();
+assert.equal(canvases[0].width, 800);
+flock.stop(); flock.stop();
+assert.equal(frames.size, 0);
+assert.equal(listeners.size, 0);
+assert.equal(canvases[0].removed, true);
+flock.start();
+assert.equal(canvases.length, 2);
+assert.equal(frames.size, 0); // Reduced motion also applies at startup.
+motion.matches = false; listeners.get('change')();
+assert.equal(frames.size, 1);
+flock.stop();
+''', 'murmuration.js')
+
+
+def test_murmuration_mode_restores_previews_and_replaces_background_bursts():
+    """Restore the saved flock and stop it when another mode is selected."""
+    run_node(r'''
+const assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm');
+const inputs = ['burst', 'paint', 'murmuration'].map(value =>
+ ({value, addEventListener(type, fn) {this.change = fn;}}));
+let starts = 0, stops = 0, removed = false;
+const scope = vm.createContext({
+ murmuration: {start() {starts++;}, stop() {stops++;}},
+ document: {documentElement: {dataset: {}}, body: {classList: {remove() {}}},
+  querySelectorAll: selector => selector.startsWith('input') ? inputs : [],
+  querySelector: () => null,
+  getElementById: id => id === 'displaySettingsData'
+   ? {textContent: '{"background_animation":"murmuration"}'} : null},
+ window: {addEventListener() {}},
+});
+vm.runInContext(fs.readFileSync(process.argv[1], 'utf8'), scope);
+assert.equal(starts, 1);
+assert.equal(inputs[2].checked, true);
+assert.equal(scope.backgroundAnimation.retain({remove() {removed = true;}}, {}), true);
+assert.equal(removed, true);
+assert.equal(scope.backgroundAnimation.visible('event'), true);
+inputs[0].change();
+assert.equal(stops, 1);
+assert.equal(scope.backgroundAnimation.retain({}, {}), false);
+inputs[2].change();
+assert.equal(starts, 2);
+assert.equal(scope.document.documentElement.dataset.backgroundAnimation, 'murmuration');
+''', 'background-animation.js')

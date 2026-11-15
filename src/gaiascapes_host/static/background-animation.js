@@ -1,12 +1,14 @@
-/** Background animation preferences and persistent color around the map.
+/** Background animation preferences and effects around the map.
  *
- * Paint accumulates for nineteen background location visits. Display choices
+ * Paint accumulates for nineteen background location visits; Murmuration flies
+ * continuously instead of showing background bursts. Display choices
  * preview immediately and are saved with the installation by the settings form.
  */
 (() => {
   const savedSettings = JSON.parse(document.getElementById("displaySettingsData")?.textContent || "{}");
   const inputs = Array.from(document.querySelectorAll('input[name="backgroundAnimation"]'));
   const paletteInput = document.getElementById("backgroundPalette");
+  const murmurationPaletteInput = document.getElementById("backgroundMurmurationPalette");
   const shapeInput = document.getElementById("backgroundPaintShape");
   const eventsInput = document.getElementById("backgroundEvents");
   const eventChoices = ["both", "events", "background"];
@@ -76,7 +78,7 @@
   }
 
   function applyMode(value) {
-    const selected = value === "paint" ? "paint" : "burst";
+    const selected = ["paint", "murmuration"].includes(value) ? value : "burst";
     if (selected !== mode) {
       clearPaint();
       document.querySelectorAll(".event-wave--background").forEach(wave => wave.remove());
@@ -85,12 +87,18 @@
       }
     }
     mode = selected;
+    if (mode === "murmuration") globalThis.murmuration?.start();
+    else globalThis.murmuration?.stop();
     document.documentElement.dataset.backgroundAnimation = mode;
     inputs.forEach(input => { input.checked = input.value === mode; });
   }
 
-  /** Style a background wave and retain it at full size in Paint mode. */
+  /** Consume a background wave for Paint or the continuous flock. */
   function retain(wave, event) {
+    if (mode === "murmuration") {
+      wave.remove();
+      return true;
+    }
     if (mode !== "paint") return false;
     if (paints.length === roundLength) clearPaint();
     const longitude = Number(event?.longitude ?? 0);
@@ -122,10 +130,16 @@
   }
 
   palette = loadChoice(paletteInput, "background_palette", [...paletteChoices, "random"], "natural");
+  const murmurationPalette = loadChoice(murmurationPaletteInput, "background_murmuration_palette", [...paletteChoices, "random"], "aurora");
+  globalThis.murmuration?.setPalette?.(murmurationPalette);
+  murmurationPaletteInput?.addEventListener("change", () => {
+    globalThis.murmuration?.setPalette?.(murmurationPaletteInput.value);
+  });
   shape = loadChoice(shapeInput, "background_paint_shape", [...shapes, "random"], "bloom");
   eventSelection = loadChoice(eventsInput, "background_events", eventChoices, "both");
   function applyEventSelection() {
     document.documentElement.dataset.animationEvents = eventSelection;
+    globalThis.murmuration?.setVisible?.(eventSelection !== "events");
     document.body.classList.remove("preview-pulse-visible");
   }
   applyEventSelection();
@@ -136,7 +150,7 @@
 
   /** Whether a cue's color effect is included in the current display filter. */
   function visible(role) {
-    return mode !== "paint" || eventSelection === "both" || (eventSelection === "background" ? role === "background" : role !== "background");
+    return mode === "burst" || eventSelection === "both" || (eventSelection === "background" ? role === "background" : role !== "background");
   }
 
   function updatePaintChoices() {
