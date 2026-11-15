@@ -309,13 +309,13 @@ Theme previews immediately. Click **Save settings** to store it in this installa
 
 ### Background Animation
 
-Below Theme, choose **Burst** for colors that expand and fade with each background sound, or **Paint** to retain full-size colors around the map's perimeter. Paint layers colors over 19 background location visits, then clears them as the next round begins. Event bursts and map animations keep their usual timing.
+Below Theme, choose **Burst** for colors that expand and fade with each background sound, **Paint** to retain full-size colors around the map's perimeter, or **Murmuration** for a translucent cloud of tiny flying particles flowing around the map's outline. The cloud stretches and folds continuously, pauses while the tab is hidden, and becomes still when reduced motion is preferred. Its own **Color Palette** blends gradually through Natural, Aurora, Wildflower, or Pastel colors; Random cycles through hues. Paint layers colors over 19 background location visits, then clears them as the next round begins. Event bursts and map animations keep their usual timing.
 
 **Color Palette** offers **Natural** (the existing sound colors), **Aurora**, **Wildflower**, and **Pastel**. The additional palettes provide a different shade for each of the 19 location visits. Both selectors sit beneath **Paint** and apply only to Paint animation. **Paint Shape** offers **Bloom** (soft circles), **Watercolor** (irregular washes), and **Ribbon** (curved strokes). **Random** is available in both selectors: each new paint layer independently chooses a palette and/or shape. Existing layers keep their resolved random choices. Changing palette or shape updates existing paint immediately without restarting the round.
 
-**Events**, beneath the Paint choices, selects **Events & Background** (the default), **Events**, or **Background** for the visible color effects. It filters Paint immediately; Burst continues showing both event and background effects. Audio and map markers continue unchanged. Hidden paint still advances through the 19-location round.
+The animation section has four columns: **Animations**, **Bursts**, **Paint**, and **Murmuration**. **Animations** selects **Events & Background** (the default), **Events**, or **Background** for the visible color effects. It filters Paint and Murmuration immediately; Burst continues showing both event and background effects. Audio and map markers continue unchanged. Hidden paint still advances through the 19-location round.
 
-The animation, palette, shape, and Events choices preview immediately. Click **Save settings** to store them with the installation and restore them after restart. Switching modes clears the accumulated paint; reloading starts a fresh canvas.
+The animation, palette, shape, and Animations choices preview immediately. Click **Save settings** to store them with the installation and restore them after restart. Switching modes clears the accumulated paint; reloading starts a fresh canvas.
 
 ### Map
 

@@ -18,7 +18,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from gaiascapes import __version__
 
@@ -334,6 +334,20 @@ def _stop_owned_server(process: subprocess.Popen[Any] | None) -> None:
         process.wait(timeout=5)
 
 
+def _register_macos_quit_cleanup(stop_server: Callable[[], None]) -> Callable[[], None]:
+    """Wait for owned-server cleanup before native menu Quit terminates Python."""
+    from AppKit import NSApplicationWillTerminateNotification
+    from Foundation import NSNotificationCenter
+
+    center = NSNotificationCenter.defaultCenter()
+    # A nil queue runs synchronously on the thread posting the notification.
+    observer = center.addObserverForName_object_queue_usingBlock_(
+        NSApplicationWillTerminateNotification, None, None,
+        lambda _notification: stop_server(),
+    )
+    return lambda: center.removeObserver_(observer)
+
+
 def _desktop_exec_arg(value: str) -> str:
     quoted = "".join("\\" + char if char in '\\"`$' else char for char in str(value))
     escaped = quoted.replace("\\", "\\\\").replace("%", "%%")
@@ -461,12 +475,11 @@ def main() -> int:
     configure_gui_environment()
 
     def stop_owned_server() -> None:
-        """Stop the server once when either the window or event loop closes."""
+        """Wait for one shared cleanup on window close, menu Quit, or loop exit."""
         nonlocal owned_server
         with server_stop_lock:
-            process = owned_server
+            _stop_owned_server(owned_server)
             owned_server = None
-        _stop_owned_server(process)
 
     if sys.platform.startswith("linux"):
         if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
@@ -510,6 +523,7 @@ def main() -> int:
         )
         return 1
 
+    remove_quit_observer = None
     try:
         geometry = _window_geometry()
         window = webview.create_window(
@@ -529,6 +543,7 @@ def main() -> int:
         )
         window.events.closed += stop_owned_server
         if sys.platform == "darwin":
+            remove_quit_observer = _register_macos_quit_cleanup(stop_owned_server)
             window.events.shown += set_macos_app_icon
             webview.start()
         elif sys.platform == "win32":
@@ -539,7 +554,11 @@ def main() -> int:
         else:
             webview.start()
     finally:
-        stop_owned_server()
+        try:
+            stop_owned_server()
+        finally:
+            if remove_quit_observer is not None:
+                remove_quit_observer()
     return 0
 
 

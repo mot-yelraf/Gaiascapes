@@ -12,6 +12,7 @@ import plistlib
 import subprocess
 import sys
 import struct
+import threading
 import time
 import zlib
 from pathlib import Path
@@ -324,6 +325,7 @@ def test_desktop_starts_native_window_and_stops_owned_server(tmp_path, monkeypat
     monkeypatch.setattr(desktop, "_wait_for_health", lambda _url, _process: True)
     monkeypatch.setattr(desktop, "_start_server", lambda: process)
     monkeypatch.setattr(desktop, "_available_screen_size", lambda: None)
+    monkeypatch.setattr(desktop, "_register_macos_quit_cleanup", lambda stop: lambda: None)
 
     assert desktop.main() == 0
 
@@ -383,6 +385,7 @@ def test_desktop_attaches_without_stopping_existing_server(tmp_path, monkeypatch
     monkeypatch.setattr(desktop, "_wait_for_health", lambda _url, process: process is None)
     monkeypatch.setattr(desktop, "_start_server", lambda: (_ for _ in ()).throw(AssertionError))
     monkeypatch.setattr(desktop, "_available_screen_size", lambda: None)
+    monkeypatch.setattr(desktop, "_register_macos_quit_cleanup", lambda stop: lambda: None)
 
     assert desktop.main() == 0
     assert calls[-1] == ("start", (), {})
@@ -533,3 +536,106 @@ def test_macos_app_name_overrides_python_identity_in_process(monkeypatch):
     assert info["CFBundleName"] == desktop.MACOS_APP_NAME
     assert info["CFBundleDisplayName"] == desktop.MACOS_APP_NAME
     assert names == [desktop.MACOS_APP_NAME]
+
+
+def test_macos_quit_notification_runs_cleanup_synchronously_and_unregisters(monkeypatch):
+    """Use the native termination notification without deferring cleanup to a queue."""
+    calls = []
+    registered = []
+    observer = object()
+
+    class Center:
+        def addObserverForName_object_queue_usingBlock_(self, name, sender, queue, callback):
+            assert (name, sender, queue) == ('will-terminate', None, None)
+            registered.append(callback)
+            return observer
+
+        def removeObserver_(self, value):
+            assert value is observer
+            calls.append('removed')
+
+    appkit = ModuleType('AppKit')
+    appkit.NSApplicationWillTerminateNotification = 'will-terminate'
+    foundation = ModuleType('Foundation')
+    foundation.NSNotificationCenter = SimpleNamespace(defaultCenter=lambda: Center())
+    monkeypatch.setitem(sys.modules, 'AppKit', appkit)
+    monkeypatch.setitem(sys.modules, 'Foundation', foundation)
+    remove = desktop._register_macos_quit_cleanup(lambda: calls.append('server stopped'))
+    registered[0](object())
+    assert calls == ['server stopped']
+    remove()
+    assert calls == ['server stopped', 'removed']
+
+
+@pytest.mark.parametrize('action', ['menu', 'window', 'overlapping'])
+def test_desktop_quit_paths_wait_for_shared_server_cleanup(tmp_path, monkeypatch, action):
+    """Menu Quit and window close finish cleanup once before desktop exit."""
+    calls = []
+    fake_webview, window = _fake_webview([])
+    callbacks = []
+    stopping = threading.Event()
+    release = threading.Event()
+
+    class Process(FakeProcess):
+        def terminate(self):
+            super().terminate()
+            calls.append('terminate')
+
+        def wait(self, timeout=None):
+            stopping.set()
+            if action == 'overlapping':
+                assert release.wait(2)
+            super().wait(timeout)
+            calls.append('server stopped')
+
+    def register(callback):
+        callbacks.append(callback)
+        return lambda: calls.append('observer removed')
+
+    def start():
+        menu_quit = callbacks[0]
+        window_close = window.events.closed.handlers[0]
+        if action == 'overlapping':
+            menu_started = threading.Event()
+            menu_finished = threading.Event()
+
+            def quit_menu():
+                menu_started.set()
+                menu_quit()
+                menu_finished.set()
+
+            closing_thread = threading.Thread(target=window_close)
+            menu_thread = threading.Thread(target=quit_menu)
+            closing_thread.start()
+            try:
+                assert stopping.wait(2)
+                menu_thread.start()
+                assert menu_started.wait(2)
+                assert not menu_finished.wait(.05), 'Menu Quit returned while server was still stopping'
+            finally:
+                release.set()
+                closing_thread.join(timeout=2)
+                if menu_thread.ident is not None:
+                    menu_thread.join(timeout=2)
+            assert not closing_thread.is_alive() and not menu_thread.is_alive()
+            assert menu_finished.is_set()
+        else:
+            (menu_quit if action == 'menu' else window_close)()
+        assert calls == ['terminate', 'server stopped']
+        calls.append('desktop exit')
+
+    monkeypatch.setenv('GAIA_SCAPE_DATA_DIR', str(tmp_path))
+    monkeypatch.delenv('GAIA_SCAPE_GUI_URL', raising=False)
+    monkeypatch.setenv(desktop.MACOS_RELAUNCH_MARKER, '1')
+    monkeypatch.setattr(desktop.sys, 'platform', 'darwin')
+    monkeypatch.setitem(sys.modules, 'webview', fake_webview)
+    monkeypatch.setattr(desktop, 'configure_macos_app_name', lambda: None)
+    monkeypatch.setattr(desktop, '_is_healthy', lambda _url: False)
+    monkeypatch.setattr(desktop, '_wait_for_health', lambda _url, _process: True)
+    monkeypatch.setattr(desktop, '_start_server', Process)
+    monkeypatch.setattr(desktop, '_available_screen_size', lambda: None)
+    monkeypatch.setattr(desktop, '_register_macos_quit_cleanup', register)
+    fake_webview.start = start
+
+    assert desktop.main() == 0
+    assert calls == ['terminate', 'server stopped', 'desktop exit', 'observer removed']
