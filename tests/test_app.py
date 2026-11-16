@@ -2457,7 +2457,7 @@ def test_recording_rotation_waits_for_player_and_rejects_stale_signals(tmp_path,
         assert await svc.play_next_ambient_layers() == ()
         assert recordings.indices == [0]
         # A reloaded player receives the held recording rather than silence.
-        assert (await svc.emitted_cues())['cues'] == (cue,)
+        assert (await svc.emitted_cues())['cues'] == ({**cue, 'playback_position': 0.0},)
         assert not svc.advance_recording(sequence + 1)
         # Preview completion must not release the continuous recording.
         await svc.preview_instrument(kind, kind)

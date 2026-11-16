@@ -376,6 +376,15 @@ context.cue = {sequence: 42, recording_rotation: true, duration: 24.5, volume: 1
   await vm.runInContext('playRecordingCue({...cue, duration: 8})', context);
   vm.runInContext('updateRecordingCountdown()', context);
   assert.equal(countdowns[1].hidden, true);
+  vm.runInContext('stopRecordingPlayback(); deviceListening = true', context);
+  // Resume from reported playback progress, rather than the cue's old wall time.
+  await vm.runInContext('playRecordingCue({...cue, emitted_at: 1, playback_position: .25})', context);
+  assert.equal(players.at(-1).startOffset, .25);
+  vm.runInContext('stopRecordingPlayback()', context);
+  // A listener returning after the recording ended must start audible audio.
+  await vm.runInContext('playRecordingCue({...cue, emitted_at: 1, playback_position: 1000})', context);
+  assert.equal(players.at(-1).startOffset, 0);
+  assert.equal(typeof players.at(-1).listeners.ended, 'function');
 })().catch(error => {console.error(error); process.exitCode = 1;});
 '''
     result = subprocess.run([node, '-e', script, str(source), kind, str(duration)],
