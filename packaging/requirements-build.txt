@@ -1,0 +1,2 @@
+# Install in a dedicated environment together with .[desktop,lightning,eumetsat].
+pyinstaller==6.22.3

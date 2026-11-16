@@ -11,6 +11,11 @@ installed.
 For illustrated operating instructions, settings, and credential setup, see the
 [User Guide](USER_GUIDE.md). Installation instructions remain in this README.
 
+Self-contained native installers bundle Python and include `user_guide.pdf`.
+See [installer apps](installers/README.md) for installation, macOS first-open
+approval, supported architectures, and build instructions. The source-based
+installers below remain available for development and custom installations.
+
 Gaiascapes is intended for personal, educational, and other noncommercial use.
 Birdsong and Frog Calls can include Xeno-canto recordings licensed
 [CC BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/). Use those

@@ -23,6 +23,7 @@ from typing import Any, Callable
 from gaiascapes import __version__
 
 from .config import AppConfig, resolve_data_dir
+from .runtime import module_command
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -317,7 +318,7 @@ def _start_server() -> subprocess.Popen[Any]:
     environment = os.environ.copy()
     environment[DESKTOP_OWNER_PID_ENV] = str(os.getpid())
     return subprocess.Popen(
-        [sys.executable, "-m", "gaiascapes_host"],
+        module_command("gaiascapes_host"),
         cwd=resolve_data_dir().parent,
         env=environment,
     )
@@ -378,7 +379,8 @@ def write_linux_app_launcher(runtime_dir: Path) -> Path | None:
     icons_dir = data_root / "icons" / "hicolor" / "512x512" / "apps"
     desktop_path = applications_dir / f"{LINUX_APP_ID}.desktop"
     themed_icon_path = icons_dir / f"{LINUX_APP_ID}.png"
-    launcher_path = runtime_dir / "scripts" / "run_gaiascapes_gui.sh"
+    launcher_path = (Path(sys.executable).resolve() if getattr(sys, "frozen", False)
+                     else runtime_dir / "scripts" / "run_gaiascapes_gui.sh")
     desktop_text = "\n".join(
         (
             "[Desktop Entry]",

@@ -42,6 +42,12 @@ SuperCollider. A system package, application bundle, or other redistributed
 SuperCollider binary must retain the notices and corresponding source offer
 required by its distributor and license.
 
+The native macOS and Windows installer builds include private SuperCollider
+3.14.1 binaries from its official release, with the matching upstream source
+archive and the notices supplied in that release. Linux installer packages
+declare distribution-managed SuperCollider dependencies instead. Build downloads
+and their pinned checksums are recorded in `packaging/audio.py`.
+
 ## Desktop platform components
 
 pywebview uses web-view components supplied by the host platform. On Linux and

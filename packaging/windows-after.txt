@@ -1,0 +1,14 @@
+Gaiascapes includes Python, provider dependencies, SuperCollider, and user_guide.pdf.
+
+The Windows desktop uses Microsoft Edge WebView2 Runtime and .NET Framework 4.8.
+Setup installs WebView2 when missing; its bootstrapper requires internet access.
+Windows Update supplies .NET Framework 4.8 on supported systems.
+
+Internet access is required for live sources and recording downloads. Commons
+Birdsong downloads on first launch, resuming missing files on subsequent launches.
+
+Settings, logs, recordings, and history remain in %USERPROFILE%\Gaiascapes\data.
+Uninstall preserves that directory. Startup diagnostics: data\desktop.log.
+The bundled runtime accepts --server and --install-media for headless use/repair.
+
+The app uses HTTP port 8769 and local OSC port 57130 by default.
