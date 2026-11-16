@@ -7,6 +7,7 @@ artifacts and build work stay under installers/; installed user data is untouche
 import argparse
 import hashlib
 import importlib.util
+from importlib.metadata import version
 import json
 from pathlib import Path
 import platform
@@ -138,6 +139,8 @@ def main() -> None:
     for dependency in ("PyInstaller", "webview", "netCDF4", "eumdac"):
         if importlib.util.find_spec(dependency) is None:
             parser.error(f"Missing {dependency}. Install packaging/requirements-build.txt and .[desktop,lightning,eumetsat]")
+    if version("gaiascapes") != __version__.removeprefix("v"):
+        parser.error("The build environment contains an older app version. Reinstall .[desktop,lightning,eumetsat] before building.")
     arch = platform.machine().lower()
     if sys.platform == "win32" and arch not in {"amd64", "x86_64"}:
         parser.error("The Windows installer currently targets x64")

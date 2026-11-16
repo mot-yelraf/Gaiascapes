@@ -38,6 +38,22 @@ def main() -> None:
                                 check=True, capture_output=True, timeout=30)
         version = result.stdout.decode().strip()
         assert version.startswith("v0.")
+        # Check fresh-install defaults inside the frozen runtime independently
+        # of the offline HTTP fixture, which deliberately disables all feeds.
+        operation = ("function", "gaiascapes_host.config", "AppConfig", (), {})
+        result = subprocess.run([str(helper), "--worker"], input=pickle.dumps(operation),
+                                env=environment, cwd=temporary, check=True, capture_output=True, timeout=30)
+        defaults, changes, error = pickle.loads(result.stdout)
+        assert error is None, error
+        assert {"open_meteo_storm", "open_meteo_marine"} <= set(defaults.enabled_sources)
+        assert defaults.background_animation == "murmuration"
+        assert defaults.background_murmuration_palette == "aurora"
+        operation = ("function", "importlib.metadata", "version", ("gaiascapes",), {})
+        result = subprocess.run([str(helper), "--worker"], input=pickle.dumps(operation),
+                                env=environment, cwd=temporary, check=True, capture_output=True, timeout=30)
+        package_version, changes, error = pickle.loads(result.stdout)
+        assert error is None, error
+        assert package_version == version.removeprefix("v")
         # Force a real native NetCDF decode in the bundled worker process.
         netcdf = Path(temporary) / "sample.nc"
         with Dataset(netcdf, "w") as dataset:
@@ -82,7 +98,7 @@ def main() -> None:
                     process.wait()
         saved = json.loads((data / "config.json").read_text())
         assert saved["http_port"] == 8769 and saved["osc_port"] == 57130
-    print(f"Frozen {version}: PDF, worker pipes, NetCDF, HTTP API, and web assets passed")
+    print(f"Frozen {version}: weather source defaults, Murmuration/Aurora, PDF, worker pipes, NetCDF, HTTP API, and web assets passed")
 
 
 if __name__ == "__main__":

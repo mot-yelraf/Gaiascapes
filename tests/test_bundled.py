@@ -66,9 +66,10 @@ def test_external_audio_environment_restores_system_library_paths(monkeypatch):
     assert bundled.os.environ["LD_LIBRARY_PATH"] == "/bundle/libraries"
 
 
-def test_installer_defaults_use_murmuration_aurora():
+def test_installer_defaults_include_weather_sources_and_murmuration_aurora():
     from gaiascapes_host.config import AppConfig
     config = AppConfig()
+    assert {"open_meteo_storm", "open_meteo_marine"} <= set(config.enabled_sources)
     assert config.background_animation == "murmuration"
     assert config.background_murmuration_palette == "aurora"
 
