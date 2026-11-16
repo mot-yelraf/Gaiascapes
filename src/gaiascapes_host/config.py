@@ -216,7 +216,7 @@ class AppConfig:
     app_view: str = "dashboard"
     sound_location_order: str = "sequential"
     theme: str = "earth"
-    background_animation: str = "burst"
+    background_animation: str = "murmuration"
     background_palette: str = "natural"
     background_murmuration_palette: str = "aurora"
     background_paint_shape: str = "bloom"

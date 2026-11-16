@@ -15,6 +15,8 @@ import sys
 import tempfile
 import threading
 
+from .runtime import module_command
+
 
 IN_WORKER = False
 BUILTIN_CLIENTS = {
@@ -42,9 +44,10 @@ def run_operation(operation, timeout):
     with tempfile.TemporaryDirectory(prefix="gaia-worker-") as pending:
         env['TMPDIR'] = pending
         with subprocess.Popen(
-            [sys.executable, '-c', 'from gaiascapes_host.worker import main; main()'],
+            module_command('gaiascapes_host.worker'),
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             env=env,
+            creationflags=subprocess.CREATE_NO_WINDOW if getattr(sys, 'frozen', False) and sys.platform == 'win32' else 0,
         ) as process:
             try:
                 output, _ = process.communicate(payload, timeout=timeout)
@@ -70,9 +73,10 @@ async def call_client(client, method, args=(), timeout=45):
         env['TMPDIR'] = pending
         env['GAIASCAPES_WORKER_TEMP_DIR'] = pending
         process = await asyncio.create_subprocess_exec(
-            sys.executable, '-c', 'from gaiascapes_host.worker import main; main()',
+            *module_command('gaiascapes_host.worker'),
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL, env=env,
+            creationflags=subprocess.CREATE_NO_WINDOW if getattr(sys, 'frozen', False) and sys.platform == 'win32' else 0,
         )
         try:
             output, _ = await asyncio.wait_for(process.communicate(payload), timeout)
@@ -127,3 +131,10 @@ def main():
         except Exception as exc:
             response = (None, changes, exc)
     pickle.dump(response, sys.stdout.buffer)
+
+
+if __name__ == '__main__':
+    # The decoders import this canonical module to detect worker isolation.
+    # Running main on the __main__ instance would create a second IN_WORKER flag.
+    from gaiascapes_host.worker import main as worker_main
+    worker_main()
