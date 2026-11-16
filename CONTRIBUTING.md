@@ -154,6 +154,10 @@ GAIA_SCAPE_DATA_DIR=$(mktemp -d) python -m pytest -q
 python -m compileall -q src tests
 ```
 
+For sustained settings and playback transition checks, use the optional
+[UI profiling tool](docs/ui-profiling.md). It runs an isolated browser and server,
+waits for sound selections to activate, and retains failure evidence.
+
 Changes to installers or launchers should include the relevant tests under
 `tests/test_install_scripts.py` or `tests/test_launchers.py`. Hardware,
 SuperCollider, and live-provider behavior should be represented by fakes or

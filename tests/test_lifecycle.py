@@ -321,3 +321,94 @@ def test_start_waits_for_concurrent_stop_to_finish(tmp_path):
         await service.stop()
 
     asyncio.run(exercise())
+
+
+class TransitionRecording:
+    """Supply immediate visits to test scheduling without network or audio hardware."""
+
+    location_count = 19
+
+    def __init__(self, kind):
+        self.kind = kind
+        self.indices = []
+
+    def event_at(self, index):
+        self.indices.append(index)
+        return GaiaEvent('test', f'{self.kind}-{len(self.indices)}', self.kind, time.time(),
+                         traits={'media_url': '/test.wav', 'title': self.kind})
+
+
+def test_saved_background_changes_activate_without_schedule_or_watchdog_wait(tmp_path):
+    """Switch away and back promptly while preserving each recording's visit cursor."""
+    birds = TransitionRecording('birdsong')
+    frogs = TransitionRecording('frog_calls')
+    app = application(tmp_path, birdsong_client=birds, frog_calls_client=frogs)
+    service = app.state.service
+    service.config.xeno_canto_api_key = 'test-key'
+    service.config.live_mode = 'continuous'
+    service.config.continuous_interval_seconds = 23
+    service.config.event_instruments = {'background': 'birdsong', 'event_1': 'none',
+                                        'event_2': 'none', 'event_3': 'none'}
+
+    async def wait_for(kind):
+        async def ready():
+            while kind not in service._recording_sequences:
+                await asyncio.sleep(.001)
+        await asyncio.wait_for(ready(), .5)
+        return service._recording_sequences[kind]
+
+    async def select(kind):
+        await service.update_settings({'event_instruments': {
+            **service.config.event_instruments, 'background': kind}}, tmp_path / 'config.json')
+
+    async def scenario():
+        await service.start_continuous()
+        try:
+            first = await wait_for('birdsong')
+            task = service._continuous_task
+            await select('frog_calls')
+            assert 'birdsong' not in service._recording_sequences
+            await wait_for('frog_calls')
+            await select('none')
+            assert not service._recording_sequences
+            await select('birdsong')
+            assert await wait_for('birdsong') > first
+            assert service._continuous_task is task
+            assert birds.indices == [0, 1]
+            assert frogs.indices == [0]
+            await service.update_settings({'birdsong_enabled': False}, tmp_path / 'config.json')
+            assert not service._recording_sequences
+            await service.update_settings({'birdsong_enabled': True}, tmp_path / 'config.json')
+            await wait_for('birdsong')
+        finally:
+            await service.stop_continuous()
+
+    asyncio.run(scenario())
+
+
+def test_held_recording_survives_event_journal_eviction_and_has_resume_position(tmp_path, monkeypatch):
+    """Late listeners get a held visit and gain even after its journal entry ages out."""
+    birds = TransitionRecording('birdsong')
+    service = application(tmp_path, birdsong_client=birds).state.service
+    service.config.event_instruments = {'background': 'birdsong', 'event_1': 'none',
+                                        'event_2': 'none', 'event_3': 'none'}
+    service.playback.start()
+
+    async def scenario():
+        await service.play_next_ambient_layers()
+        sequence = service._recording_sequences['birdsong']
+        service._emitted_cues.clear()  # Equivalent to a long visit outliving the journal.
+        assert service.recording_announcement_event(sequence)['kind'] == 'birdsong'
+        payload = (await service.emitted_cues())['cues'][0]
+        assert payload['sequence'] == sequence
+        assert payload['playback_position'] == 0  # No player has started this visit yet.
+        monkeypatch.setattr('gaiascapes_host.service.time.monotonic', lambda: 1000)
+        assert service.recording_progress(sequence, 12)
+        monkeypatch.setattr('gaiascapes_host.service.time.monotonic', lambda: 1004)
+        assert (await service.emitted_cues())['cues'][0]['playback_position'] == 16
+        await service.update_settings({'instrument_volumes': {
+            **service.config.instrument_volumes, 'background': .25}}, tmp_path / 'config.json')
+        assert (await service.emitted_cues())['cues'][0]['volume'] == .25
+        await service.stop_continuous()
+
+    asyncio.run(scenario())
