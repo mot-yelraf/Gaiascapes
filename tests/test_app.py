@@ -2457,7 +2457,7 @@ def test_recording_rotation_waits_for_player_and_rejects_stale_signals(tmp_path,
         assert await svc.play_next_ambient_layers() == ()
         assert recordings.indices == [0]
         # A reloaded player receives the held recording rather than silence.
-        assert (await svc.emitted_cues())['cues'] == (cue,)
+        assert (await svc.emitted_cues())['cues'] == ({**cue, 'playback_position': 0.0},)
         assert not svc.advance_recording(sequence + 1)
         # Preview completion must not release the continuous recording.
         await svc.preview_instrument(kind, kind)
@@ -2846,12 +2846,14 @@ def test_commons_birdsong_saves_and_plays_with_all_background_sources_enabled(tm
     assert restored.instrument_slots()['background'] == 'birdsong'
 
 
-def test_display_settings_persist_and_restore_without_browser_storage(tmp_path):
+@pytest.mark.parametrize("animation", ["paint", "murmuration"])
+def test_display_settings_persist_and_restore_without_browser_storage(tmp_path, animation):
     """Restore all saved appearance choices from the installation after restart."""
     import json
 
     selected = {
-        "theme": "ocean", "background_animation": "paint",
+        "theme": "ocean", "background_animation": animation,
+        "background_murmuration_palette": "wildflower",
         "background_palette": "random", "background_paint_shape": "ribbon",
         "background_events": "background",
     }

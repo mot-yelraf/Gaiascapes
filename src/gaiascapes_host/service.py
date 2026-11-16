@@ -737,6 +737,7 @@ class GaiascapesService:
                 "played_count": self.continuous_played_count,
                 "last_error": self.continuous_last_error,
                 "interval_seconds": self.config.continuous_interval_seconds,
+                "background_instrument": self.config.instrument_slots()["background"],
                 "location_strategy": "background_rotation_with_due_events",
             },
             "osc": self.renderer.status(),
@@ -824,6 +825,7 @@ class GaiascapesService:
 
     def _apply_config(self, candidate):
         previous_sources = set(self.config.enabled_sources)
+        previous_background = self.config.instrument_slots()["background"]
         if candidate.sound_location_order != self.config.sound_location_order:
             self._location_orders.clear()
         changed_kinds = set()
@@ -876,9 +878,15 @@ class GaiascapesService:
                 self.mtg_li.set_credentials(*credentials)
         for item in fields(AppConfig):
             setattr(self.config, item.name, getattr(candidate, item.name))
+        if previous_background != self.config.instrument_slots()["background"]:
+            # An abandoned visit must not hold a reselected sound until its
+            # progress watchdog expires. Preserve each kind's rotation cursor.
+            self._recording_sequences.clear()
+            self._recording_progress.clear()
+            self._recording_payloads.clear()
         # Reconnecting players must receive the saved gain for a held recording.
-        for cue in self._emitted_cues:
-            if cue["sequence"] in self._recording_sequences.values():
+        for kind, cue in self._recording_payloads.items():
+            if cue["sequence"] == self._recording_sequences.get(kind):
                 cue["volume"] = self.config.instrument_volumes["background"]
         self.glm.sonification_sample_stride = self.config.lightning_sample_rate
         self.renderer.instrument_mappings = self.config.background_mappings()
@@ -913,6 +921,7 @@ class GaiascapesService:
         """Persist a candidate before applying coordinated runtime changes."""
         async with self._settings_lock:
             previous_volumes = dict(self.config.instrument_volumes)
+            previous_background = self.config.instrument_slots()["background"]
             candidate = settings_candidate(self.config, changes)
             await persist_settings(candidate, path)
             pruned = 0
@@ -940,6 +949,10 @@ class GaiascapesService:
                         await self.start_continuous()
                     else:
                         await self.stop_continuous()
+                selected_background = self.config.instrument_slots()["background"]
+                if (previous_background != selected_background
+                        or selected_background in changed_kinds):
+                    self._recording_advance.set()
             except Exception as exc:
                 self.continuous_last_error = f"Settings saved, but runtime update failed: {exc}"
                 raise RuntimeError(self.continuous_last_error) from exc
@@ -1016,14 +1029,30 @@ class GaiascapesService:
 
     def recording_announcement_event(self, sequence: int) -> dict | None:
         """Return retained recording metadata for a speech request without polling."""
+        held = next((cue["event"] for cue in self._recording_payloads.values()
+                     if cue["sequence"] == sequence), None)
+        if held is not None:
+            return held
         return next((cue["event"] for cue in reversed(self._emitted_cues)
                      if cue["sequence"] == sequence and cue["event"]["kind"] in {"birdsong", "frog_calls", "whale_song", "dolphin_calls", *MAMMAL_KINDS}), None)
 
     async def emitted_cues(self, after=None) -> dict:
-        """Return cue events emitted after a browser.s sequence cursor."""
+        """Return held recordings or fresh cues, excluding retired recording visits."""
         if after is None:
-            cues = tuple(cue for cue in self._emitted_cues
-                         if cue["sequence"] in self._recording_sequences.values())
+            # A long recording can outlive the bounded event journal. Its held
+            # payload remains available to listeners joining or unmuting later.
+            held = []
+            now = time.monotonic()
+            for kind, sequence in self._recording_sequences.items():
+                payload = self._recording_payloads.get(kind)
+                if not payload or payload["sequence"] != sequence or not self._instruments_for_kind(kind):
+                    continue
+                position, deadline = self._recording_progress[kind]
+                position = 0.0 if position < 0 else position + max(
+                    0.0, now - (deadline - RECORDING_PROGRESS_TIMEOUT_SECONDS)
+                )
+                held.append({**payload, "playback_position": position})
+            cues = tuple(sorted(held, key=lambda cue: cue["sequence"]))
         else:
             cursor = max(0, int(after))
             while self._cue_sequence <= cursor:
@@ -1036,7 +1065,9 @@ class GaiascapesService:
                     )
                 except asyncio.TimeoutError:
                     break
-            cues = tuple(cue for cue in self._emitted_cues if cue["sequence"] > cursor)
+            cues = tuple(cue for cue in self._emitted_cues if cue["sequence"] > cursor
+                         and (not cue.get("recording_rotation")
+                              or self._recording_sequences.get(cue["event"]["kind"]) == cue["sequence"]))
         return {"latest_sequence": self._cue_sequence, "cues": cues}
 
     async def next_recording_image(self) -> dict:

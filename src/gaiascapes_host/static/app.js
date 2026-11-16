@@ -153,7 +153,9 @@ async function playRecordingCue(cue) {
   // A second media-element load can stall independently of that successful load.
   const next = recordingNormalizer.createPlayer();
   if (deviceListening && cue.emitted_at) {
-    next.startOffset = Math.max(0, Date.now() / 1000 - cue.emitted_at);
+    next.startOffset = Number.isFinite(cue.playback_position)
+      ? Math.max(0, cue.playback_position)
+      : Math.max(0, Date.now() / 1000 - cue.emitted_at);
   }
   lastPlayedRecordingSequence = cue.sequence;
   pendingRecordingAudio = next;
@@ -199,6 +201,12 @@ async function playRecordingCue(cue) {
         clearTimeout(loadTimeout);
         await globalThis.recordingAnnouncements.play(cue);
         controller.signal.throwIfAborted();
+      }
+      // A held cue can predate the decoded buffer after all listeners leave.
+      // Starting exactly at its end can miss the ended listener installed below
+      // and strand playback until the server's abandoned-player timeout.
+      if (next.fullRecording && Number.isFinite(next.duration) && next.startOffset >= next.duration) {
+        next.startOffset = 0;
       }
       await next.play();
       if (controller.signal.aborted) next.pause();
@@ -798,6 +806,9 @@ function backgroundCharacteristics(event) {
 }
 
 function updateBackgroundCharacteristics(event, fallbackText = null) {
+  const recordingDescription = document.querySelector('[data-status-field="background-sound"]');
+  recordingDescription.replaceChildren();
+  recordingDescription.hidden = true;
   const severityClasses = [
     "storm-cape--weak", "storm-cape--modest",
     "storm-cape--substantial", "storm-cape--strong",
@@ -868,7 +879,9 @@ function updateBackgroundCharacteristics(event, fallbackText = null) {
       }[event.provider] || event.provider || "Unknown source";
       provenance.textContent = `${sourceName} · ${traits.license || "License unavailable"}`;
       element.classList.add("forecast-characteristics");
-      element.append(description, credit, provenance);
+      recordingDescription.append(description);
+      recordingDescription.hidden = false;
+      element.append(credit, provenance);
       if (traits.context) {
         const context = document.createElement("span");
         context.className = "forecast-characteristics-details recording-attribution";
@@ -1226,8 +1239,11 @@ async function updateStatus() {
     const continuous = status.live.mode === "continuous";
     const previewingRecording = Date.now() < recordingPreviewUntil;
     const recordingDisabled = recordingKind && status.sources?.[`${recordingKind}_enabled`] === false;
-    if (recordingDisabled || ((!continuous || !status.live.running
-        || byId("backgroundInstrument")?.value !== recordingKind) && !previewingRecording)) {
+    const selectedBackground = status.live.background_instrument ?? byId("backgroundInstrument")?.value;
+    const selectedDisabled = status.sources?.[`${selectedBackground}_enabled`] === false;
+    const replacingWithRecording = RECORDED_BACKGROUNDS.includes(selectedBackground) && !selectedDisabled;
+    if (recordingDisabled || selectedDisabled || ((!continuous || !status.live.running
+        || (selectedBackground !== recordingKind && !replacingWithRecording)) && !previewingRecording)) {
       stopRecordingPlayback();
     }
     const active = continuous && status.live.running;
@@ -2036,7 +2052,6 @@ if (settingsDialog && settingsForm) {
     });
   });
   byId("backgroundInstrument").addEventListener("change", (event) => {
-    if (event.target.value !== recordingKind) stopRecordingPlayback();
     updateBackgroundStatus(null);
   });
   updateBackgroundSoundsTitle(byId("backgroundInstrument").value);
@@ -2076,6 +2091,7 @@ if (settingsDialog && settingsForm) {
           theme: document.documentElement.dataset.theme,
           background_animation: document.querySelector('input[name="backgroundAnimation"]:checked').value,
           background_palette: byId("backgroundPalette").value,
+          background_murmuration_palette: byId("backgroundMurmurationPalette").value,
           background_paint_shape: byId("backgroundPaintShape").value,
           background_events: byId("backgroundEvents").value,
         }),
@@ -2137,6 +2153,15 @@ if (settingsDialog && settingsForm) {
       });
       applyRecordingVolume(audioSettings.instrument_volumes.background);
       globalThis.recordingAnnouncements?.configure(audioSettings);
+      // Retry a missing local player from the held snapshot after a save.
+      // Keep a healthy player running when only gains or display choices change.
+      if (!deviceMuted && (!recordingAudio || recordingAudio.ended) && !pendingRecordingAudio
+          && RECORDED_BACKGROUNDS.includes(audioSettings.instrument_slots.background)) {
+        lastPlayedRecordingSequence = null;
+        observedCueSequence = null;
+        cuePollController?.abort();
+        if (!cuePollInFlight) updateEmittedCues();
+      }
       if (audioSettings.eumetsat_credentials_configured) {
         mtgLiToggle.dataset.credentialsConfigured = "true";
         eumetsatConsumerKey.value = "";

@@ -24,8 +24,9 @@ DEFAULT_USGS_URL = (
 )
 DISPLAY_CHOICES = {
     "theme": ("earth", "wind", "fire", "ocean"),
-    "background_animation": ("burst", "paint"),
+    "background_animation": ("burst", "paint", "murmuration"),
     "background_palette": ("natural", "aurora", "wildflower", "pastel", "random"),
+    "background_murmuration_palette": ("natural", "aurora", "wildflower", "pastel", "random"),
     "background_paint_shape": ("bloom", "watercolor", "ribbon", "random"),
     "background_events": ("both", "events", "background"),
 }
@@ -217,6 +218,7 @@ class AppConfig:
     theme: str = "earth"
     background_animation: str = "burst"
     background_palette: str = "natural"
+    background_murmuration_palette: str = "aurora"
     background_paint_shape: str = "bloom"
     background_events: str = "both"
     map_projection: str = "eckert_iv"
