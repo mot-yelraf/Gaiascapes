@@ -314,13 +314,18 @@ def _wait_for_health(base_url: str, process: subprocess.Popen[Any] | None) -> bo
 
 
 def _start_server() -> subprocess.Popen[Any]:
-    """Start the web server with this interpreter and installation."""
+    """Start the web server with this installation's interpreter or helper."""
     environment = os.environ.copy()
     environment[DESKTOP_OWNER_PID_ENV] = str(os.getpid())
+    options = {}
+    if getattr(sys, "frozen", False) and sys.platform == "win32":
+        options.update(stdout=sys.stdout, stderr=sys.stderr,
+                       creationflags=subprocess.CREATE_NO_WINDOW)
     return subprocess.Popen(
         module_command("gaiascapes_host"),
         cwd=resolve_data_dir().parent,
         env=environment,
+        **options,
     )
 
 

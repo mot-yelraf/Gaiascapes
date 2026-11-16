@@ -47,6 +47,7 @@ def run_operation(operation, timeout):
             module_command('gaiascapes_host.worker'),
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             env=env,
+            creationflags=subprocess.CREATE_NO_WINDOW if getattr(sys, 'frozen', False) and sys.platform == 'win32' else 0,
         ) as process:
             try:
                 output, _ = process.communicate(payload, timeout=timeout)
@@ -75,6 +76,7 @@ async def call_client(client, method, args=(), timeout=45):
             *module_command('gaiascapes_host.worker'),
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL, env=env,
+            creationflags=subprocess.CREATE_NO_WINDOW if getattr(sys, 'frozen', False) and sys.platform == 'win32' else 0,
         )
         try:
             output, _ = await asyncio.wait_for(process.communicate(payload), timeout)

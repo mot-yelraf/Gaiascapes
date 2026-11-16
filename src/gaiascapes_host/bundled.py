@@ -141,13 +141,16 @@ def main(argv=None) -> int:
                             pass
                         else:
                             probe.close()
-                            command = _audio_command(data_dir)
-                            if command:
-                                renderer = subprocess.Popen(
-                                    command, env=external_environment(), stdout=log, stderr=log,
-                                    start_new_session=sys.platform != "win32",
-                                    creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
-                                )
+                            try:
+                                command = _audio_command(data_dir)
+                                if command:
+                                    renderer = subprocess.Popen(
+                                        command, env=external_environment(), stdout=log, stderr=log,
+                                        start_new_session=sys.platform != "win32",
+                                        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+                                    )
+                            except (OSError, subprocess.SubprocessError) as exc:
+                                print(f"Synthesized audio could not start: {exc}. Continuing with the app.", file=sys.stderr)
             if os.environ.get("GAIA_SCAPE_INSTALL_BIRDSONG", "yes") != "no":
                 threading.Thread(target=_install_media, daemon=True, name="birdsong-setup").start()
             from .desktop import main as desktop_main

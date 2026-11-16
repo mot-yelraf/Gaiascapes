@@ -71,3 +71,53 @@ def test_installer_defaults_use_murmuration_aurora():
     config = AppConfig()
     assert config.background_animation == "murmuration"
     assert config.background_murmuration_palette == "aurora"
+
+
+def test_failed_renderer_start_keeps_desktop_available(tmp_path, monkeypatch):
+    import socket
+    from gaiascapes_host import desktop
+    from gaiascapes_host.config import AppConfig
+
+    data = tmp_path / "data"
+    data.mkdir()
+    AppConfig().save(data / "config.json")
+    monkeypatch.setenv("GAIA_SCAPE_DATA_DIR", str(data))
+    monkeypatch.setenv("GAIA_SCAPE_INSTALL_BIRDSONG", "no")
+
+    class Probe:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def bind(self, address):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(socket, "socket", lambda *args: Probe())
+    def fail_audio(_data):
+        raise OSError("Renderer unavailable")
+    monkeypatch.setattr(bundled, "_audio_command", fail_audio)
+    monkeypatch.setattr(desktop, "main", lambda: 0)
+    assert bundled.main([]) == 0
+    assert "Renderer unavailable" in (data / "desktop.log").read_text()
+
+
+def test_frozen_windows_server_uses_log_streams_without_a_console(tmp_path, monkeypatch):
+    from gaiascapes_host import desktop
+    helper = tmp_path / "gaiascapes-runtime.exe"
+    helper.touch()
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "Gaiascapes.exe"))
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(desktop.subprocess, "CREATE_NO_WINDOW", 0x08000000, raising=False)
+    monkeypatch.setattr(desktop, "resolve_data_dir", lambda: tmp_path / "data")
+    calls = []
+    monkeypatch.setattr(desktop.subprocess, "Popen", lambda *args, **kwargs: calls.append((args, kwargs)))
+    desktop._start_server()
+    assert calls[0][0][0] == [str(helper), "--server"]
+    assert calls[0][1]["creationflags"] == 0x08000000
+    assert calls[0][1]["stderr"] is sys.stderr

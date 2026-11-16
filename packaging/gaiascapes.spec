@@ -2,6 +2,7 @@
 from importlib import metadata
 from pathlib import Path
 import sys
+import sysconfig
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
@@ -14,6 +15,13 @@ datas = collect_data_files("gaiascapes_host")
 for name in ("user_guide.pdf", "LICENSE", "THIRD_PARTY_NOTICES.md", "PRIVACY.md", "SECURITY.md"):
     datas.append((str(root / name), resources))
 datas.append((str(root / "supercollider/gaia-scape.scd"), resources))
+python_licenses = [Path(sysconfig.get_path("stdlib")) / "LICENSE.txt",
+                   Path(sys.base_prefix) / "LICENSE.txt",
+                   Path(f"/usr/share/doc/python{sys.version_info.major}.{sys.version_info.minor}/copyright")]
+python_license = next((path for path in python_licenses if path.is_file()), None)
+if python_license is None:
+    raise RuntimeError("The build interpreter's Python license must be available for redistribution")
+datas.append((str(python_license), resources + "/python-license"))
 # Retain installed distribution metadata, including supplied license files.
 for distribution in metadata.distributions():
     datas += copy_metadata(distribution.metadata["Name"])
