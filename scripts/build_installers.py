@@ -114,7 +114,10 @@ def build_windows(bundle: Path, work: Path, output: Path, name: str) -> Path:
         with setup.open("wb") as target:
             shutil.copyfileobj(response, target)
     # Microsoft signs this bootstrapper; refuse a modified or unsigned payload.
-    run("powershell.exe", "-NoProfile", "-Command",
+    powershell = shutil.which("pwsh.exe") or shutil.which("powershell.exe")
+    if powershell is None:
+        raise RuntimeError("PowerShell is required to verify the Microsoft WebView2 bootstrapper")
+    run(powershell, "-NoProfile", "-Command",
         "$s=Get-AuthenticodeSignature -LiteralPath '" + str(setup).replace("'", "''") + "'; "
         "if ($s.Status -ne 'Valid' -or $s.SignerCertificate.Subject -notlike '*O=Microsoft Corporation*') { exit 1 }")
     compiler = shutil.which("ISCC.exe")
