@@ -38,6 +38,8 @@ Apple's instructions: https://support.apple.com/en-us/102445
 ## Data, internet, and documentation
 
 Internet access is required for live data feeds and first-use media downloads.
+Bundled applications use their included CA certificates for verified HTTPS;
+explicit `SSL_CERT_FILE` or `SSL_CERT_DIR` settings retain a custom trust store.
 On desktop launch, missing Commons Birdsong recordings download in the
 background; later launches retry incomplete downloads. Some sources require
 personal API credentials. The startup log reports download and audio errors.

@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import pickle
 import socket
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -32,12 +33,23 @@ def main() -> None:
                   "http_port": 8769, "osc_port": 57130}
         (data / "config.json").write_text(json.dumps(config))
         environment = {key: value for key, value in os.environ.items()
-                       if not key.startswith(("GAIA_SCAPE_", "PYTHON", "DYLD_", "LD_LIBRARY_PATH"))}
+                       if not key.startswith(("GAIA_SCAPE_", "PYTHON", "DYLD_", "LD_LIBRARY_PATH", "SSL_CERT_"))}
         environment.update(GAIA_SCAPE_DATA_DIR=str(data), GAIA_SCAPE_INSTALL_BIRDSONG="no")
         result = subprocess.run([str(helper), "--version"], env=environment, cwd=temporary,
                                 check=True, capture_output=True, timeout=30)
         version = result.stdout.decode().strip()
         assert version.startswith("v0.")
+        # The builder's system trust store can hide broken certificate paths
+        # on clean machines. Require the frozen runtime to supply usable roots.
+        operation = ("function", "ssl", "get_default_verify_paths", (), {})
+        result = subprocess.run([str(helper), "--worker"], input=pickle.dumps(operation),
+                                env=environment, cwd=temporary, check=True, capture_output=True, timeout=30)
+        certificates, changes, error = pickle.loads(result.stdout)
+        assert error is None, error
+        assert certificates.cafile and Path(certificates.cafile).is_file()
+        context = ssl.create_default_context(cafile=certificates.cafile)
+        assert context.cert_store_stats()["x509_ca"] > 0
+        assert context.check_hostname and context.verify_mode == ssl.CERT_REQUIRED
         # Check fresh-install defaults inside the frozen runtime independently
         # of the offline HTTP fixture, which deliberately disables all feeds.
         operation = ("function", "gaiascapes_host.config", "AppConfig", (), {})
@@ -98,7 +110,7 @@ def main() -> None:
                     process.wait()
         saved = json.loads((data / "config.json").read_text())
         assert saved["http_port"] == 8769 and saved["osc_port"] == 57130
-    print(f"Frozen {version}: weather source defaults, Murmuration/Aurora, PDF, worker pipes, NetCDF, HTTP API, and web assets passed")
+    print(f"Frozen {version}: HTTPS roots, weather source defaults, Murmuration/Aurora, PDF, worker pipes, NetCDF, HTTP API, and web assets passed")
 
 
 if __name__ == "__main__":

@@ -22,6 +22,20 @@ def resources_dir() -> Path:
     return Path(__file__).resolve().parent / "installation"
 
 
+def configure_bundled_https() -> None:
+    """Use included CA certificates when a frozen app has no custom trust store."""
+    if not getattr(sys, "frozen", False):
+        return
+    if os.environ.get("SSL_CERT_FILE") or os.environ.get("SSL_CERT_DIR"):
+        return
+    import certifi
+
+    certificates = Path(certifi.where())
+    if not certificates.is_file():
+        raise RuntimeError(f"Bundled HTTPS certificates are missing: {certificates}")
+    os.environ["SSL_CERT_FILE"] = str(certificates)
+
+
 def external_environment() -> dict[str, str]:
     """Restore library paths before starting system audio executables."""
     environment = os.environ.copy()
@@ -87,6 +101,7 @@ def _audio_command(data_dir: Path) -> list[str] | None:
 
 def main(argv=None) -> int:
     """Dispatch bundled app modes without treating the executable as Python."""
+    configure_bundled_https()
     arguments = list(sys.argv[1:] if argv is None else argv)
     # Workers must retain binary stdin/stdout and must not initialize the GUI.
     if arguments == ["--worker"]:
