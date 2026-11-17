@@ -139,7 +139,7 @@ def main() -> None:
     parser.add_argument("--bundle-only", action="store_true", help="Freeze and verify without creating the OS installer")
     parser.add_argument("--without-audio", action="store_true", help="Omit private SuperCollider on macOS/Windows")
     args = parser.parse_args()
-    for dependency in ("PyInstaller", "webview", "netCDF4", "eumdac"):
+    for dependency in ("PyInstaller", "webview", "netCDF4", "eumdac", "certifi"):
         if importlib.util.find_spec(dependency) is None:
             parser.error(f"Missing {dependency}. Install packaging/requirements-build.txt and .[desktop,lightning,eumetsat]")
     if version("gaiascapes") != __version__.removeprefix("v"):

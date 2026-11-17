@@ -6,10 +6,44 @@ of immutable application resources and process-only environment overrides.
 
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 
 import pytest
 
 from gaiascapes_host import bundled, runtime, worker
+
+
+def test_frozen_https_uses_included_certificates_without_changing_user_settings(tmp_path, monkeypatch):
+    certificates = tmp_path / "cacert.pem"
+    certificates.write_text("test CA bundle")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setenv("SSL_CERT_FILE", "")
+    monkeypatch.delenv("SSL_CERT_DIR", raising=False)
+    monkeypatch.setitem(sys.modules, "certifi", SimpleNamespace(where=lambda: str(certificates)))
+    monkeypatch.setenv("GAIA_SCAPE_DATA_DIR", str(tmp_path / "data"))
+    bundled.configure_bundled_https()
+    assert bundled.os.environ["SSL_CERT_FILE"] == str(certificates)
+    assert not (tmp_path / "data").exists()
+
+
+@pytest.mark.parametrize("override", ["SSL_CERT_FILE", "SSL_CERT_DIR"])
+def test_frozen_https_preserves_custom_trust_stores(monkeypatch, override):
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    monkeypatch.delenv("SSL_CERT_DIR", raising=False)
+    monkeypatch.setenv(override, "/custom/trusted-certificates")
+    bundled.configure_bundled_https()
+    assert bundled.os.environ[override] == "/custom/trusted-certificates"
+    if override == "SSL_CERT_DIR":
+        assert "SSL_CERT_FILE" not in bundled.os.environ
+
+
+def test_source_https_keeps_system_trust_configuration(monkeypatch):
+    monkeypatch.setattr(sys, "frozen", False, raising=False)
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    monkeypatch.delenv("SSL_CERT_DIR", raising=False)
+    bundled.configure_bundled_https()
+    assert "SSL_CERT_FILE" not in bundled.os.environ
 
 
 def test_source_module_command_uses_python():
