@@ -55,7 +55,8 @@ def test_private_native_launcher_keeps_state_under_owned_workspace(tmp_path):
     info = plistlib.loads((contents / 'Info.plist').read_bytes())
     assert info['CFBundleName'] == 'Gaiascapes UI Profiler'
     script = contents / 'MacOS/UIProfiler'
-    assert script.stat().st_mode & 0o777 == 0o700
+    if sys.platform != 'win32':
+        assert script.stat().st_mode & 0o777 == 0o700
     assert str(root / 'runtime/data') in script.read_text()
     assert '--worker < ' in script.read_text()
     assert not (root / 'runtime/data/config.json').exists()
@@ -71,7 +72,7 @@ def test_remote_cleanup_rejects_wrong_token_and_reused_process_ids(tmp_path, mon
     (tmp_path / 'owned-processes.json').write_text(json.dumps(ownership))
     calls = []
     monkeypatch.setitem(function.__globals__, 'process_identity', lambda pid: 'owned' if pid == 999992 else 'reused')
-    monkeypatch.setattr(function.__globals__['os'], 'killpg', lambda *args: calls.append(args))
+    monkeypatch.setattr(function.__globals__['os'], 'killpg', lambda *args: calls.append(args), raising=False)
     monkeypatch.setattr(function.__globals__['os'], 'kill', lambda *args: pytest.fail('Unowned process terminated'))
     with pytest.raises(RuntimeError, match='token does not match'):
         function(tmp_path, 'wrong')

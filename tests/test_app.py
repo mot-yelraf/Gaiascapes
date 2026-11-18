@@ -2324,7 +2324,7 @@ def test_sanctsound_settings_preview_rotation_and_disable(tmp_path, kind):
                                 media_url=f'/{kind.replace("_", "-")}-media/test.wav')
             return event
 
-    config = AppConfig(enabled_sources=[], osc_enabled=False)
+    config = AppConfig(live_mode="capture", enabled_sources=[], osc_enabled=False)
     setattr(config, f"{kind}_enabled", False)
     config.save(tmp_path / "config.json")
     recording = FakeMarineRecording()
