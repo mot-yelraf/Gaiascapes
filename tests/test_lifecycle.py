@@ -294,6 +294,30 @@ def test_concurrent_settings_updates_preserve_both_changes_and_environment(tmp_p
     assert (service.config.http_port, service.config.osc_port) == (18868, 18869)
 
 
+def test_stop_finishes_when_inflight_lookup_consumes_cancellation(tmp_path):
+    service = application(tmp_path).state.service
+
+    async def exercise():
+        entered = asyncio.Event()
+
+        async def lookup():
+            entered.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                # Python 3.10 wait_for can consume a concurrent cancellation.
+                return ()
+
+        service.play_next_ambient_layers = lookup
+        await service.start_continuous()
+        await entered.wait()
+        await asyncio.wait_for(service.stop_continuous(), timeout=1)
+        assert not service.playback.enabled
+        assert not service.playback.tasks
+
+    asyncio.run(exercise())
+
+
 def test_start_waits_for_concurrent_stop_to_finish(tmp_path):
     app = application(tmp_path)
     service = app.state.service

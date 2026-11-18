@@ -1449,7 +1449,7 @@ class GaiascapesService:
                 self.mtg_played_count += 1
 
     async def _continuous_loop(self) -> None:
-        while True:
+        while self.playback.enabled:
             self._recording_advance.clear()
             try:
                 await self.play_next_ambient_layers()
@@ -1458,6 +1458,8 @@ class GaiascapesService:
                 raise
             except Exception as exc:
                 self.continuous_last_error = f"{type(exc).__name__}: {exc}"
+            if not self.playback.enabled:
+                return
             try:
                 await asyncio.wait_for(self._recording_advance.wait(),
                                        timeout=self.config.continuous_interval_seconds)
