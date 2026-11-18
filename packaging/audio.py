@@ -67,10 +67,19 @@ def prepare_audio(destination: Path, cache: Path) -> None:
                                 check=True, capture_output=True)
         entities = plistlib.loads(result.stdout)["system-entities"]
         mounts = [item["mount-point"] for item in entities if "mount-point" in item]
+        helper = destination / "SuperCollider.app"
         try:
             app = next(Path(mount) / "SuperCollider.app" for mount in mounts
                        if (Path(mount) / "SuperCollider.app").is_dir())
-            subprocess.run(["ditto", str(app), str(destination / "SuperCollider.app")], check=True)
+            subprocess.run(["ditto", str(app), str(helper)], check=True)
         finally:
             for mount in mounts:
                 subprocess.run(["hdiutil", "detach", mount], check=True)
+        # Gaiascapes uses this copy as a background renderer. Keep it out of
+        # the Dock so macOS will not retain it as a recently opened app.
+        info = helper / "Contents/Info.plist"
+        properties = plistlib.loads(info.read_bytes())
+        properties["LSUIElement"] = True
+        info.write_bytes(plistlib.dumps(properties))
+        # Editing the plist invalidates the copied app's original signature.
+        subprocess.run(["codesign", "--force", "--sign", "-", str(helper)], check=True)

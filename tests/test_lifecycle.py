@@ -166,7 +166,8 @@ def test_polling_owns_independent_idempotent_tasks(tmp_path):
         tasks = dict(service.polling.tasks)
         await service.start_polling()
         assert service.polling.tasks == tasks
-        assert len(tasks) == 5
+        assert len(tasks) == 6
+        assert "kma_lightning" in tasks
         await service.stop()
         assert all(task.done() for task in tasks.values())
         assert not service.polling.running()
@@ -175,6 +176,7 @@ def test_polling_owns_independent_idempotent_tasks(tmp_path):
 
 
 def test_failed_settings_save_leaves_config_clients_and_history_unchanged(tmp_path, monkeypatch):
+    AppConfig(live_mode='capture').save(tmp_path / 'config.json')
     app = application(tmp_path)
     config = app.state.config
     locations = deepcopy(config.ocean_swell_locations)
@@ -290,6 +292,30 @@ def test_concurrent_settings_updates_preserve_both_changes_and_environment(tmp_p
     assert persisted['app_view'] == 'map'
     assert (persisted['http_port'], persisted['osc_port']) == (8769, 57130)
     assert (service.config.http_port, service.config.osc_port) == (18868, 18869)
+
+
+def test_stop_finishes_when_inflight_lookup_consumes_cancellation(tmp_path):
+    service = application(tmp_path).state.service
+
+    async def exercise():
+        entered = asyncio.Event()
+
+        async def lookup():
+            entered.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                # Python 3.10 wait_for can consume a concurrent cancellation.
+                return ()
+
+        service.play_next_ambient_layers = lookup
+        await service.start_continuous()
+        await entered.wait()
+        await asyncio.wait_for(service.stop_continuous(), timeout=1)
+        assert not service.playback.enabled
+        assert not service.playback.tasks
+
+    asyncio.run(exercise())
 
 
 def test_start_waits_for_concurrent_stop_to_finish(tmp_path):

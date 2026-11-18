@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "packaging"))
 from gaiascapes import __version__
 from audio import prepare_audio
+from macos_compat import audit_bundle, version_tuple
 
 
 def run(*command: str) -> None:
@@ -138,7 +139,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle-only", action="store_true", help="Freeze and verify without creating the OS installer")
     parser.add_argument("--without-audio", action="store_true", help="Omit private SuperCollider on macOS/Windows")
+    parser.add_argument("--macos-min-version", help="Audit every native slice against this macOS minimum (for example 12.0)")
     args = parser.parse_args()
+    if args.macos_min_version:
+        if sys.platform != 'darwin':
+            parser.error('--macos-min-version requires a macOS build')
+        version_tuple(args.macos_min_version)
     for dependency in ("PyInstaller", "webview", "netCDF4", "eumdac", "certifi"):
         if importlib.util.find_spec(dependency) is None:
             parser.error(f"Missing {dependency}. Install packaging/requirements-build.txt and .[desktop,lightning,eumetsat]")
@@ -159,6 +165,15 @@ def main() -> None:
     if not args.without_audio:
         prepare_audio(resources / "audio", output / ".cache")
     shutil.copy2(ROOT / "installers/README.md", resources / "INSTALLATION.txt")
+    compatibility = None
+    if args.macos_min_version:
+        import plistlib
+        info = bundle / 'Contents/Info.plist'
+        properties = plistlib.loads(info.read_bytes())
+        properties['LSMinimumSystemVersion'] = args.macos_min_version
+        info.write_bytes(plistlib.dumps(properties))
+        compatibility = audit_bundle(bundle, arch, args.macos_min_version)
+        print('macOS compatibility audit: ' + json.dumps(compatibility), flush=True)
     run(sys.executable, ROOT / "scripts/smoke_bundle.py", bundle)
     artifacts = []
     if not args.bundle_only:
@@ -174,6 +189,8 @@ def main() -> None:
                 "build_os": platform.platform(), "python": platform.python_version(),
                 "private_supercollider": not args.without_audio and sys.platform in {"darwin", "win32"},
                 "bundle": str(bundle.relative_to(output)), "files": {}}
+    if compatibility:
+        manifest['macos_compatibility'] = compatibility
     for artifact in artifacts:
         with artifact.open("rb") as file:
             manifest["files"][artifact.name] = hashlib.file_digest(file, "sha256").hexdigest()

@@ -202,6 +202,7 @@ def create_app(
             frog_calls_enabled=config.frog_calls_enabled,
             birdsong_enabled=config.birdsong_enabled,
             birdsong_provider=config.birdsong_provider,
+            kma_credentials_configured=bool(config.kma_api_key),
             xeno_canto_credentials_configured=bool(config.xeno_canto_api_key),
             eumetsat_credentials_configured=bool(
                 config.eumetsat_consumer_key and config.eumetsat_consumer_secret
@@ -422,6 +423,8 @@ def create_app(
         document.pop("eumetsat_consumer_key", None)
         document.pop("eumetsat_consumer_secret", None)
         document.pop("xeno_canto_api_key", None)
+        document.pop("kma_api_key", None)
+        document["kma_credentials_configured"] = bool(config.kma_api_key)
         document["xeno_canto_credentials_configured"] = bool(config.xeno_canto_api_key)
         document["eumetsat_credentials_configured"] = bool(
             config.eumetsat_consumer_key and config.eumetsat_consumer_secret
@@ -459,7 +462,7 @@ def create_app(
                 "birdsong_enabled": body.get("birdsong_enabled", config.birdsong_enabled),
                 "birdsong_provider": body.get("birdsong_provider", config.birdsong_provider),
             }
-            for name in ("eumetsat_consumer_key", "eumetsat_consumer_secret", "xeno_canto_api_key"):
+            for name in ("eumetsat_consumer_key", "eumetsat_consumer_secret", "xeno_canto_api_key", "kma_api_key"):
                 if body.get(name):
                     changes[name] = body[name]
             if changes["announcements_enabled"] and not (espeak_executable() or
@@ -476,6 +479,7 @@ def create_app(
             "frog_calls_enabled": config.frog_calls_enabled,
             "birdsong_enabled": config.birdsong_enabled,
             "birdsong_provider": config.birdsong_provider,
+            "kma_credentials_configured": bool(config.kma_api_key),
             "xeno_canto_credentials_configured": bool(config.xeno_canto_api_key),
             "units": config.units,
             "announcements_enabled": config.announcements_enabled,

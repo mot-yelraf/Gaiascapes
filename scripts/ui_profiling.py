@@ -219,6 +219,28 @@ def serve(args):
             ('mtg_li_client', 'eumetsat_mtg_li', 'lightning_flash'))}
         clients['geoip_resolver'] = FixtureGeoIp()
     app = create_app(data_dir, auto_capture=True, **clients)
+    if args.navigation_script:
+        if args.mode != 'fixture':
+            raise RuntimeError('Candidate JavaScript requires an isolated fixture runtime')
+        from fastapi.responses import FileResponse
+        from starlette.routing import Route
+        script = args.navigation_script.resolve(strict=True)
+
+        async def candidate_script(request):
+            return FileResponse(script, media_type='application/javascript')
+
+        app.router.routes.insert(0, Route('/static/app.js', candidate_script))
+    if args.navigation_stylesheet:
+        if args.mode != 'fixture':
+            raise RuntimeError('Candidate CSS requires an isolated fixture runtime')
+        from fastapi.responses import FileResponse
+        from starlette.routing import Route
+        stylesheet = args.navigation_stylesheet.resolve(strict=True)
+
+        async def candidate_stylesheet(request):
+            return FileResponse(stylesheet, media_type='text/css')
+
+        app.router.routes.insert(0, Route('/static/app.css', candidate_stylesheet))
     service = app.state.service
     if args.mode == 'real':
         prepare_real_recordings(service)
@@ -397,6 +419,13 @@ class Profiler:
         if not self.page.locator('#settingsDialog').evaluate('(e) => e.open'):
             self.page.locator('[data-open-settings]').click()
         self.page.locator(f'[data-settings-pane="{name}"]').click()
+        self.page.wait_for_function('''name => {
+          const dialog = document.getElementById('settingsDialog');
+          const pane = dialog.querySelector(`[data-pane="${name}"]`);
+          const tab = dialog.querySelector(`[data-settings-pane="${name}"]`);
+          return !pane.hidden && getComputedStyle(pane).display !== 'none'
+            && tab.classList.contains('is-active');
+        }''', arg=name)
 
     def sound(self, control, value):
         """Choose the visible sound card, including its scrolling behavior."""
@@ -753,6 +782,19 @@ def parser():
     result.add_argument('--trace-all', action='store_true', help='Keep successful traces too (larger artifacts)')
     result.add_argument('--output', type=Path)
     result.add_argument('--headed', action='store_true')
+    result.add_argument('--ssh-host', help='SSH alias for an isolated native macOS navigation check')
+    result.add_argument('--remote-app', default='/Applications/Gaiascapes.app',
+                        help='Packaged app supplying the remote Python and WebKit runtime')
+    result.add_argument('--navigation-only', action='store_true',
+                        help='Check all Settings sections without saving settings or playing audio')
+    result.add_argument('--navigation-script', type=Path,
+                        help='Serve a candidate app.js only in the isolated navigation fixture')
+    result.add_argument('--navigation-stylesheet', type=Path,
+                        help='Serve a candidate app.css only in the isolated navigation fixture')
+    result.add_argument('--check-animations', action='store_true',
+                        help='Check remote Burst, Paint, and Murmuration rendering without audio')
+    result.add_argument('--check-birdsong-media', type=Path,
+                        help='Decode disposable MP3 copies in remote WebKit without playing audio')
     result.add_argument('--serve', action='store_true', help=argparse.SUPPRESS)
     result.add_argument('--port', type=int, default=0, help=argparse.SUPPRESS)
     return result
@@ -779,6 +821,23 @@ def main(argv=None):
         raise SystemExit('--max-steps must be positive')
     if args.serve and args.mode == 'both':
         raise SystemExit('--serve requires a single fixture or real phase')
+    if args.navigation_script and not (args.serve or (args.ssh_host and args.navigation_only)):
+        raise SystemExit('--navigation-script requires a remote navigation check or fixture server')
+    if args.navigation_stylesheet and not (args.serve or (args.ssh_host and args.navigation_only)):
+        raise SystemExit('--navigation-stylesheet requires a remote navigation check or fixture server')
+    if args.check_animations and not (args.ssh_host and args.navigation_only):
+        raise SystemExit('--check-animations requires a remote navigation check')
+    if args.check_birdsong_media and not (args.ssh_host and args.navigation_only):
+        raise SystemExit('--check-birdsong-media requires a remote navigation check')
+    if args.ssh_host or args.navigation_only:
+        if not args.ssh_host or not args.navigation_only or args.serve:
+            raise SystemExit('Remote navigation requires --ssh-host and --navigation-only')
+        if args.mode != 'fixture' or args.credentials_from is not None:
+            raise SystemExit('Remote navigation requires --mode fixture without credentials')
+        if args.output:
+            validate_output(args.output.expanduser().resolve(), protected_configs())
+        from ui_profile_remote import run_remote_navigation
+        return run_remote_navigation(args)
     os.umask(0o077)
     if args.serve:
         serve(args)

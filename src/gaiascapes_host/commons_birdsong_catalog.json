@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-09-12",
+  "checked_at": "2026-11-17",
   "region_radius_km": 100,
   "locations": [
     {
@@ -31,18 +31,6 @@
           "license": "CC BY-SA 4.0",
           "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
           "location_evidence": ":Adult on breeding grounds\nbird-seen:yes\nplayback-used:yes\nCommon name: Dunlin\nType: adult, call, male, sex uncertain, song\nGenus: Calidris\nSpecies: alpina\nLocation: \"the Fen\", near Churchill Northern Studies Centre, Manitoba\nCountry: Canada\nElevation: 30 m"
-        },
-        {
-          "title": "Sterna paradisaea - Arctic Tern XC564600.mp3",
-          "page_id": 91877188,
-          "recording_id": "564600",
-          "latitude": 58.6624,
-          "longitude": -93.834,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Sterna_paradisaea_-_Arctic_Tern_XC564600.mp3",
-          "creator": "Doug Hynes",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":Recordist \"mobbed\" by pair of adults near nesting site.\nbird-seen:yes\nplayback-used:no\nCommon name: Arctic Tern\nType: adult, alarm call, call, flight call, sex uncertain\nGenus: Sterna\nSpecies: paradisaea\nLocation: \"the Fen\", near Churchill Northern Studies Centre, Manitoba\nCountry: Canada\nElevation: 30 m"
         },
         {
           "title": "Zonotrichia leucophrys - White-crowned Sparrow XC565001.mp3",
@@ -143,18 +131,6 @@
           "license": "CC BY-SA 4.0",
           "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
           "location_evidence": ":An adult landed very close, it was calling for its chicks that are already hunting around our farm. This adult male hunted a bananaquit to feed its chick, but the chicks were not present at that moment, so I had clear views and close up.\nbird-seen:yes\nplayback-used:no\nCommon name: Tiny Hawk\nType: Calling for feeding chicks, call, male\nGenus: Accipiter\nSpecies: superciliosus\nLocation: Canaan Farm, Sarapiqui.\nCountry: Costa Rica\nElevation: 60 m"
-        },
-        {
-          "title": "Myadestes melanops - Black-faced Solitaire XC611988.mp3",
-          "page_id": 100146203,
-          "recording_id": "611988",
-          "latitude": 9.6031,
-          "longitude": -83.8188,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Myadestes_melanops_-_Black-faced_Solitaire_XC611988.mp3",
-          "creator": "Pichard Olivier",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":Recording with MIXPRE3 and 2 microphones primo EM184 in ORTF Configuration. A little High pass filter was applied to avoid sounds of water.\nIt was recorded in forest.\nbird-seen:no\nplayback-used:no\nCommon name: Black-faced Solitaire\nType: adult, sex uncertain, song\nGenus: Myadestes\nSpecies: melanops\nLocation: National park los quetzales Copey District, Dota, San José\nCountry: Costa Rica\nElevation: 3000 m"
         }
       ]
     },
@@ -289,18 +265,6 @@
           "location_evidence": ":Flock of 10-15 feeding in canopy of exotic pines\nCommon name: Giant Cowbird\nType: song\nGenus: Molothrus\nSpecies: oryzivorus\nLocation: Miracatu, São Paulo\nCountry: Brazil\nElevation: 50 m"
         },
         {
-          "title": "Turdus albicollis - White-necked Thrush XC433671.mp3",
-          "page_id": 77545535,
-          "recording_id": "433671",
-          "latitude": -24.7899,
-          "longitude": -47.9185,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Turdus_albicollis_-_White-necked_Thrush_XC433671.mp3",
-          "creator": "maria belotti",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":bird-seen:no\nplayback-used:no\nCommon name: White-necked Thrush\nType: song\nGenus: Turdus\nSpecies: albicollis\nLocation: Cananéia, São Paulo\nCountry: Brazil\nElevation: 50 m"
-        },
-        {
           "title": "Cyanocorax caeruleus - Azure Jay XC433994.mp3",
           "page_id": 77542654,
           "recording_id": "433994",
@@ -313,16 +277,28 @@
           "location_evidence": ":bird-seen:yes\nplayback-used:no\nCommon name: Azure Jay\nType: call, song\nGenus: Cyanocorax\nSpecies: caeruleus\nLocation: Cananéia, São Paulo\nCountry: Brazil\nElevation: 50 m"
         },
         {
-          "title": "Myiothlypis rivularis - Riverbank Warbler XC433995.mp3",
-          "page_id": 77556266,
-          "recording_id": "433995",
+          "title": "Crypturellus tataupa - Tataupa Tinamou XC433997.mp3",
+          "page_id": 77527930,
+          "recording_id": "433997",
           "latitude": -24.7899,
           "longitude": -47.9185,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Myiothlypis_rivularis_-_Riverbank_Warbler_XC433995.mp3",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Crypturellus_tataupa_-_Tataupa_Tinamou_XC433997.mp3",
           "creator": "maria belotti",
           "license": "CC BY-SA 4.0",
           "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":The audio has been cut to reduce size.\nbird-seen:no\nplayback-used:no\nCommon name: Riverbank Warbler\nType: song\nGenus: Myiothlypis\nSpecies: rivularis\nLocation: Cananéia, São Paulo\nCountry: Brazil\nElevation: 50 m"
+          "location_evidence": ":The audio has been cut and a some noise has been filtered.\nbird-seen:no\nplayback-used:no\nCommon name: Tataupa Tinamou\nType: song\nGenus: Crypturellus\nSpecies: tataupa\nLocation: Cananéia, São Paulo\nCountry: Brazil\nElevation: 50 m"
+        },
+        {
+          "title": "Hylophilus poicilotis - Rufous-crowned Greenlet XC437665.mp3",
+          "page_id": 77542600,
+          "recording_id": "437665",
+          "latitude": -23.8393,
+          "longitude": -46.9634,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Hylophilus_poicilotis_-_Rufous-crowned_Greenlet_XC437665.mp3",
+          "creator": "maria belotti",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "location_evidence": ":This is an amazing audio of an interaction between the calls of the two species. The X. fuscus starts singing at about 00:01, and its song starts exactly when H. poicilotis stops.\nThank you to Guto Carvalho for showing me such an amazing interaction and to Matheus Santos for hinting me at the arapaçus.\nbird-seen:no\nplayback-used:no\nCommon name: Rufous-crowned Greenlet\nType: song\nGenus: Hylophilus\nSpecies: poicilotis\nLocation: São Lourenço da Serra, São Lourenço da Serra, São Paulo\nCountry: Brazil\nElevation: 800 m"
         }
       ]
     },
@@ -423,6 +399,18 @@
           "license": "CC BY-SA 3.0",
           "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
           "location_evidence": "Species Tucuman Mountain Finch (Compsospiza baeri)\nRecordist Niels Krabbe\nRemarks Adult.\nBird seen yes\nPlayback used no\nLocation Finca El Candado, Salta\nElevation 2920 m\nCountry Argentina"
+        },
+        {
+          "title": "Nothoprocta pentlandii - Andean Tinamou XC112727.mp3",
+          "page_id": 68239820,
+          "recording_id": "112727",
+          "latitude": -25.2001,
+          "longitude": -65.8167,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Nothoprocta_pentlandii_-_Andean_Tinamou_XC112727.mp3",
+          "creator": "Niels Krabbe",
+          "license": "CC BY-SA 3.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+          "location_evidence": ":Bushy canyon. From one of 2 birds feeding 20 m apart (pair?).\nbird-seen:yes\nplayback-used:no\nCommon name: Andean Tinamou\nType: song\nGenus: Nothoprocta\nSpecies: pentlandii\nLocation: Salta: Finca El Candado\nCountry: Argentina\nElevation: 3000 m"
         }
       ]
     },
@@ -501,18 +489,6 @@
           "location_evidence": ":bird-seen:yes\nplayback-used:no\nCommon name: Ring Ouzel\nType: male, song\nGenus: Turdus\nSpecies: torquatus\nLocation: Baddoch Glen, Auchallater, Aberdeenshire, Scotland\nCountry: United Kingdom\nElevation: 500 m"
         },
         {
-          "title": "Turdus torquatus - Ring Ouzel XC468594.mp3",
-          "page_id": 83210014,
-          "recording_id": "468594",
-          "latitude": 56.9538,
-          "longitude": -3.4001,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Turdus_torquatus_-_Ring_Ouzel_XC468594.mp3",
-          "creator": "Anthony Wetherhill",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":bird-seen:yes\nplayback-used:no\nCommon name: Ring Ouzel\nType: alarm call, male, song\nGenus: Turdus\nSpecies: torquatus\nLocation: Glen Clunie, Aberdeenshire, Scotland\nCountry: United Kingdom\nElevation: 550 m"
-        },
-        {
           "title": "Loxia curvirostra - Red Crossbill XC468917.mp3",
           "page_id": 83211129,
           "recording_id": "468917",
@@ -535,6 +511,18 @@
           "license": "CC BY-SA 4.0",
           "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
           "location_evidence": ":bird-seen:yes\nplayback-used:no\nCommon name: Common Redstart\nType: male, song\nGenus: Phoenicurus\nSpecies: phoenicurus\nLocation: Ballochbuie, Aberdeenshire, Scotland\nCountry: United Kingdom\nElevation: 340 m"
+        },
+        {
+          "title": "Phylloscopus trochilus - Willow Warbler XC468919.mp3",
+          "page_id": 83208549,
+          "recording_id": "468919",
+          "latitude": 56.9959,
+          "longitude": -3.3315,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Phylloscopus_trochilus_-_Willow_Warbler_XC468919.mp3",
+          "creator": "Anthony Wetherhill",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "location_evidence": ":bird-seen:yes\nplayback-used:no\nCommon name: Willow Warbler\nType: song\nGenus: Phylloscopus\nSpecies: trochilus\nLocation: Ballochbuie, Aberdeenshire, Scotland\nCountry: United Kingdom\nElevation: 340 m"
         }
       ]
     },
@@ -565,42 +553,6 @@
       "longitude": 36.7684,
       "recordings": [
         {
-          "title": "Passer rufocinctus - Kenya Sparrow XC364472.mp3",
-          "page_id": 68264616,
-          "recording_id": "364472",
-          "latitude": -1.2639,
-          "longitude": 36.7684,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Passer_rufocinctus_-_Kenya_Sparrow_XC364472.mp3",
-          "creator": "Anne",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":The male and female flitted from wall to bush looking for a juvenile stuck on the ground.\nbird-seen:yes\nplayback-used:no\nCommon name: Kenya Sparrow\nType: call, female, juvenile, male\nGenus: Passer\nSpecies: rufocinctus\nLocation: Nairobi, Nairobi County\nCountry: Kenya\nElevation: 1800 m"
-        },
-        {
-          "title": "Lybius leucocephalus - White-headed Barbet XC364474.mp3",
-          "page_id": 68244099,
-          "recording_id": "364474",
-          "latitude": -1.2639,
-          "longitude": 36.7684,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Lybius_leucocephalus_-_White-headed_Barbet_XC364474.mp3",
-          "creator": "Anne",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":It was more than one bird in the canopy of a tree. I saw them later but could not identify them as they were so far away and they flew off before I could study them.\nbird-seen:yes\nplayback-used:no\nCommon name: White-headed Barbet\nType: call\nGenus: Lybius\nSpecies: leucocephalus\nLocation: Nairobi, Nairobi County\nCountry: Kenya\nElevation: 1800 m"
-        },
-        {
-          "title": "Ploceus xanthops - Holub's Golden Weaver XC364568.mp3",
-          "page_id": 68264629,
-          "recording_id": "364568",
-          "latitude": -1.2639,
-          "longitude": 36.7684,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Ploceus_xanthops_-_Holub%27s_Golden_Weaver_XC364568.mp3",
-          "creator": "Anne Ndung'u",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":A number of birds on a tree.\nbird-seen:yes\nplayback-used:no\nCommon name: Holub's Golden Weaver\nType: call\nGenus: Ploceus\nSpecies: xanthops\nLocation: Nairobi, Nairobi County\nCountry: Kenya\nElevation: 1800 m"
-        },
-        {
           "title": "Milvus migrans - Black Kite XC365863.mp3",
           "page_id": 68241022,
           "recording_id": "365863",
@@ -611,6 +563,54 @@
           "license": "CC BY-SA 4.0",
           "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
           "location_evidence": ":Three or four black kites on a number of jacaranda trees calling out to each other. There is bird in the background but the sound of the black kites is almost like the whinny of a horse.\nbird-seen:yes\nplayback-used:no\nCommon name: Black Kite\nType: call\nGenus: Milvus\nSpecies: migrans\nLocation: Nairobi, Nairobi County\nCountry: Kenya\nElevation: 1800 m"
+        },
+        {
+          "title": "Bycanistes brevis - Silvery-cheeked Hornbill XC372271.mp3",
+          "page_id": 68243576,
+          "recording_id": "372271",
+          "latitude": -1.2639,
+          "longitude": 36.7684,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Bycanistes_brevis_-_Silvery-cheeked_Hornbill_XC372271.mp3",
+          "creator": "Anne Ndung'u",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "location_evidence": ":Human voices in the background. 3 hornbills on the canopy of a tree calling out to each other. They later flew away.\nbird-seen:yes\nplayback-used:no\nCommon name: Silvery-cheeked Hornbill\nType: call, song\nGenus: Bycanistes\nSpecies: brevis\nLocation: Nairobi, Nairobi County\nCountry: Kenya\nElevation: 1800 m"
+        },
+        {
+          "title": "Onychognathus morio - Red-winged Starling XC366678.mp3",
+          "page_id": 68263216,
+          "recording_id": "366678",
+          "latitude": -1.2865,
+          "longitude": 36.8129,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Onychognathus_morio_-_Red-winged_Starling_XC366678.mp3",
+          "creator": "Anne Ndung'u",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "location_evidence": ":I paused the recording a number of times to cut out the voices in the background\nbird-seen:yes\nplayback-used:no\nCommon name: Red-winged Starling\nType: call\nGenus: Onychognathus\nSpecies: morio\nLocation: Nairobi, Nairobi County\nCountry: Kenya\nElevation: 1700 m"
+        },
+        {
+          "title": "Cossypha semirufa - Rüppell's Robin-Chat XC370903.mp3",
+          "page_id": 68264474,
+          "recording_id": "370903",
+          "latitude": -1.2652,
+          "longitude": 36.7776,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Cossypha_semirufa_-_R%C3%BCppell%27s_Robin-Chat_XC370903.mp3",
+          "creator": "Anne Ndung'u",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "location_evidence": ":The bird was in the undergrowth near a fence next to the road.\nbird-seen:yes\nplayback-used:no\nCommon name: Rüppell's Robin-Chat\nType: song\nGenus: Cossypha\nSpecies: semirufa\nLocation: Nairobi, Nairobi County\nCountry: Kenya\nElevation: 1700 m"
+        },
+        {
+          "title": "Uraeginthus bengalus - Red-cheeked Cordon-bleu XC376080.mp3",
+          "page_id": 68264634,
+          "recording_id": "376080",
+          "latitude": -1.2639,
+          "longitude": 36.7684,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Uraeginthus_bengalus_-_Red-cheeked_Cordon-bleu_XC376080.mp3",
+          "creator": "Anne Ndung'u",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "location_evidence": ":A number of red-cheeked cordon bleu's feeding off the ground and flitting around.\nbird-seen:yes\nplayback-used:no\nCommon name: Red-cheeked Cordon-bleu\nType: song\nGenus: Uraeginthus\nSpecies: bengalus\nLocation: Nairobi, Nairobi County\nCountry: Kenya\nElevation: 1800 m"
         }
       ]
     },
@@ -677,52 +677,28 @@
       "longitude": 77.6721,
       "recordings": [
         {
-          "title": "Iduna rama - Sykes's Warbler XC336949.mp3",
-          "page_id": 68261502,
-          "recording_id": "336949",
-          "latitude": 13.2233,
-          "longitude": 77.4433,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Iduna_rama_-_Sykes%27s_Warbler_XC336949.mp3",
-          "creator": "Mike Prince",
+          "title": "Pycnonotus jocosus - Red-whiskered Bulbul XC538779.mp3",
+          "page_id": 89564506,
+          "recording_id": "538779",
+          "latitude": 12.9647,
+          "longitude": 77.6373,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Pycnonotus_jocosus_-_Red-whiskered_Bulbul_XC538779.mp3",
+          "creator": "Subhashish Panigrahi",
           "license": "CC BY-SA 4.0",
           "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":Two newly arrived migrants calling and giving subsong\nbird-seen:yes\nplayback-used:no\nCommon name: Sykes's Warbler\nType: Subsong, call, song\nGenus: Iduna\nSpecies: rama\nLocation: Madhure Kere, Bangalore Rural, Karnataka\nCountry: India\nElevation: 850 m"
+          "location_evidence": ":The bird is most likely a Pycnonotus jocosus but it would be great if someone more knowledgeable can help identify. Thanks!\nbird-seen:yes\nCommon name: Red-whiskered Bulbul\nType: call, life stage uncertain, sex uncertain\nGenus: Pycnonotus\nSpecies: jocosus\nLocation: Bengaluru, Bangalore Urban, Karnataka\nCountry: India\nElevation: 900 m"
         },
         {
-          "title": "Alauda gulgula - Oriental Skylark XC336956.mp3",
-          "page_id": 68261042,
-          "recording_id": "336956",
-          "latitude": 12.9823,
-          "longitude": 77.3463,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Alauda_gulgula_-_Oriental_Skylark_XC336956.mp3",
+          "title": "Galloperdix spadicea - Red Spurfowl XC356035.mp3",
+          "page_id": 68240355,
+          "recording_id": "356035",
+          "latitude": 13.3614,
+          "longitude": 77.6721,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Galloperdix_spadicea_-_Red_Spurfowl_XC356035.mp3",
           "creator": "Mike Prince",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":bird-seen:yes\nplayback-used:no\nCommon name: Oriental Skylark\nType: song\nGenus: Alauda\nSpecies: gulgula\nLocation: Thippagondanahalli (TG Halli) Reservoir, Bangalore Rural, Karnataka\nCountry: India\nElevation: 800 m"
-        },
-        {
-          "title": "Galerida deva - Sykes's Lark XC336958.mp3",
-          "page_id": 68261050,
-          "recording_id": "336958",
-          "latitude": 12.9823,
-          "longitude": 77.3463,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Galerida_deva_-_Sykes%27s_Lark_XC336958.mp3",
-          "creator": "Mike Prince",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":bird-seen:yes\nplayback-used:no\nCommon name: Sykes's Lark\nType: song\nGenus: Galerida\nSpecies: deva\nLocation: Thippagondanahalli (TG Halli) Reservoir, Bangalore Rural, Karnataka\nCountry: India\nElevation: 800 m"
-        },
-        {
-          "title": "Taccocua leschenaultii - Sirkeer Malkoha XC336960.mp3",
-          "page_id": 68241758,
-          "recording_id": "336960",
-          "latitude": 12.9762,
-          "longitude": 77.3464,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Taccocua_leschenaultii_-_Sirkeer_Malkoha_XC336960.mp3",
-          "creator": "Mike Prince",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":bird-seen:yes\nplayback-used:no\nCommon name: Sirkeer Malkoha\nType: call\nGenus: Taccocua\nSpecies: leschenaultii\nLocation: Thippagondanahalli (TG Halli) Reservoir, Bangalore Rural, Karnataka\nCountry: India\nElevation: 800 m"
+          "license": "CC BY-SA 3.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+          "location_evidence": ":bird-seen:no\nplayback-used:no\nCommon name: Red Spurfowl\nType: call\nGenus: Galloperdix\nSpecies: spadicea\nLocation: Chikballapur, Karnataka\nCountry: India\nElevation: 1100 m"
         }
       ]
     },
@@ -813,18 +789,6 @@
           "location_evidence": ":bird-seen:no\nplayback-used:no\nCommon name: White-browed Scrub Robin\nType: call, song\nGenus: Cercotrichas\nSpecies: leucophrys\nLocation: Kruger Park (near Kruger National Park), Mopani, Limpopo\nCountry: South Africa\nElevation: 420 m"
         },
         {
-          "title": "Cercotrichas leucophrys - White-browed Scrub Robin XC444233.mp3",
-          "page_id": 77545548,
-          "recording_id": "444233",
-          "latitude": -23.9449,
-          "longitude": 31.1652,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Cercotrichas_leucophrys_-_White-browed_Scrub_Robin_XC444233.mp3",
-          "creator": "Rion Lerm",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":bird-seen:no\nplayback-used:no\nCommon name: White-browed Scrub Robin\nType: call, song\nGenus: Cercotrichas\nSpecies: leucophrys\nLocation: Kruger Park (near Kruger National Park), Mopani, Limpopo\nCountry: South Africa\nElevation: 420 m"
-        },
-        {
           "title": "Cecropis abyssinica - Lesser Striped Swallow XC445449.mp3",
           "page_id": 77542868,
           "recording_id": "445449",
@@ -835,6 +799,42 @@
           "license": "CC BY-SA 4.0",
           "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
           "location_evidence": ":Call recorded near nest, birds were flying overhead.\nbird-seen:yes\nplayback-used:no\nCommon name: Lesser Striped Swallow\nType: alarm call, female, male\nGenus: Cecropis\nSpecies: abyssinica\nLocation: Kruger Park (near  Kruger National Park), Mopani, Limpopo\nCountry: South Africa\nElevation: 420 m"
+        },
+        {
+          "title": "Mirafra passerina - Monotonous Lark XC456500.mp3",
+          "page_id": 77542813,
+          "recording_id": "456500",
+          "latitude": -24.0073,
+          "longitude": 31.2225,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Mirafra_passerina_-_Monotonous_Lark_XC456500.mp3",
+          "creator": "Rion Lerm",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "location_evidence": ":bird-seen:yes\nplayback-used:no\nCommon name: Monotonous Lark\nType: call, song\nGenus: Mirafra\nSpecies: passerina\nLocation: Kruger Park (near  Kruger National Park), Mopani, Limpopo\nCountry: South Africa\nElevation: 360 m"
+        },
+        {
+          "title": "Cisticola chiniana - Rattling Cisticola XC463923.mp3",
+          "page_id": 83208857,
+          "recording_id": "463923",
+          "latitude": -24.0102,
+          "longitude": 31.1874,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Cisticola_chiniana_-_Rattling_Cisticola_XC463923.mp3",
+          "creator": "Rion Lerm",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "location_evidence": ":On rehabilitated tailings dam of PMC mine\nbird-seen:yes\nplayback-used:no\nCommon name: Rattling Cisticola\nType: call, song, wind\nGenus: Cisticola\nSpecies: chiniana\nLocation: Phalaborwa, Mopani, Limpopo\nCountry: South Africa\nElevation: 400 m"
+        },
+        {
+          "title": "Emberiza tahapisi - Cinnamon-breasted Bunting XC463924.mp3",
+          "page_id": 83211278,
+          "recording_id": "463924",
+          "latitude": -24.011,
+          "longitude": 31.1895,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Emberiza_tahapisi_-_Cinnamon-breasted_Bunting_XC463924.mp3",
+          "creator": "Rion Lerm",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "location_evidence": ":Rehabilitated tailings dam of PMC mine.\nbird-seen:yes\nplayback-used:no\nCommon name: Cinnamon-breasted Bunting\nType: alarm call, call, male, song, vehicle reverse hooter\nGenus: Emberiza\nSpecies: tahapisi\nLocation: Phalaborwa, Mopani, Limpopo\nCountry: South Africa\nElevation: 400 m"
         }
       ]
     },
@@ -844,30 +844,6 @@
       "latitude": -33.8732,
       "longitude": 151.2068,
       "recordings": [
-        {
-          "title": "Sonus naturalis - Soundscape XC442361.mp3",
-          "page_id": 77566833,
-          "recording_id": "442361",
-          "latitude": -33.6903,
-          "longitude": 150.5296,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Sonus_naturalis_-_Soundscape_XC442361.mp3",
-          "creator": "James Ray",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":\nPsophodes olivaceus at intervals.\nAnthochaera carunculata 1:26.\nMyzomela sanguinolenta? at intervals e.g. at 0:11.\nAcanthiza pusilla e.g. 1:54.\n\nSilenced some sections of noise.\nRecorded on a deck at the back of the house at the provided coordinates, about 5-10 m above ground. This is typical dry sclerophyll forest on a ridge with eucalypts and casuarinas dominating the canopy, in different areas. There are intermittent creeks (more like ponds along the creekline as of Nov 2018) at the valley bottoms east and west about 200 m away.\nI have deliberately not trimmed (but may silence) some noises in some of my uploads as even though they don't overlap with vocalizations, trimming them reduces the time between vocalizations, which results in lost important information.\nFeel free to send me additions for background species or suggestions for my recordings, or upload your edited version of the recording, linking to the original and letting me know.\nMy recording device is a smart phone, a Xiaomi Redmi Note 4X. Recorded straight to mp3.\nbird-seen:no\nplayback-used:no\nCommon name: Soundscape\nType: call, female, male, song\nGenus: Sonus\nSpecies: naturalis\nLocation: Faulconbridge, Blue Mountains City Council, New South Wales\nCountry: Australia\nElevation: 480 m"
-        },
-        {
-          "title": "Sonus naturalis - Soundscape XC442377.mp3",
-          "page_id": 77566776,
-          "recording_id": "442377",
-          "latitude": -33.6903,
-          "longitude": 150.5296,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Sonus_naturalis_-_Soundscape_XC442377.mp3",
-          "creator": "James Ray",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":\nPsophodes olivaceus pair at intervals, loudest 1:32 otherwise contact calls. Edit: soft chortling of eastern whipbird at start, faint (originally unknown), then male call at 0:12, 0:26, 0:36, 0:46, 0:57. Wee-whop wee-whop wow. Sometimes with chip-chip. 1:35.\n0:08 descending whistles chee-chiew-chiew-chiew-chiew-chiew. I think it's a brown thornbill.\nAcanthorhynchus tenuirostris 1:12, 1:18.\nAnthochaera carunculata 0:14, 2:11, 2:46\nMyzomela sanguinolenta? Seep-seep-seep-seep at intervals e.g. 0:39, 0:49 (responses to eastern whipbirds). New holland honeyeaters are regularly seen in the area, but AIUI they only make single seep calls. Note that I haven't seen any male Myzomela sanguinolentas (or females, AFAIK), so I'm skeptical about this, but I'll keep an eye out for them.\nMenura novaehollandiae 1:05+, 2:11+\n\nRecorded on a deck at the back of the house at the provided coordinates, about 5-10 m above ground. This is typical dry sclerophyll forest on a ridge with eucalypts and casuarinas dominating the canopy, in different areas. There are intermittent creeks (more like ponds along the creekline as of Nov 2018) at the valley bottoms east and west about 200 m away.\nFeel free to send me additions for background species or suggestions for my recordings, or upload your edited version of the recording, linking to the original and letting me kno.\nMy recording device is a smart phone, a Xiaomi Redmi Note 4X. Recorded straight to mp3.\nbird-seen:no\nplayback-used:no\nCommon name: Soundscape\nType: call, female, male, song\nGenus: Sonus\nSpecies: naturalis\nLocation: Faulconbridge, Blue Mountains City Council, New South Wales\nCountry: Australia\nElevation: 480 m"
-        },
         {
           "title": "Ptilonorhynchus violaceus - Satin Bowerbird XC442381.mp3",
           "page_id": 83207406,
@@ -891,6 +867,30 @@
           "license": "CC BY-SA 4.0",
           "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
           "location_evidence": ":\n1:12 southern boobook\n0:40+ faint Macropygia phasianella\nred wattlebird e.g. 0:26\n0:53+ faint wonga pigeon\naustralian king parrots, rainbow lorikeets and crimson rosellas\nno response from satin bowerbird after mimicry\n\nThis was recorded just before https://www.youtube.com/watch?v=WHn_hb0hQWs.\nFeel free to send me additions for background species or suggestions for my recordings, or upload your edited version or excerpt of a species of the recording, linking to the original and you may let me know so that I can also link to it.\nMy recording device is a smart phone, a Xiaomi Redmi Note 4X.\nbird-seen:yes\nplayback-used:no\nCommon name: Satin Bowerbird\nType: call, juvenile, male, song\nGenus: Ptilonorhynchus\nSpecies: violaceus\nLocation: Faulconbridge, Blue Mountains City Council, New South Wales\nCountry: Australia\nElevation: 480 m"
+        },
+        {
+          "title": "Menura novaehollandiae - Superb Lyrebird XC442964.mp3",
+          "page_id": 77539187,
+          "recording_id": "442964",
+          "latitude": -33.6903,
+          "longitude": 150.5296,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Menura_novaehollandiae_-_Superb_Lyrebird_XC442964.mp3",
+          "creator": "James Ray",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "location_evidence": ":Recorded while I was in the bush, it was calling from one of its mounds near rocks / cliffs, and has been seen at other times near there.\nSilenced some bits and applied a normalize and gain (but avoiding clipping).\nbird-seen:no\nplayback-used:yes\nCommon name: Superb Lyrebird\nType: call, male, mimicry, song\nGenus: Menura\nSpecies: novaehollandiae\nLocation: Faulconbridge, Blue Mountains City Council, New South Wales\nCountry: Australia\nElevation: 480 m"
+        },
+        {
+          "title": "Pardalotus punctatus - Spotted Pardalote XC446209.mp3",
+          "page_id": 77542485,
+          "recording_id": "446209",
+          "latitude": -33.6903,
+          "longitude": 150.5296,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Pardalotus_punctatus_-_Spotted_Pardalote_XC446209.mp3",
+          "creator": "James Ray",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "location_evidence": ":Normalized.\nbird-seen:no\nplayback-used:no\nCommon name: Spotted Pardalote\nType: call, male\nGenus: Pardalotus\nSpecies: punctatus\nLocation: Faulconbridge, Blue Mountains City Council, New South Wales\nCountry: Australia\nElevation: 480 m"
         }
       ]
     },
@@ -911,18 +911,6 @@
           "license": "CC BY-SA 4.0",
           "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
           "location_evidence": ":The Blue-winged Kookaburra males usually start this call right on the first glow of light in the eastern sky and also the last glow of light in the evening . They will use the same call during the day around breeding season to attract mates and let other males know their territory .\nTheir habitat is mainly  semi-arid country along water ways in the Northern Parts across Australia . They are normally stationary birds do not move very far during the year .\nTheir food consists of Reptiles- small birds- marsupiales - frogs and large insects .\nTheir nesting habits are usually hollows in Eucalypt trees and sometimes in cliff faces where small hollows may excist '\nThey are a very nervous bird and will sit very still in foliage so not to be seen .\nbird-seen:yes\nplayback-used:no\nCommon name: Blue-winged Kookaburra\nType: call\nGenus: Dacelo\nSpecies: leachii\nLocation: Cooya Pooya, Shire of Roebourne, Western Australia\nCountry: Australia\nElevation: 100 m"
-        },
-        {
-          "title": "Ptilotula keartlandi - Grey-headed Honeyeater XC496422.mp3",
-          "page_id": 83207422,
-          "recording_id": "496422",
-          "latitude": -21.0719,
-          "longitude": 117.2481,
-          "source_url": "https://commons.wikimedia.org/wiki/File:Ptilotula_keartlandi_-_Grey-headed_Honeyeater_XC496422.mp3",
-          "creator": "Peter Russell",
-          "license": "CC BY-SA 4.0",
-          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
-          "location_evidence": ":The bird was with another, I am assuming a pair as the one bird was calling while feeding and searching for insects no blossoms available .\nZebra finches are also in the back ground constantly calling as well .\nbird-seen:yes\nplayback-used:no\nCommon name: Grey-headed Honeyeater\nType: call\nGenus: Ptilotula\nSpecies: keartlandi\nLocation: Cooya Pooya, Shire of Roebourne, Western Australia\nCountry: Australia\nElevation: 100 m"
         },
         {
           "title": "Spilopelia chinensis - Spotted Dove XC497557.mp3",
@@ -947,6 +935,18 @@
           "license": "CC BY-SA 4.0",
           "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
           "location_evidence": ":early dawn calling in the mangroves .\nbird-seen:yes\nplayback-used:no\nCommon name: Indonesian Honeyeater\nType: call\nGenus: Lichmera\nSpecies: limbata\nLocation: Burrup, Shire of Roebourne, Western Australia\nCountry: Australia\nElevation: 0 m"
+        },
+        {
+          "title": "Ptilotula penicillata - White-plumed Honeyeater XC492324.mp3",
+          "page_id": 83207426,
+          "recording_id": "492324",
+          "latitude": -20.9466,
+          "longitude": 117.0578,
+          "source_url": "https://commons.wikimedia.org/wiki/File:Ptilotula_penicillata_-_White-plumed_Honeyeater_XC492324.mp3",
+          "creator": "Peter Russell",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "location_evidence": ":The Birds use this call every morning before sunrise , It is not their only call as they have some others they use during the day and when in groups , but this call seems to be used every morning at this time .\nbird-seen:yes\nplayback-used:no\nCommon name: White-plumed Honeyeater\nType: call\nGenus: Ptilotula\nSpecies: penicillata\nLocation: Cooya Pooya, Shire of Roebourne, Western Australia\nCountry: Australia\nElevation: 100 m"
         }
       ]
     },

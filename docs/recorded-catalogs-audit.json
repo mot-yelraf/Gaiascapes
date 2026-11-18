@@ -12,7 +12,7 @@
           "name": "Churchill, Manitoba, Canada",
           "latitude": 58.6624,
           "longitude": -93.834,
-          "eligible_recordings": 4,
+          "eligible_recordings": 3,
           "samples": [
             {
               "recording_id": "552770",
@@ -70,7 +70,7 @@
           "name": "Rancho Naturalista, Costa Rica",
           "latitude": 9.8333,
           "longitude": -83.5629,
-          "eligible_recordings": 3,
+          "eligible_recordings": 2,
           "samples": [
             {
               "recording_id": "464415",
@@ -169,9 +169,9 @@
               "longitude": -47.4267
             },
             {
-              "recording_id": "433671",
-              "title": "Turdus albicollis - White-necked Thrush XC433671.mp3",
-              "source_url": "https://commons.wikimedia.org/wiki/File:Turdus_albicollis_-_White-necked_Thrush_XC433671.mp3",
+              "recording_id": "433994",
+              "title": "Cyanocorax caeruleus - Azure Jay XC433994.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Cyanocorax_caeruleus_-_Azure_Jay_XC433994.mp3",
               "creator": "maria belotti",
               "license": "CC BY-SA 4.0",
               "latitude": -24.7899,
@@ -215,7 +215,7 @@
           "name": "Finca El Candado, Salta, Argentina",
           "latitude": -25.2001,
           "longitude": -65.8167,
-          "eligible_recordings": 3,
+          "eligible_recordings": 4,
           "samples": [
             {
               "recording_id": "112711",
@@ -285,13 +285,13 @@
               "longitude": -3.4365
             },
             {
-              "recording_id": "468594",
-              "title": "Turdus torquatus - Ring Ouzel XC468594.mp3",
-              "source_url": "https://commons.wikimedia.org/wiki/File:Turdus_torquatus_-_Ring_Ouzel_XC468594.mp3",
+              "recording_id": "468917",
+              "title": "Loxia curvirostra - Red Crossbill XC468917.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Loxia_curvirostra_-_Red_Crossbill_XC468917.mp3",
               "creator": "Anthony Wetherhill",
               "license": "CC BY-SA 4.0",
-              "latitude": 56.9538,
-              "longitude": -3.4001
+              "latitude": 56.9959,
+              "longitude": -3.3315
             }
           ],
           "errors": [],
@@ -322,22 +322,22 @@
           "name": "Nairobi, Kenya",
           "latitude": -1.2639,
           "longitude": 36.7684,
-          "eligible_recordings": 4,
+          "eligible_recordings": 5,
           "samples": [
             {
-              "recording_id": "364472",
-              "title": "Passer rufocinctus - Kenya Sparrow XC364472.mp3",
-              "source_url": "https://commons.wikimedia.org/wiki/File:Passer_rufocinctus_-_Kenya_Sparrow_XC364472.mp3",
-              "creator": "Anne",
+              "recording_id": "365863",
+              "title": "Milvus migrans - Black Kite XC365863.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Milvus_migrans_-_Black_Kite_XC365863.mp3",
+              "creator": "Anne Ndung'u",
               "license": "CC BY-SA 4.0",
               "latitude": -1.2639,
               "longitude": 36.7684
             },
             {
-              "recording_id": "364474",
-              "title": "Lybius leucocephalus - White-headed Barbet XC364474.mp3",
-              "source_url": "https://commons.wikimedia.org/wiki/File:Lybius_leucocephalus_-_White-headed_Barbet_XC364474.mp3",
-              "creator": "Anne",
+              "recording_id": "372271",
+              "title": "Bycanistes brevis - Silvery-cheeked Hornbill XC372271.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Bycanistes_brevis_-_Silvery-cheeked_Hornbill_XC372271.mp3",
+              "creator": "Anne Ndung'u",
               "license": "CC BY-SA 4.0",
               "latitude": -1.2639,
               "longitude": 36.7684
@@ -380,25 +380,25 @@
           "name": "Chikballapur, Karnataka, India",
           "latitude": 13.3614,
           "longitude": 77.6721,
-          "eligible_recordings": 4,
+          "eligible_recordings": 2,
           "samples": [
             {
-              "recording_id": "336949",
-              "title": "Iduna rama - Sykes's Warbler XC336949.mp3",
-              "source_url": "https://commons.wikimedia.org/wiki/File:Iduna_rama_-_Sykes%27s_Warbler_XC336949.mp3",
-              "creator": "Mike Prince",
+              "recording_id": "538779",
+              "title": "Pycnonotus jocosus - Red-whiskered Bulbul XC538779.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Pycnonotus_jocosus_-_Red-whiskered_Bulbul_XC538779.mp3",
+              "creator": "Subhashish Panigrahi",
               "license": "CC BY-SA 4.0",
-              "latitude": 13.2233,
-              "longitude": 77.4433
+              "latitude": 12.9647,
+              "longitude": 77.6373
             },
             {
-              "recording_id": "336956",
-              "title": "Alauda gulgula - Oriental Skylark XC336956.mp3",
-              "source_url": "https://commons.wikimedia.org/wiki/File:Alauda_gulgula_-_Oriental_Skylark_XC336956.mp3",
+              "recording_id": "356035",
+              "title": "Galloperdix spadicea - Red Spurfowl XC356035.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Galloperdix_spadicea_-_Red_Spurfowl_XC356035.mp3",
               "creator": "Mike Prince",
-              "license": "CC BY-SA 4.0",
-              "latitude": 12.9823,
-              "longitude": 77.3463
+              "license": "CC BY-SA 3.0",
+              "latitude": 13.3614,
+              "longitude": 77.6721
             }
           ],
           "errors": [],
@@ -438,7 +438,7 @@
           "name": "Kruger National Park, South Africa",
           "latitude": -24.0073,
           "longitude": 31.2225,
-          "eligible_recordings": 4,
+          "eligible_recordings": 6,
           "samples": [
             {
               "recording_id": "442983",
@@ -470,18 +470,18 @@
           "eligible_recordings": 4,
           "samples": [
             {
-              "recording_id": "442361",
-              "title": "Sonus naturalis - Soundscape XC442361.mp3",
-              "source_url": "https://commons.wikimedia.org/wiki/File:Sonus_naturalis_-_Soundscape_XC442361.mp3",
+              "recording_id": "442381",
+              "title": "Ptilonorhynchus violaceus - Satin Bowerbird XC442381.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Ptilonorhynchus_violaceus_-_Satin_Bowerbird_XC442381.mp3",
               "creator": "James Ray",
               "license": "CC BY-SA 4.0",
               "latitude": -33.6903,
               "longitude": 150.5296
             },
             {
-              "recording_id": "442377",
-              "title": "Sonus naturalis - Soundscape XC442377.mp3",
-              "source_url": "https://commons.wikimedia.org/wiki/File:Sonus_naturalis_-_Soundscape_XC442377.mp3",
+              "recording_id": "442452",
+              "title": "Ptilonorhynchus violaceus - Satin Bowerbird XC442452.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Ptilonorhynchus_violaceus_-_Satin_Bowerbird_XC442452.mp3",
               "creator": "James Ray",
               "license": "CC BY-SA 4.0",
               "latitude": -33.6903,
@@ -508,13 +508,13 @@
               "longitude": 117.0578
             },
             {
-              "recording_id": "496422",
-              "title": "Ptilotula keartlandi - Grey-headed Honeyeater XC496422.mp3",
-              "source_url": "https://commons.wikimedia.org/wiki/File:Ptilotula_keartlandi_-_Grey-headed_Honeyeater_XC496422.mp3",
+              "recording_id": "497557",
+              "title": "Spilopelia chinensis - Spotted Dove XC497557.mp3",
+              "source_url": "https://commons.wikimedia.org/wiki/File:Spilopelia_chinensis_-_Spotted_Dove_XC497557.mp3",
               "creator": "Peter Russell",
               "license": "CC BY-SA 4.0",
-              "latitude": -21.0719,
-              "longitude": 117.2481
+              "latitude": -20.9466,
+              "longitude": 117.0578
             }
           ],
           "errors": [],
@@ -546,7 +546,7 @@
         "Oujda, Morocco",
         "Ocean Beach, Stewart Island, New Zealand"
       ],
-      "checked_at": "2026-09-12T12:49:03.677995+00:00"
+      "checked_at": "2026-11-17"
     },
     {
       "kind": "whale_song",

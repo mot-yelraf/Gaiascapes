@@ -897,9 +897,25 @@ function updateBackgroundCharacteristics(event, fallbackText = null) {
   updateRecordingCountdown();
 }
 
-function updateBackgroundStatus(event, recordingStatuses = {}) {
+let latestBirdsongDownload = null;
+
+function birdsongDownloadMessage(progress) {
+  if (progress?.state === "downloading") {
+    return `Downloading birdsong ${progress.current}/${progress.total}: ${progress.title}`;
+  }
+  return progress?.state === "error" ? progress.error : "";
+}
+
+function updateBackgroundStatus(event, recordingStatuses = {}, downloadProgress = latestBirdsongDownload) {
   const selection = byId("backgroundInstrument")?.value || "none";
   updateBackgroundSoundsTitle(selection);
+  const downloadMessage = selection === "birdsong" && byId("birdsongProvider")?.value === "wikimedia_commons"
+    ? birdsongDownloadMessage(downloadProgress) : "";
+  if (downloadMessage) {
+    updateSoundLocation(null);
+    updateBackgroundCharacteristics(null, downloadMessage);
+    return;
+  }
   if (selection === "none") {
     updateSoundLocation(null);
     updateBackgroundCharacteristics(null, "No background selected");
@@ -953,6 +969,7 @@ function lightningSourceLabel(event, compact = false) {
   if (event?.provider === "noaa_glm") {
     return compact ? "GOES GLM · live" : "NOAA GOES GLM · near-live";
   }
+  if (event?.provider === "kma_lightning") return "KMA · South Korea";
   return "Observed lightning";
 }
 
@@ -983,6 +1000,7 @@ function formatLightningSignal(event) {
     const value = radiance >= 1000 ? radiance.toExponential(1) : radiance.toFixed(1);
     return `${value} mW·m⁻²·sr⁻¹`;
   }
+  if (event?.provider === "kma_lightning") return Number(traits.current_ka).toFixed(1) + " kA";
   return formatLightningEnergy(traits.flash_energy_j);
 }
 
@@ -1229,7 +1247,15 @@ async function updateStatus() {
     const historySignature = `${status.history.event_count}:${status.history.latest_timestamp ?? ""}`;
     const historyChanged = observedHistorySignature !== null && observedHistorySignature !== historySignature;
     observedHistorySignature = historySignature;
-    updateBackgroundStatus(status.cues.latest_background_event, status.sources?.recordings);
+    const downloadProgress = status.sources?.birdsong_download;
+    latestBirdsongDownload = downloadProgress;
+    const downloadMessage = birdsongDownloadMessage(downloadProgress);
+    const downloadStatus = byId("birdsongDownloadStatus");
+    if (downloadStatus) {
+      if (downloadStatus.textContent !== downloadMessage) downloadStatus.textContent = downloadMessage;
+      downloadStatus.hidden = !downloadMessage;
+    }
+    updateBackgroundStatus(status.cues.latest_background_event, status.sources?.recordings, downloadProgress);
     updateLastEventStatus(status.cues.latest_event);
     updateLastEarthquakeStatus(status.cues.latest_earthquake_event);
     syncRecoveryToasts({
@@ -1568,7 +1594,9 @@ function showSettingsToast(text, failed = false) {
 
 const settingsDialog = byId("settingsDialog");
 const settingsForm = byId("settingsForm");
-if (settingsDialog && settingsForm) {
+// A function scope keeps Settings closures consistent across older WebKit engines.
+function initializeSettings() {
+  if (!settingsDialog || !settingsForm) return;
   const tabs = Array.from(settingsDialog.querySelectorAll("[data-settings-pane]"));
   const panes = Array.from(settingsDialog.querySelectorAll("[data-pane]"));
   const locationDataElement = byId("forecastLocationData");
@@ -2001,6 +2029,15 @@ if (settingsDialog && settingsForm) {
   };
   mtgLiToggle.addEventListener("change", updateMtgLiCredentials);
   updateMtgLiCredentials();
+  const kmaToggle = byId("sourceKma");
+  const kmaCredentials = byId("kmaCredentials");
+  const kmaApiKey = byId("kmaApiKey");
+  const updateKmaCredentials = () => {
+    kmaCredentials.hidden = !kmaToggle.checked;
+    kmaApiKey.required = kmaToggle.checked && kmaToggle.dataset.credentialsConfigured !== "true";
+  };
+  kmaToggle.addEventListener("change", updateKmaCredentials);
+  updateKmaCredentials();
   ["event1Instrument", "event2Instrument", "event3Instrument"].forEach((selectId) => {
     const select = byId(selectId);
     const control = select.parentElement.querySelector("[data-lightning-sample-control]");
@@ -2119,6 +2156,7 @@ if (settingsDialog && settingsForm) {
             ...(byId("sourceStorm").checked ? ["open_meteo_storm"] : []),
             ...(byId("sourceGlm").checked ? ["noaa_glm"] : []),
             ...(byId("sourceMtgLi").checked ? ["eumetsat_mtg_li"] : []),
+            ...(kmaToggle.checked ? ["kma_lightning"] : []),
           ],
           instrument_slots: {
             event_1: byId("event1Instrument").value,
@@ -2133,6 +2171,7 @@ if (settingsDialog && settingsForm) {
             background: Number(byId("backgroundVolume").value) / 100,
           },
           lightning_sample_rate: Number(lightningSampleSliders[0].value),
+          kma_api_key: kmaApiKey.value,
           eumetsat_consumer_key: eumetsatConsumerKey.value,
           eumetsat_consumer_secret: eumetsatConsumerSecret.value,
           birdsong_enabled: byId("sourceBirdsong").checked,
@@ -2162,6 +2201,12 @@ if (settingsDialog && settingsForm) {
         cuePollController?.abort();
         if (!cuePollInFlight) updateEmittedCues();
       }
+      if (audioSettings.kma_credentials_configured) {
+        kmaToggle.dataset.credentialsConfigured = "true";
+        kmaApiKey.value = "";
+        kmaApiKey.placeholder = "Saved — enter only to replace";
+        updateKmaCredentials();
+      }
       if (audioSettings.eumetsat_credentials_configured) {
         mtgLiToggle.dataset.credentialsConfigured = "true";
         eumetsatConsumerKey.value = "";
@@ -2188,6 +2233,7 @@ if (settingsDialog && settingsForm) {
     }
   });
 }
+initializeSettings();
 
 document.querySelectorAll(".status-card").forEach((card) => {
   card.addEventListener("mouseover", () => {

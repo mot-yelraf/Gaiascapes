@@ -25,6 +25,7 @@ from .contracts import EventProvider
 from .mammals import MAMMAL_KINDS, MAMMAL_LABELS, MammalRecordingClient
 from .sanctsound import MARINE_KINDS, SanctSoundClient
 from .commons_birdsong import CommonsBirdsongClient
+from .birdsong_cache import read_download_progress
 from .xeno_canto import NoRecordingsError, XenoCantoClient
 from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS, SUPPORTED_SOURCES, EVENT_KIND_BY_VOICE
 from .eumetsat_li import EumetsatLiClient
@@ -33,6 +34,7 @@ from .open_meteo import (
     OpenMeteoStormClient,
     provider_locations,
 )
+from .kma_lightning import KMA_POLL_SECONDS, KmaLightningClient
 from .noaa_glm import GLM_POLL_SECONDS, NoaaGlmClient
 from .osc import OscRenderer
 from .history import HistoryView, BACKGROUND_HISTORY_KINDS, HIDDEN_HISTORY_KINDS
@@ -56,6 +58,7 @@ GLM_FALLBACK_MAX_AGE_SECONDS = 5 * 60.0
 FORECAST_FALLBACK_MAX_AGE_SECONDS = 3 * 60 * 60.0
 SOURCE_FETCH_TIMEOUT_SECONDS = 45.0
 SOURCE_LABELS = {
+    "kma_lightning": "KMA lightning",
     "usgs": "USGS earthquakes",
     "open_meteo_marine": "Open-Meteo marine",
     "open_meteo_storm": "Open-Meteo storm outlook",
@@ -127,6 +130,7 @@ class GaiascapesService:
         self.storm = storm_client or OpenMeteoStormClient(
             locations=provider_locations(config.storm_outlook_locations, "storm")
         )
+        self.kma_lightning = KmaLightningClient(config.kma_api_key)
         self.glm = glm_client or NoaaGlmClient()
         self.glm.sonification_sample_stride = config.lightning_sample_rate
         self.mtg_li = mtg_li_client or EumetsatLiClient(
@@ -284,9 +288,7 @@ class GaiascapesService:
         recovery = self._source_recovery[source]
         recovery.consecutive_failures += 1
         recovery.last_failure_at = now
-        base_delay = (
-            GLM_POLL_SECONDS if source == "noaa_glm" else self.config.poll_seconds
-        )
+        base_delay = self._source_poll_seconds(source)
         delay = min(
             RECOVERY_MAX_RETRY_SECONDS,
             float(base_delay) * (2 ** min(recovery.consecutive_failures - 1, 8)),
@@ -441,6 +443,13 @@ class GaiascapesService:
             "transition": overall.transition,
         }
 
+    def _source_poll_seconds(self, source: str) -> float:
+        if source == "noaa_glm":
+            return GLM_POLL_SECONDS
+        if source == "kma_lightning" and source in self.config.enabled_sources:
+            return KMA_POLL_SECONDS
+        return self.config.poll_seconds
+
     async def start_polling(self) -> None:
         """Start one independently scheduled loop per provider."""
         for source in SUPPORTED_SOURCES:
@@ -453,7 +462,7 @@ class GaiascapesService:
                 self.polling.start(
                     source,
                     lambda source=source: self.capture_once(True, source),
-                    lambda: self.config.poll_seconds,
+                    lambda source=source: self._source_poll_seconds(source),
                 )
 
     async def start_continuous(self) -> None:
@@ -511,6 +520,7 @@ class GaiascapesService:
 
     def _capture_clients(self) -> dict[str, EventProvider]:
         return {
+            "kma_lightning": self.kma_lightning,
             "usgs": self.usgs,
             "open_meteo_marine": self.marine,
             "open_meteo_storm": self.storm,
@@ -548,6 +558,12 @@ class GaiascapesService:
                             earthquakes = [event for event in inserted_events if event.kind == "earthquake"]
                             if earthquakes:
                                 await self._play_live_event(max(earthquakes, key=lambda event: event.strength))
+                            if source == "kma_lightning" and inserted_events:
+                                # Bound each batch to one cue and skip backlog after an outage.
+                                recent = [event for event in inserted_events
+                                          if event.timestamp >= time.time() - 2 * KMA_POLL_SECONDS]
+                                if recent:
+                                    await self._play_live_event(max(recent, key=lambda event: event.strength))
                             if source == "eumetsat_mtg_li" and events:
                                 self._start_mtg_sonification(events)
                     except Exception as exc:
@@ -747,6 +763,7 @@ class GaiascapesService:
                 "birdsong_enabled": self.config.birdsong_enabled,
                 "frog_calls_enabled": self.config.frog_calls_enabled,
                 "recordings": {kind: dict(value) for kind, value in self._recording_status.items()},
+                "birdsong_download": read_download_progress(self.data_dir),
                 **{f"{kind}_enabled": getattr(self.config, f"{kind}_enabled") for kind in (*MARINE_KINDS, *MAMMAL_KINDS)},
                 "health": source_health,
                 "recovery": self._overall_recovery_status(source_health),
@@ -870,6 +887,11 @@ class GaiascapesService:
                     setattr(self, client_name, client_type(
                         locations=provider_locations(getattr(candidate, field_name), prefix)
                     ))
+        if candidate.kma_api_key != self.config.kma_api_key:
+            self.kma_lightning = KmaLightningClient(candidate.kma_api_key)
+            self._source_recovery["kma_lightning"] = _SourceRecovery(
+                last_data_at=self._source_recovery["kma_lightning"].last_data_at
+            )
         credentials = (candidate.eumetsat_consumer_key, candidate.eumetsat_consumer_secret)
         if credentials != (self.config.eumetsat_consumer_key, self.config.eumetsat_consumer_secret):
             if isinstance(self.mtg_li, EumetsatLiClient):
@@ -1427,7 +1449,7 @@ class GaiascapesService:
                 self.mtg_played_count += 1
 
     async def _continuous_loop(self) -> None:
-        while True:
+        while self.playback.enabled:
             self._recording_advance.clear()
             try:
                 await self.play_next_ambient_layers()
@@ -1436,6 +1458,8 @@ class GaiascapesService:
                 raise
             except Exception as exc:
                 self.continuous_last_error = f"{type(exc).__name__}: {exc}"
+            if not self.playback.enabled:
+                return
             try:
                 await asyncio.wait_for(self._recording_advance.wait(),
                                        timeout=self.config.continuous_interval_seconds)

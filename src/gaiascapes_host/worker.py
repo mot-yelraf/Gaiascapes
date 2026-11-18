@@ -24,6 +24,7 @@ BUILTIN_CLIENTS = {
     ('gaiascapes_host.open_meteo', 'OpenMeteoMarineClient'),
     ('gaiascapes_host.open_meteo', 'OpenMeteoStormClient'),
     ('gaiascapes_host.noaa_glm', 'NoaaGlmClient'),
+    ('gaiascapes_host.kma_lightning', 'KmaLightningClient'),
     ('gaiascapes_host.eumetsat_li', 'EumetsatLiClient'),
     ('gaiascapes_host.xeno_canto', 'XenoCantoClient'),
     ('gaiascapes_host.commons_birdsong', 'CommonsBirdsongClient'),

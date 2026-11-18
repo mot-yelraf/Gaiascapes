@@ -129,6 +129,60 @@ Always inspect coverage audits as well as the exit status.
 
 ## Focused development checks
 
+### Remote Mac navigation
+
+An SSH alias and an installed Gaiascapes bundle can supply the remote Python
+runtime and native WebKit without installing profiling dependencies there:
+
+```sh
+python scripts/ui_profiling.py --ssh-host harvest --navigation-only \
+  --mode fixture --remote-app /Applications/Gaiascapes.app \
+  --output /tmp/gaiascapes-remote-navigation
+```
+
+The remote user needs an active graphical login session. Leave the production
+app running: the probe creates a separate fixture server on an available
+loopback port, a nonpersistent WebKit view, and marked data under a new
+`/tmp/gaiascapes-ui-profile.*` directory. It reads no provider credentials and
+does not save production settings or start an audio renderer. The remote bundle
+must contain `Contents/MacOS/gaiascapes-runtime`.
+
+One navigation pass runs per invocation. To validate a proposed JavaScript fix,
+add `--navigation-script src/gaiascapes_host/static/app.js`. Only the private
+fixture serves that file; the installed bundle stays unchanged. Its SHA-256 is
+recorded in the report so candidate results remain distinguishable from tests
+of the packaged script.
+
+Add `--check-animations` to render silent synthetic background and event cues.
+This checks Burst, all three Paint shapes, and Murmuration canvas pixels. Reports
+include `color-mix()` support, Reduced Motion state, computed gradients, and
+animation progress. Missing gradients fail the animation check even when the
+DOM elements and animation timers exist. Use `--navigation-stylesheet
+src/gaiascapes_host/static/app.css` to test candidate CSS in the private fixture;
+the report records its SHA-256 and the installed stylesheet stays unchanged.
+
+`--check-birdsong-media /tmp/approved-mp3-copies` stages MP3 copies in the private
+remote fixture and decodes each through WebKit's `OfflineAudioContext`. It never
+connects to audio output hardware. The report lists duration, sample rate, and
+decode errors per file; a failed file fails the check. Keep the input directory
+limited to the approved audio copies (1–128 files), with no installed config.
+
+This focused mode sends native pointer events to each Settings section and
+checks both selected navigation and visible panel state. Reports retain hit-test
+details, JavaScript errors, and failed programmatic-click comparisons. It tests
+the remote WebKit engine in a private native window; desktop window integration,
+settings persistence, providers, and audio are outside this mode's coverage.
+`full_settings_coverage` is always false. Loading or automation failures are
+reported as failures, never as successful navigation.
+
+The controller retrieves `report.json`, `server.log`, and `native.log` and stops
+only processes matching the session token and recorded process identity.
+Temporary evidence stays on both machines for inspection. The report also
+checks that `~/Gaiascapes/data/config.json` has the same fingerprint after a
+completed probe. Output directories must be new and outside installed data.
+
+### Local filters
+
 Explicit filters, `--max-steps`, and `--minutes` are diagnostic shortcuts; their
 coverage is reported as incomplete. A time cap is split across requested
 runs/modes and finishes the current bounded step.

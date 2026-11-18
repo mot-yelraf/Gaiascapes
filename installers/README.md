@@ -96,6 +96,27 @@ the OS installation/upgrade UI still require checks on the target machines.
 Build manifests identify the build OS, Python, architecture, and installer hashes.
 Building on a newer macOS can raise the minimum supported macOS version.
 
+For **Intel macOS 12**, use an Intel Python 3.13 environment, including when
+building under Rosetta on Apple Silicon. Resolve wheels for macOS 12 explicitly:
+ordinary pip installation on a newer Mac may select NumPy's Accelerate wheel,
+which needs system symbols absent on macOS 12. The compatible Intel wheel uses
+its included OpenBLAS library instead. In a fresh build environment run:
+
+```sh
+python -m pip wheel proxy_tools --wheel-dir installers/.cache/macos12-wheels
+python -m pip download --dest installers/.cache/macos12-wheels --find-links installers/.cache/macos12-wheels --platform macosx_12_0_x86_64 --only-binary=:all: --python-version 3.13 --implementation cp --abi cp313 -r packaging/requirements-build.txt '.[desktop,lightning,eumetsat]' setuptools wheel
+python -m pip install --no-index --find-links installers/.cache/macos12-wheels setuptools wheel
+python -m pip install --no-index --find-links installers/.cache/macos12-wheels --no-build-isolation -r packaging/requirements-build.txt '.[desktop,lightning,eumetsat]'
+MACOSX_DEPLOYMENT_TARGET=12.0 python scripts/build_installers.py --macos-min-version 12.0
+```
+
+The final option audits the selected architecture of every bundled Mach-O file,
+rejects libraries with a deployment target newer than 12.0, and records the
+minimum in the app and manifest. This static check complements testing the
+frozen decoder and UI on an actual macOS 12 host; it cannot prove that a library
+never calls a newer system API. The Intel CI build uses this dependency selection
+and audit automatically.
+
 Downloads of SuperCollider binaries and source are pinned by SHA-256 in
 `packaging/audio.py`. Windows WebView2's current Microsoft bootstrapper is
 checked for a valid Microsoft Authenticode signature. Python dependency

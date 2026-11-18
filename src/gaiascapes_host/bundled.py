@@ -142,6 +142,37 @@ def main(argv=None) -> int:
         previous_streams = sys.stdout, sys.stderr
         sys.stdout = sys.stderr = log
         renderer = None
+        renderer_stop_lock = threading.Lock()
+
+        def stop_owned_renderer():
+            """Finish audio cleanup before native Quit can terminate Python."""
+            nonlocal renderer
+            with renderer_stop_lock:
+                if renderer is None:
+                    return
+                if renderer.poll() is None:
+                    if sys.platform == "win32":
+                        subprocess.run(["taskkill", "/PID", str(renderer.pid), "/T", "/F"],
+                                       stdout=log, stderr=log, env=external_environment(), check=False)
+                    else:
+                        import signal
+                        try:
+                            os.killpg(renderer.pid, signal.SIGTERM)
+                        except ProcessLookupError:
+                            pass
+                    try:
+                        renderer.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        if sys.platform != "win32":
+                            try:
+                                os.killpg(renderer.pid, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
+                        else:
+                            renderer.kill()
+                        renderer.wait(timeout=5)
+                renderer = None
+
         try:
             if not options.no_audio:
                 # Do not start another renderer when its OSC port is occupied.
@@ -169,28 +200,13 @@ def main(argv=None) -> int:
             if os.environ.get("GAIA_SCAPE_INSTALL_BIRDSONG", "yes") != "no":
                 threading.Thread(target=_install_media, daemon=True, name="birdsong-setup").start()
             from .desktop import main as desktop_main
-            return desktop_main()
+            return desktop_main(on_shutdown=stop_owned_renderer)
         except Exception:
             import traceback
             traceback.print_exc()
             return 1
         finally:
-            if renderer is not None and renderer.poll() is None:
-                if sys.platform == "win32":
-                    subprocess.run(["taskkill", "/PID", str(renderer.pid), "/T", "/F"],
-                                   stdout=log, stderr=log, env=external_environment(), check=False)
-                else:
-                    import signal
-                    try:
-                        os.killpg(renderer.pid, signal.SIGTERM)
-                    except ProcessLookupError:
-                        pass
-                try:
-                    renderer.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    if sys.platform != "win32":
-                        os.killpg(renderer.pid, signal.SIGKILL)
-                    else:
-                        renderer.kill()
-                    renderer.wait()
-            sys.stdout, sys.stderr = previous_streams
+            try:
+                stop_owned_renderer()
+            finally:
+                sys.stdout, sys.stderr = previous_streams

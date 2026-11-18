@@ -36,6 +36,7 @@ SUPPORTED_SOURCES = (
     "open_meteo_storm",
     "noaa_glm",
     "eumetsat_mtg_li",
+    "kma_lightning",
 )
 EVENT_VOICE_OPTIONS = (
     "earthquake",
@@ -212,7 +213,7 @@ class AppConfig:
     retention_days: int = 7
     replay_hours: float = 2.0
     performance_seconds: float = 120.0
-    live_mode: str = "capture"
+    live_mode: str = "continuous"
     app_view: str = "dashboard"
     sound_location_order: str = "sequential"
     theme: str = "earth"
@@ -244,6 +245,7 @@ class AppConfig:
         default_factory=lambda: dict(DEFAULT_INSTRUMENT_VOLUMES)
     )
     lightning_sample_rate: int = 1
+    kma_api_key: str = field(default="", repr=False)
     eumetsat_consumer_key: str = field(default="", repr=False)
     eumetsat_consumer_secret: str = field(default="", repr=False)
     whale_song_enabled: bool = True
@@ -411,6 +413,9 @@ class AppConfig:
         self.lightning_sample_rate = max(
             1, min(11, int(self.lightning_sample_rate))
         )
+        self.kma_api_key = _credential(self.kma_api_key, "KMA API key")
+        if "kma_lightning" in self.enabled_sources and not self.kma_api_key:
+            raise ValueError("KMA lightning requires an API key")
         self.eumetsat_consumer_key = _credential(
             self.eumetsat_consumer_key, "EUMETSAT Consumer Key"
         )

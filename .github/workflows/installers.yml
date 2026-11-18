@@ -21,12 +21,29 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install app and build dependencies
+        if: matrix.os != 'macos-15-intel'
         run: python -m pip install -r packaging/requirements-build.txt '.[desktop,lightning,eumetsat]'
+      - name: Resolve Intel dependencies for macOS 12
+        if: matrix.os == 'macos-15-intel'
+        run: |
+          python -m pip wheel proxy_tools --wheel-dir installers/.cache/macos12-wheels
+          python -m pip download --dest installers/.cache/macos12-wheels --find-links installers/.cache/macos12-wheels --platform macosx_12_0_x86_64 --only-binary=:all: --python-version 3.13 --implementation cp --abi cp313 -r packaging/requirements-build.txt '.[desktop,lightning,eumetsat]' setuptools wheel
+          python -m pip install --no-index --find-links installers/.cache/macos12-wheels setuptools wheel
+          python -m pip install --no-index --find-links installers/.cache/macos12-wheels --no-build-isolation -r packaging/requirements-build.txt '.[desktop,lightning,eumetsat]'
       - name: Install Inno Setup
         if: runner.os == 'Windows'
         run: choco install innosetup --yes --no-progress
       - name: Build and verify native installers
+        if: matrix.os != 'macos-15-intel'
         run: python scripts/build_installers.py
+      - name: Build and audit macOS 12 Intel installers
+        if: matrix.os == 'macos-15-intel'
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '12.0'
+        run: python scripts/build_installers.py --macos-min-version 12.0
+      - name: Verify native macOS Quit cleanup
+        if: runner.os == 'macOS'
+        run: python scripts/smoke_macos_quit.py installers/build-*/dist/Gaiascapes.app
       - name: Save installer outputs
         if: success()
         uses: actions/upload-artifact@v4

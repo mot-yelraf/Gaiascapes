@@ -136,9 +136,63 @@ def test_failed_renderer_start_keeps_desktop_available(tmp_path, monkeypatch):
     def fail_audio(_data):
         raise OSError("Renderer unavailable")
     monkeypatch.setattr(bundled, "_audio_command", fail_audio)
-    monkeypatch.setattr(desktop, "main", lambda: 0)
+    monkeypatch.setattr(desktop, "main", lambda **kwargs: 0)
     assert bundled.main([]) == 0
     assert "Renderer unavailable" in (data / "desktop.log").read_text()
+
+
+@pytest.mark.skipif(sys.platform == 'win32', reason='POSIX renderer process groups')
+@pytest.mark.parametrize('stalled', [False, True])
+def test_native_quit_stops_owned_audio_before_desktop_exit(tmp_path, monkeypatch, stalled):
+    """Audio cleanup cannot depend on a finally block after native termination."""
+    from contextlib import nullcontext
+    import signal
+    import socket
+    import subprocess
+    from gaiascapes_host import desktop
+    from gaiascapes_host.config import AppConfig
+
+    data = tmp_path / 'data'
+    data.mkdir()
+    AppConfig().save(data / 'config.json')
+    monkeypatch.setenv('GAIA_SCAPE_DATA_DIR', str(data))
+    monkeypatch.setenv('GAIA_SCAPE_INSTALL_BIRDSONG', 'no')
+    monkeypatch.setattr(sys, 'platform', 'darwin')
+    probe = SimpleNamespace(bind=lambda address: None, close=lambda: None)
+    monkeypatch.setattr(socket, 'socket', lambda *args: nullcontext(probe))
+    monkeypatch.setattr(bundled, '_audio_command', lambda data: ['owned-sclang'])
+    calls = []
+
+    class Renderer:
+        pid = 999991
+        stopped = False
+
+        def poll(self):
+            return 0 if self.stopped else None
+
+        def wait(self, timeout):
+            calls.append(('wait', timeout))
+            if stalled and timeout == 10:
+                raise subprocess.TimeoutExpired('owned-sclang', timeout)
+            self.stopped = True
+
+    renderer = Renderer()
+    monkeypatch.setattr(bundled.subprocess, 'Popen', lambda *args, **kwargs: renderer)
+    monkeypatch.setattr(bundled.os, 'killpg', lambda pid, sig: calls.append((pid, sig)))
+
+    def desktop_main(*, on_shutdown):
+        on_shutdown()
+        assert renderer.stopped, 'Native Quit returned while audio was still running'
+        on_shutdown()
+        calls.append('desktop exit')
+        return 0
+
+    monkeypatch.setattr(desktop, 'main', desktop_main)
+    assert bundled.main([]) == 0
+    expected = [(renderer.pid, signal.SIGTERM), ('wait', 10)]
+    if stalled:
+        expected += [(renderer.pid, signal.SIGKILL), ('wait', 5)]
+    assert calls == expected + ['desktop exit']
 
 
 def test_frozen_windows_server_uses_log_streams_without_a_console(tmp_path, monkeypatch):

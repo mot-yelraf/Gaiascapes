@@ -425,7 +425,58 @@ def test_map_is_visible_for_legacy_view_preferences(tmp_path, view):
     assert 'id="dashboardView"' not in home
 
 
+def test_birdsong_download_progress_reaches_tile_status(tmp_path, monkeypatch):
+    from gaiascapes_host import birdsong_cache
+    from gaiascapes_host.config import AppConfig
+
+    AppConfig(live_mode="capture", osc_enabled=False).save(tmp_path / "config.json")
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
+    entered, release = threading.Event(), threading.Event()
+    monkeypatch.setattr(birdsong_cache, "COMMONS_CATALOG", [
+        {"recordings": [{"title": "Common Redpoll.mp3"}]},
+    ])
+
+    class DownloadClient:
+        def event_at(self, index):
+            entered.set()
+            assert release.wait(5)
+
+    download = threading.Thread(target=birdsong_cache.install_recordings,
+                                args=(tmp_path, DownloadClient()))
+    with TestClient(app) as client:
+        assert client.get("/api/status").json()["sources"]["birdsong_download"] is None
+        download.start()
+        try:
+            assert entered.wait(5)
+            progress = client.get("/api/status").json()["sources"]["birdsong_download"]
+            assert progress["state"] == "downloading"
+            assert progress["current"] == progress["total"] == 1
+            assert progress["completed"] == 0
+            assert progress["title"] == "Common Redpoll.mp3"
+            assert 'id="birdsongDownloadStatus"' in client.get("/").text
+        finally:
+            release.set()
+            download.join(5)
+        progress = client.get("/api/status").json()["sources"]["birdsong_download"]
+        assert progress["state"] == "complete"
+        assert progress["completed"] == 1
+
+
+def test_new_installation_starts_playback(tmp_path):
+    app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs(),
+                     birdsong_client=FakeBirdsong())
+    app.state.service.renderer.enabled = False
+
+    with TestClient(app) as client:
+        live = client.get("/api/status").json()["live"]
+        assert live["mode"] == "continuous"
+        assert live["running"] is True
+
+
 def test_play_selects_continuous_for_capture_configuration(tmp_path):
+    from gaiascapes_host.config import AppConfig
+
+    AppConfig(live_mode="capture").save(tmp_path / "config.json")
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
     with TestClient(app) as client:
         assert app.state.config.live_mode == "capture"
@@ -1055,6 +1106,7 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path, monkeypatch):
 def test_birdsong_source_setup_and_disable_preserve_instrument(tmp_path):
     from gaiascapes_host.config import AppConfig
 
+    AppConfig(live_mode="capture").save(tmp_path / "config.json")
     birdsong = FakeBirdsong()
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs(),
                      birdsong_client=birdsong)
@@ -1409,6 +1461,9 @@ def test_natural_thunder_preview_routes_to_lightning(tmp_path):
 
 
 def test_event_history_identifies_seismic_bell_voice(tmp_path):
+    from gaiascapes_host.config import AppConfig
+
+    AppConfig(live_mode="capture").save(tmp_path / "config.json")
     event = GaiaEvent(
         "usgs", "bell-event", "earthquake", time.time(), strength=0.7
     )
@@ -1900,6 +1955,9 @@ def test_background_preview_does_not_add_captured_event(tmp_path):
 
 
 def test_birdsong_preview_emits_cached_media_without_osc(tmp_path):
+    from gaiascapes_host.config import AppConfig
+
+    AppConfig(live_mode="capture").save(tmp_path / "config.json")
     birdsong = FakeBirdsong()
     app = create_app(
         tmp_path,
@@ -2223,7 +2281,7 @@ def test_frog_calls_preview_rotation_history_and_disable_without_osc(tmp_path):
                                 media_url="/frog-calls-media/test.wav")
             return event
 
-    config = AppConfig(frog_calls_enabled=True, xeno_canto_api_key="test-key", enabled_sources=[], osc_enabled=False)
+    config = AppConfig(live_mode="capture", frog_calls_enabled=True, xeno_canto_api_key="test-key", enabled_sources=[], osc_enabled=False)
     config.event_instruments["background"] = "frog_calls"
     config.save(tmp_path / "config.json")
     frogs = FakeFrogs()
@@ -2266,7 +2324,7 @@ def test_sanctsound_settings_preview_rotation_and_disable(tmp_path, kind):
                                 media_url=f'/{kind.replace("_", "-")}-media/test.wav')
             return event
 
-    config = AppConfig(enabled_sources=[], osc_enabled=False)
+    config = AppConfig(live_mode="capture", enabled_sources=[], osc_enabled=False)
     setattr(config, f"{kind}_enabled", False)
     config.save(tmp_path / "config.json")
     recording = FakeMarineRecording()
@@ -2811,6 +2869,7 @@ def test_recording_watchdog_runs_while_retrieval_is_blocked(tmp_path):
 def test_commons_birdsong_saves_and_plays_with_all_background_sources_enabled(tmp_path):
     from gaiascapes_host.config import AppConfig
 
+    AppConfig(live_mode="capture").save(tmp_path / "config.json")
     birds = FakeBirdsong()
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs(), birdsong_client=birds)
     with TestClient(app) as client:

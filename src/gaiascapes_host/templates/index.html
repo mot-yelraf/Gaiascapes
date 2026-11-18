@@ -189,6 +189,7 @@
                   <small class="source-hint" id="sourceBirdsongHint" role="tooltip">Archived bird recordings for the Birdsong background.</small>
                 </div>
                 <label class="source-art" for="sourceBirdsong" aria-label="Toggle Birdsong"><img src="/static/sound-birdsong.svg" width="512" height="512" alt=""></label>
+                <small id="birdsongDownloadStatus" class="birdsong-download-status" role="status" hidden></small>
                 <div class="source-credentials" id="birdsongCredentials"{% if not birdsong_enabled %} hidden{% endif %}>
                   <label for="birdsongProvider"><span>Birdsong source</span><select id="birdsongProvider"><option value="wikimedia_commons"{% if birdsong_provider == "wikimedia_commons" %} selected{% endif %}>Wikimedia Commons</option><option value="xeno_canto"{% if birdsong_provider == "xeno_canto" %} selected{% endif %}>Xeno-canto</option></select></label>
                   <label for="xenoCantoApiKey" id="xenoCantoCredentials"{% if birdsong_provider != "xeno_canto" %} hidden{% endif %}><span>Xeno-canto API key (shared)</span><input id="xenoCantoApiKey" type="password" autocomplete="new-password" placeholder="{% if xeno_canto_credentials_configured %}Saved — enter only to replace{% else %}Enter your Xeno-canto API key{% endif %}"></label>
@@ -245,7 +246,8 @@
               </article>
             </div>
             <h4 class="source-group-heading" id="eventSourcesHeading">Event sound sources</h4>
-            <div class="source-tile-grid" role="group" aria-labelledby="eventSourcesHeading">
+            <h5 class="source-group-heading" id="lightningSourcesHeading">Lightning</h5>
+            <div class="source-tile-grid" role="group" aria-labelledby="lightningSourcesHeading">
               <article class="source-tile" aria-label="EUMETSAT MTG Lightning Imager">
                 <div class="source-title">
                   <label for="sourceMtgLi"><input id="sourceMtgLi" type="checkbox" data-credentials-configured="{{ 'true' if eumetsat_credentials_configured else 'false' }}" aria-describedby="sourceMtgLiHint" {% if "eumetsat_mtg_li" in enabled_sources %}checked{% endif %}><strong>EUMETSAT MTG Lightning Imager</strong></label>
@@ -264,6 +266,19 @@
                 </div>
                 <label class="source-art" for="sourceGlm" aria-label="Toggle NOAA GOES GLM lightning"><img src="/static/sound-natural_thunder.svg" width="512" height="512" alt=""></label>
               </article>
+              <article class="source-tile" aria-label="KMA lightning">
+                <div class="source-title">
+                  <label for="sourceKma"><input id="sourceKma" type="checkbox" data-credentials-configured="{{ 'true' if kma_credentials_configured else 'false' }}" aria-describedby="sourceKmaHint" {% if "kma_lightning" in enabled_sources %}checked{% endif %}><strong>KMA lightning · South Korea</strong></label>
+                  <small class="source-hint" id="sourceKmaHint" role="tooltip">Observed lightning from the Korea Meteorological Administration. Updated every five minutes.</small>
+                </div>
+                <label class="source-art" for="sourceKma" aria-label="Toggle KMA lightning"><img src="/static/sound-natural_thunder.svg" width="512" height="512" alt=""></label>
+                <div class="source-credentials" id="kmaCredentials"{% if "kma_lightning" not in enabled_sources %} hidden{% endif %}>
+                  <label for="kmaApiKey"><span>KMA API key</span><input id="kmaApiKey" type="password" autocomplete="new-password" placeholder="{{ 'Saved — enter only to replace' if kma_credentials_configured else 'KMA API key' }}"></label>
+                  <small><a href="https://apihub.kma.go.kr/apiList.do?apiMov=%EB%82%99%EB%A2%B0+%EC%9B%90%EC%8B%9C%EC%9E%90%EB%A3%8C+%EC%A1%B0%ED%9A%8C&amp;seqApi=5&amp;seqApiSub=264" target="_blank" rel="noopener noreferrer">Get a key and apply for lightning API access</a></small>
+                </div>
+              </article>
+            </div>
+            <div class="source-tile-grid" role="group" aria-label="Other event sound sources">
               <article class="source-tile" aria-label="USGS earthquakes">
                 <div class="source-title">
                   <label for="sourceUsgs"><input id="sourceUsgs" type="checkbox" aria-describedby="sourceUsgsHint" {% if "usgs" in enabled_sources %}checked{% endif %}><strong>USGS earthquakes</strong></label>
