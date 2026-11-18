@@ -77,6 +77,10 @@ class CommonsBirdsongClient:
         file_title = recording["title"]
         metadata_path = self.media_dir / f"{slug}.json"
         metadata = self._read_cached_metadata(metadata_path)
+        # Older WebKit cannot play Ogg. Setup replaces its metadata only after
+        # obtaining a complete MP3; existing original files remain untouched.
+        if metadata and Path(metadata.get("file", "")).suffix.lower() in {".ogg", ".oga", ".opus"}:
+            metadata = None
         if not self._local_audio_available(metadata):
             if not self.allow_downloads:
                 raise FileNotFoundError(
@@ -143,6 +147,13 @@ class CommonsBirdsongClient:
             if license_name not in SUPPORTED_LICENSES or not 0 < size <= MAX_AUDIO_BYTES:
                 continue
             title = str(page.get("title", "")).removeprefix("File:")
+            download_url = image_info["url"]
+            mime = image_info["mime"]
+            if (mime.lower().split(";", 1)[0].strip() in {"application/ogg", "audio/ogg"}
+                    or Path(urllib.parse.urlparse(download_url).path).suffix.lower() in {".ogg", ".oga", ".opus"}):
+                download_url = self._mp3_derivative(int(page["pageid"]), title)
+                mime = "audio/mpeg"
+                size = 0  # The derivative has a different size from the original.
             candidates.append(
                 {
                     "page_id": int(page["pageid"]),
@@ -151,8 +162,8 @@ class CommonsBirdsongClient:
                     "license": license_name,
                     "license_url": _metadata_value(metadata, "LicenseUrl"),
                     "source_url": image_info["descriptionurl"],
-                    "download_url": image_info["url"],
-                    "mime": image_info["mime"],
+                    "download_url": download_url,
+                    "mime": mime,
                     "size": size,
                 }
             )
@@ -161,6 +172,25 @@ class CommonsBirdsongClient:
                 f"Wikimedia Commons has no compatible audio for {file_title}"
             )
         return candidates[0]
+
+    def _mp3_derivative(self, page_id: int, title: str) -> str:
+        """Resolve Commons' own MP3 version while retaining original attribution."""
+        parameters = {"action": "query", "pageids": page_id, "prop": "videoinfo",
+                      "viprop": "derivatives", "format": "json", "formatversion": 2}
+        request = urllib.request.Request(
+            f"{COMMONS_API_URL}?{urllib.parse.urlencode(parameters)}",
+            headers={"User-Agent": COMMONS_USER_AGENT},
+        )
+        with self._opener(request, timeout=30) as response:
+            document = json.load(response)
+        for page in document.get("query", {}).get("pages", []):
+            for info in page.get("videoinfo", []):
+                for derivative in info.get("derivatives", []):
+                    url = str(derivative.get("src", ""))
+                    if (derivative.get("type") == "audio/mpeg"
+                            and urllib.parse.urlparse(url).path.lower().endswith(".mp3")):
+                        return url
+        raise RuntimeError(f"Wikimedia Commons has no compatible MP3 version for {title}")
 
     def _download(self, slug: str, metadata: dict) -> Path:
         extension = Path(urllib.parse.urlparse(metadata["download_url"]).path).suffix
@@ -175,6 +205,7 @@ class CommonsBirdsongClient:
             headers={"User-Agent": COMMONS_USER_AGENT},
         )
         with self._opener(request, timeout=60) as response, temporary.open("wb") as output:
+            content_length = int(getattr(response, "headers", {}).get("Content-Length", 0))
             remaining = MAX_AUDIO_BYTES + 1
             while remaining > 0:
                 chunk = response.read(min(64 * 1024, remaining))
@@ -191,6 +222,10 @@ class CommonsBirdsongClient:
         if metadata.get("size") and temporary.stat().st_size != metadata["size"]:
             temporary.unlink()
             raise RuntimeError("Wikimedia Commons audio download is incomplete; rerun the installer")
+        if content_length and temporary.stat().st_size != content_length:
+            temporary.unlink()
+            raise RuntimeError("Wikimedia Commons audio download is incomplete; rerun the installer")
+        metadata["size"] = temporary.stat().st_size
         temporary.replace(destination)
         return destination
 

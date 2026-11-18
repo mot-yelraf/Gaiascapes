@@ -166,7 +166,8 @@ def test_polling_owns_independent_idempotent_tasks(tmp_path):
         tasks = dict(service.polling.tasks)
         await service.start_polling()
         assert service.polling.tasks == tasks
-        assert len(tasks) == 5
+        assert len(tasks) == 6
+        assert "kma_lightning" in tasks
         await service.stop()
         assert all(task.done() for task in tasks.values())
         assert not service.polling.running()
@@ -175,6 +176,7 @@ def test_polling_owns_independent_idempotent_tasks(tmp_path):
 
 
 def test_failed_settings_save_leaves_config_clients_and_history_unchanged(tmp_path, monkeypatch):
+    AppConfig(live_mode='capture').save(tmp_path / 'config.json')
     app = application(tmp_path)
     config = app.state.config
     locations = deepcopy(config.ocean_swell_locations)

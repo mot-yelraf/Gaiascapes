@@ -472,21 +472,27 @@ def configure_gui_environment() -> None:
         os.environ.setdefault("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
 
 
-def main() -> int:
-    """Start or attach to Gaiascapes and display its native desktop window."""
+def main(*, on_shutdown: Callable[[], None] | None = None) -> int:
+    """Display the desktop and finish optional owned-resource cleanup on Quit."""
     if relaunch_for_macos_app_identity():
         return 0
     base_url = _base_url()
     owned_server: subprocess.Popen[Any] | None = None
+    shutdown_callback = on_shutdown
     server_stop_lock = threading.Lock()
     configure_gui_environment()
 
     def stop_owned_server() -> None:
         """Wait for one shared cleanup on window close, menu Quit, or loop exit."""
-        nonlocal owned_server
+        nonlocal owned_server, shutdown_callback
         with server_stop_lock:
-            _stop_owned_server(owned_server)
-            owned_server = None
+            try:
+                _stop_owned_server(owned_server)
+                owned_server = None
+            finally:
+                if shutdown_callback is not None:
+                    shutdown_callback()
+                    shutdown_callback = None
 
     if sys.platform.startswith("linux"):
         if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):

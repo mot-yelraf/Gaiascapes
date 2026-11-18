@@ -569,7 +569,7 @@ def test_macos_quit_notification_runs_cleanup_synchronously_and_unregisters(monk
 
 @pytest.mark.parametrize('action', ['menu', 'window', 'overlapping'])
 def test_desktop_quit_paths_wait_for_shared_server_cleanup(tmp_path, monkeypatch, action):
-    """Menu Quit and window close finish cleanup once before desktop exit."""
+    """Menu Quit and window close finish server and audio cleanup before exit."""
     calls = []
     fake_webview, window = _fake_webview([])
     callbacks = []
@@ -621,7 +621,7 @@ def test_desktop_quit_paths_wait_for_shared_server_cleanup(tmp_path, monkeypatch
             assert menu_finished.is_set()
         else:
             (menu_quit if action == 'menu' else window_close)()
-        assert calls == ['terminate', 'server stopped']
+        assert calls == ['terminate', 'server stopped', 'audio stopped']
         calls.append('desktop exit')
 
     monkeypatch.setenv('GAIA_SCAPE_DATA_DIR', str(tmp_path))
@@ -637,5 +637,5 @@ def test_desktop_quit_paths_wait_for_shared_server_cleanup(tmp_path, monkeypatch
     monkeypatch.setattr(desktop, '_register_macos_quit_cleanup', register)
     fake_webview.start = start
 
-    assert desktop.main() == 0
-    assert calls == ['terminate', 'server stopped', 'desktop exit', 'observer removed']
+    assert desktop.main(on_shutdown=lambda: calls.append('audio stopped')) == 0
+    assert calls == ['terminate', 'server stopped', 'audio stopped', 'desktop exit', 'observer removed']

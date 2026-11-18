@@ -255,7 +255,7 @@ const context = vm.createContext({
   updateBackgroundCharacteristics: (event, text) => {context.event = event; context.text = text;},
   instrumentLabel: () => "Frog Calls",
 });
-vm.runInContext(source.slice(source.indexOf("function updateBackgroundStatus("), source.indexOf("\nfunction eventKindLabel(")), context);
+vm.runInContext(source.slice(source.indexOf("let latestBirdsongDownload ="), source.indexOf("\nfunction eventKindLabel(")), context);
 context.previous = {kind: "birdsong", traits: {place: "Old bird location"}};
 vm.runInContext('updateBackgroundStatus(previous, {frog_calls: {state: "unavailable", error: "No frog recordings in Test Wetland"}})', context);
 assert.equal(context.text, "No frog recordings in Test Wetland");
@@ -266,6 +266,18 @@ context.frog = {kind: "frog_calls", latitude: 1, longitude: 2, traits: {place: "
 vm.runInContext('updateBackgroundStatus(frog, {frog_calls: {state: "ready", error: ""}})', context);
 assert.equal(context.event, context.frog);
 assert.equal(context.location.name, "New wetland");
+context.byId = (id) => ({value: id === "birdsongProvider" ? "wikimedia_commons" : "birdsong"});
+vm.runInContext('latestBirdsongDownload = {state: "downloading", current: 12, total: 68, title: "Common Redpoll.mp3"}; updateBackgroundStatus(previous)', context);
+assert.equal(context.text, "Downloading birdsong 12/68: Common Redpoll.mp3");
+assert.equal(context.location, null);
+vm.runInContext('latestBirdsongDownload = {state: "error", error: "Commons rate limit reached"}; updateBackgroundStatus(previous)', context);
+assert.equal(context.text, "Commons rate limit reached");
+vm.runInContext('latestBirdsongDownload = {state: "complete"}; updateBackgroundStatus(previous)', context);
+assert.equal(context.event, context.previous);
+assert.equal(context.location.name, "Old bird location");
+context.byId = (id) => ({value: id === "birdsongProvider" ? "xeno_canto" : "birdsong"});
+vm.runInContext('latestBirdsongDownload = {state: "downloading", current: 12, total: 68, title: "Common Redpoll.mp3"}; updateBackgroundStatus(previous)', context);
+assert.equal(context.event, context.previous);
 '''
     result = subprocess.run([node, "-e", script, str(source)], capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stderr

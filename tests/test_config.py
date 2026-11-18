@@ -19,6 +19,17 @@ from gaiascapes_host.config import (
 )
 
 
+@pytest.mark.parametrize("saved_mode", [None, "capture", "continuous"])
+def test_playback_default_preserves_saved_mode(tmp_path, saved_mode):
+    path = tmp_path / "config.json"
+    if saved_mode is not None:
+        path.write_text(json.dumps({"live_mode": saved_mode}), encoding="utf-8")
+
+    config = AppConfig.load(path)
+
+    assert config.live_mode == (saved_mode or "continuous")
+
+
 def test_legacy_instrument_mappings_migrate_to_three_roles(tmp_path):
     path = tmp_path / "config.json"
     path.write_text(
