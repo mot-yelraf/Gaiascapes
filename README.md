@@ -22,8 +22,20 @@ Birdsong and Frog Calls can include Xeno-canto recordings licensed
 recordings noncommercially, retain attribution and license links, identify
 modifications, and apply the required ShareAlike license when sharing adaptations.
 The existing recording attribution shows each recording's license and source.
-The application code remains BSD-2-Clause licensed; third-party recordings retain
-their own licenses. This statement of intended use does not change either license.
+Third-party recordings retain their own licenses. This statement of intended use
+does not add restrictions to the application's GPLv3 license.
+
+## License
+
+Copyright (c) 2026 T.W. Farley, dba Peace Hill Studios.
+
+Gaiascapes application code is licensed under the GNU General Public License,
+version 3 only (`GPL-3.0-only`). You may use, modify, and redistribute it under
+the terms in [LICENSE](LICENSE), including for commercial purposes. The software
+is provided without warranty; see the license for details.
+
+Third-party software, recordings, images, and data retain their respective
+licenses and terms; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Who this is for
 

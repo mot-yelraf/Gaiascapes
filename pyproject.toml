@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Turn live terrestrial events into generative musical performances."
 readme = "README.md"
 requires-python = ">=3.10"
-license = "BSD-2-Clause"
+license = "GPL-3.0-only"
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 authors = [{name = "Tom Farley"}]
 dependencies = [
