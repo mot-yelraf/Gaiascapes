@@ -1,7 +1,8 @@
 # Third-Party and Data Notices
 
-Gaiascapes source code is distributed under the BSD 2-Clause License in
-`LICENSE`. Third-party software, platform components, services, and data remain
+Gaiascapes source code is distributed under the GNU General Public License,
+version 3 only (`GPL-3.0-only`), in [LICENSE](LICENSE).
+Third-party software, platform components, services, and data remain
 subject to their own licenses and terms. The Gaiascapes license does not replace
 those terms.
 
@@ -139,7 +140,7 @@ Xeno-canto Birdsong and Frog Calls accept CC BY, CC BY-SA, and CC BY-NC-SA
 recordings. Each recording retains its creator credit, license link, and
 Xeno-canto source link in the existing attribution display. CC BY-NC-SA audio
 is for noncommercial use; shared adaptations must meet its ShareAlike terms.
-These recording licenses are separate from the application's BSD-2-Clause license.
+These recording licenses are separate from the application's GPL-3.0-only license.
 See <https://creativecommons.org/licenses/by-nc-sa/4.0/>.
 
 Redistributors remain responsible for preserving each recording's attribution and

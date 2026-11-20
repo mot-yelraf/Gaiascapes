@@ -27,7 +27,7 @@ def main() -> None:
 
     assert version('gaiascapes') == __version__.removeprefix('v')
     package = distribution('gaiascapes')
-    assert package.metadata['License-Expression'] == 'BSD-2-Clause'
+    assert package.metadata['License-Expression'] == 'GPL-3.0-only'
     license_files = package.metadata.get_all('License-File') or []
     assert {'LICENSE', 'THIRD_PARTY_NOTICES.md'} <= set(license_files)
     for notice in license_files:
