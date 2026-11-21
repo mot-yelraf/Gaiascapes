@@ -30,8 +30,8 @@ For synthesized backgrounds or event voices, the host’s SuperCollider renderer
 
 Playback uses continuous sound: new event voices play over a rotating background.
 **Play** starts or resumes the soundscape; **Pause** pauses it while enabled feeds
-continue collecting observations. **Next** stages the next animal image and pauses
-without playing its recording. Capture/replay remains available through the API;
+continue collecting observations. **Next** advances to the next animal recording
+and plays it automatically. Capture/replay remains available through the API;
 the UI has no mode selector or replay controls.
 
 Ocean Swells and Storm Outlook normally advance to another background location approximately every **23 seconds**. Wildlife recordings use their audio length instead. Network searches and downloads can take longer. Wildlife recordings are archived audio, even while the app is in Continuous mode.
@@ -54,23 +54,27 @@ A dash or **Not yet** means there is no matching event to display yet. A previou
 
 ## Sound sources
 
-Open **Settings → Sound sources**. Background sources appear first: Birdsong through Whale Song, followed by the four mammal groups and Announce Recording. Event sound sources appear below them. Click a checkbox or its artwork to enable or disable that source. Hover over a title, or focus its checkbox, for its explanation.
+Open **Settings → Sound sources**. The background section lists animal vocalizations alphabetically, with the two Open-Meteo tiles on a separate row below them. Event sound sources appear below the background section. Click a checkbox or its artwork to enable or disable that source. Hover over a title, or focus its checkbox, for its explanation.
 
 ![Sound sources with Xeno-canto selected for Birdsong and empty shared API-key fields for Birdsong and Frog Calls](docs/images/user-guide/05-sound-sources.png)
 
 **Sound sources** determines which providers are available. **Sound Choices** determines which of their sounds play. Enabling several background sources does not mix them together: there is one Background sound selection. Save source changes before using Preview.
 
-**Feline Calls, Canine Calls, Elephants, and Primates** each have an animal tile
+**Bears, Canine Calls, Elephants, Feline Calls, and Primates** each have an animal tile
 with an enable checkbox in Background sound sources and an entry in the Sound
-Choices Background selector. They are disabled initially. The bundled starter pack contains nine recordings:
-lion and tiger; dingo, fox, and coyote; one elephant soundscape; bonnet macaque
-and two howler monkey recordings. Enable the desired source and select it as
-Background to play it. No key or recording download is needed.
+Choices Background selector. The built-in pack includes bear growls, huffs,
+cub calls and panda calls, canine howls and barks, elephant calls and rumbles,
+feline roars and mating calls, and several kinds of monkey vocalizations.
+The count beside each tile shows how many recordings it has. Enable the desired
+source and select it as Background to play it. No key or recording download is needed.
 
-**Proof-of-concept limitation:** the current elephant clip has been reported as
-dominated by other wildlife rather than a usable elephant call. It needs
-replacement and is not an approved elephant example; the source remains
-disabled by default.
+**Import catalog** on an animal tile accepts a version 1 JSON catalog for that
+tile and downloads its public audio and pictures. Use the [catalog creation
+prompt](create_catalog.md) to research and assemble the file. **Add local
+sound/picture** accepts one MP3 or WAV and one JPEG, PNG, or WebP with an animal
+name, recording locality, and latitude and longitude. Both actions add to the
+tile immediately and keep user media under the installation’s `data/` directory.
+Frog Calls and Xeno-canto Birdsong can play added files without an API key.
 
 These groups use only fixed recording sites, with no user-selectable locations.
 Sequential/Random, Preview, Next, images, and announcements use those sites.
@@ -85,16 +89,17 @@ animal labels are used where species identification is unresolved. See the
 
 | Source tile | What it supplies | Credentials and additional settings |
 | --- | --- | --- |
+| **Bears** | Bundled brown and grizzly bear, American black bear, and giant panda calls from North America, Europe, and Asia. | No key or download; no editable location catalog. |
 | **Birdsong** | Archived bird recordings. The **Birdsong source** selector chooses Wikimedia Commons or Xeno-canto. | **Wikimedia Commons:** no key; uses 19 curated locations. **Xeno-canto:** shared API key; uses 19 editable regions with searches within 100 km of each center. |
 | **Dolphin Calls** | Dolphin recordings from NOAA and other verified archives at 19 locations. | No key. Select included sites in Sound locations. |
 | **Frog Calls** | Xeno-canto frog and toad recordings near the chosen region centers. | The same Xeno-canto API key as Birdsong. Its 19 region centers are edited independently of Birdsong. |
 | **Open-Meteo Storm Outlook** | Forecast conditions used to generate a storm background. | No key. Uses the 19 Storm Outlook locations. This is forecast convection, not observed lightning. |
 | **Open-Meteo surf & tides** | Modeled ocean swells and tide turns. | No key. Uses the 19 Ocean Swells locations. Supplies both the Ocean Swells background and events for Tidal Tone. |
 | **Whale Song** | NOAA whale songs and calls from several species at 19 locations. | No key. Select included sites in Sound locations. |
-| **Feline Calls** | Bundled lion and tiger recordings at fixed sites. | No key or download; no editable location catalog. |
-| **Canine Calls** | Bundled dingo, fox, and coyote recordings at fixed sites. | No key or download; no editable location catalog. |
-| **Elephants** | One bundled soundscape at a fixed site; see the proof-of-concept limitation above. | No key or download; disabled by default. |
-| **Primates** | Bundled bonnet macaque and howler monkey recordings at fixed sites. | No key or download; no editable location catalog. |
+| **Feline Calls** | Bundled lion, tiger, cougar, and leopard calls at fixed sites. | No key or download; no editable location catalog. |
+| **Canine Calls** | Bundled dingo, fox, coyote, and wolf calls at fixed sites. | No key or download; no editable location catalog. |
+| **Elephants** | Bundled elephant calls and rumbles at fixed sites. | No key or download; disabled by default. |
+| **Primates** | Bundled bonnet macaque, capuchin, and howler monkey calls at fixed sites. | No key or download; no editable location catalog. |
 
 NOAA marine recordings come from the [NCEI passive acoustic archive](https://www.ncei.noaa.gov/products/passive-acoustic-data). Gaiascapes caches selected recordings locally and retains their source attribution. A first use can require a download; subsequent uses can reuse the cache.
 
@@ -106,7 +111,7 @@ NOAA marine recordings come from the [NCEI passive acoustic archive](https://www
 | **NOAA GOES GLM lightning** | Observed total-lightning flashes from GOES-East and GOES-West, used by Thunder. | No API key. |
 | **USGS earthquakes** | Earthquake observations, used by Earthquake and Seismic Tone. | No API key. |
 
-Credentials are required only for **Birdsong using Xeno-canto**, **Frog Calls**, and **EUMETSAT MTG Lightning Imager**. There is no credential field for the other sources.
+Credentials are required for Xeno-canto searches in **Birdsong** and **Frog Calls**, and for **EUMETSAT MTG Lightning Imager**. Added bird and frog recordings are available independently of Xeno-canto.
 
 ### Obtaining credentials
 
@@ -215,18 +220,19 @@ extra process. Repeated announcements may use the in-memory speech cache.
 | Choice | Sound and dependency |
 | --- | --- |
 | **None** | No continuous background. Event voices can still play. |
+| **Bears** | Plays bundled bear recordings; enable Bears in Sound sources. |
 | **Birdsong** | Plays recordings from the provider chosen in the Birdsong source tile. |
 | **Canine Calls** | Plays bundled canine recordings; enable Canine Calls in Sound sources. |
 | **Dolphin Calls** | Plays curated dolphin recordings from the included sites. |
-| **Elephants** | Plays the bundled elephant soundscape; enable Elephants and review the limitation above. |
-| **Feline Calls** | Plays bundled lion and tiger recordings; enable Feline Calls. |
+| **Elephants** | Plays bundled elephant calls and rumbles; enable Elephants. |
+| **Feline Calls** | Plays bundled feline recordings; enable Feline Calls. |
 | **Frog Calls** | Plays Xeno-canto frog recordings from the configured regions. |
 | **Ocean Swells** | Generates a background from modeled swell conditions; requires Open-Meteo surf & tides. |
 | **Primates** | Plays bundled primate recordings; enable Primates. |
 | **Storm Outlook** | Generates a background from forecast storm conditions; requires Open-Meteo Storm Outlook. |
 | **Whale Song** | Plays curated whale songs and calls from the included sites. |
 
-Animal recordings, including the four mammal groups, play through the browser or desktop web view. Ocean Swells, Storm Outlook, and the event voices use the configured SuperCollider renderer. A working recording preview therefore does not by itself confirm that synthesized sounds are available.
+Animal recordings play through the browser or desktop web view. Ocean Swells, Storm Outlook, and the event voices use the configured SuperCollider renderer. A working recording preview therefore does not by itself confirm that synthesized sounds are available.
 
 ### Event 1, Event 2, and Event 3
 
@@ -403,7 +409,7 @@ Complete setup before showing the screen to the players.
    fixed recording sites.
 4. Press **Pause**. The map shows the recording location as a visual clue.
 5. Set the background status tile’s **Reveal / Hide** selector to **Hide**.
-6. Press **Next** to prepare the first animal without playing its sound. Once
+6. Press **Next** to play the first animal recording. Once
    the picture card appears, set its selector to **Hide** too. The picture and
    location pointer stay visible, but its caption and credits are concealed.
 
@@ -412,20 +418,15 @@ article closed until you are ready to reveal the answer.
 
 ### Play a round
 
-1. **Guess from the picture.** Next displays the animal picture and pauses.
-   Give everyone a chance to identify it without hearing the recording.
-2. **Offer the sound if needed.** If nobody knows, press **Play** to hear the
-   same animal. Announcements are disabled, so players hear the animal rather
-   than its name. Press **Pause** after a useful clue; Play resumes continuous
-   playback, which can otherwise advance to another recording automatically.
-3. **Reveal the answer.** When someone identifies the animal correctly—or no
+1. **Guess from the picture and sound.** Next shows the animal and plays its
+   recording. With announcements disabled, players hear the animal call.
+2. **Reveal the answer.** When someone identifies the animal correctly or no
    one can identify it—select **Reveal** on the picture card and background
    status tile. Read the displayed animal name and recording location together.
    Some recordings identify only a broad animal group; use the displayed name
    as the answer rather than requiring an unsupported exact species.
-4. **Prepare the next round.** Return both selectors to **Hide**, then press
-   **Next**. The next animal appears silently, with its information still hidden.
-   Repeat the picture, sound, and reveal sequence.
+3. **Start the next round.** Return both selectors to **Hide**, then press
+   **Next**. The next animal plays with its identifying information hidden.
 
 Reveal/Hide choices remain in effect as animals change, but reloading the page
 resets them to Reveal. If you reload, hide both sets of information again before
@@ -454,9 +455,8 @@ Changes take effect on the next background visit without interrupting a recordin
 The animal image tile has its own top-center **Reveal / Hide** selector, initially
 Reveal. Hide conceals the caption and credits while keeping the image and its
 map pointer visible; it stays selected
-as animals change. **Next** stages the next animal in the configured Sequential
-or Random order and pauses without playing its announcement or recording. Once
-the image is ready, Pause is highlighted. **Play** plays that staged animal.
+as animals change. **Next** plays the next recording in the configured Sequential
+or Random order and follows the saved announcement setting.
 Next requires an enabled animal recording background.
 
 ![Quiz view with the Redpoll image and location pointer visible while its caption, credits, and background status details are hidden](docs/images/user-guide/19-map-hidden-information.png)

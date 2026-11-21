@@ -126,23 +126,16 @@ class XenoCantoClient:
             raise RuntimeError(message) from None
 
     def _catalog(self, place, location=None):
-        featured_id = (
-            NEW_MEXICO_ROADRUNNER_ID
-            if self.group == "birds" and _new_mexico_region(location) else None
-        )
+        featured_id = _featured_recording(self.group, location)
         if featured_id:
             query_regions = [f"nr:{featured_id}"]
-            cache_name = f"recording-{featured_id}"
         elif location:
             boxes = _region_boxes(location)
             query_regions = [f"box:{south:.6f},{west:.6f},{north:.6f},{east:.6f}"
                              for south, west, north, east in boxes]
-            identity = json.dumps([location["latitude"], location["longitude"], REGION_RADIUS_KM])
-            cache_name = "region-" + hashlib.sha256(identity.encode()).hexdigest()[:24]
         else:
             query_regions = [f'cnt:"{place}"']
-            cache_name = place.lower().replace(" ", "-")
-        path = self.media_dir / f"{cache_name}.json"
+        path = self.media_dir / _catalog_filename(place, location, featured_id)
         try:
             cached = json.loads(path.read_text(encoding="utf-8"))
             if (
@@ -222,6 +215,43 @@ class XenoCantoClient:
             raise RuntimeError("Unable to download or cache the Xeno-canto recording") from None
         finally:
             temporary.unlink(missing_ok=True)
+
+
+def cached_recording_count(data_dir: Path, group: str, locations: list[dict]) -> int | None:
+    """Count unique eligible matches from the last searches of configured regions.
+
+    Cache snapshots may be partial or older than the playback refresh interval.
+    Return None when there are no usable snapshots and never query the provider.
+    """
+    kind = {"birds": "birdsong", "frogs": "frog_calls"}[group]
+    media_dir = data_dir / "media" / kind / "xeno-canto"
+    recording_ids = set()
+    for location in locations:
+        featured_id = _featured_recording(group, location)
+        path = media_dir / _catalog_filename(location["name"], location, featured_id)
+        try:
+            cache = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(cache, dict) and cache.get("policy_version") == CATALOG_POLICY_VERSION:
+                recording_ids.update({
+                    record["id"] for record in cache.get("records", [])
+                    if (record["id"] == featured_id if featured_id else _within_region(record, location))
+                })
+        except (OSError, ValueError, TypeError, KeyError):
+            continue
+    return len(recording_ids) or None
+
+
+def _catalog_filename(place, location, featured_id):
+    if featured_id:
+        return f"recording-{featured_id}.json"
+    if location:
+        identity = json.dumps([location["latitude"], location["longitude"], REGION_RADIUS_KM])
+        return "region-" + hashlib.sha256(identity.encode()).hexdigest()[:24] + ".json"
+    return place.lower().replace(" ", "-") + ".json"
+
+
+def _featured_recording(group, location):
+    return NEW_MEXICO_ROADRUNNER_ID if group == "birds" and _new_mexico_region(location) else None
 
 
 def _new_mexico_region(location):

@@ -5,17 +5,15 @@ They will not expose a location selector or require all 19 original anchors to
 be populated. The 19-site comparison below remains research provenance, not a
 requirement to search those sites at playback time.
 
-Checked 2026-09-12. This document retains the initial shortlist. Nine candidates
-have since been promoted into a bundled starter catalog; see the
+Checked 2026-09-12. This document retains the initial shortlist. See the
 [per-file credits and review limits](../../src/gaiascapes_host/recordings/MAMMAL_CREDITS.md)
 and [runtime manifest](../../src/gaiascapes_host/mammal_catalog.json).
-Public high-quality MP3 derivatives are used, not login-gated original uploads.
 Unused candidates below remain research-only.
 
 User listening feedback on the PoC rejects `freesound-818986` as a suitable
 elephant-call example: other wildlife dominates the clip. Its source description
 and successful decode were insufficient to establish listening suitability.
-Replace it before treating the elephant collection as curated and approved.
+The 2026-11-21 catalog expansion replaced it with three elephant recordings.
 
 Free-license candidates exist in all four requested groups. The strongest match to an existing Gaiascapes region is the bonnet macaque recording near Tambdi Surla in Goa. Most other candidates belong to different locations. No complete 19-location collection has been verified for any of these groups.
 

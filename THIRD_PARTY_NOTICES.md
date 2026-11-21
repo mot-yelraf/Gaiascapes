@@ -240,7 +240,10 @@ terms before redistributing either dependency.
 
 ## Bundled mammal recordings
 
-Nine Freesound MP3 derivatives are redistributed under CC0 or CC BY 4.0.
-Per-file creators, source links, licenses, recording context, and processing
-notes are in [MAMMAL_CREDITS.md](src/gaiascapes_host/recordings/MAMMAL_CREDITS.md).
+Recordings from Freesound, Wikimedia Commons, the National Park Service, PLOS,
+iNaturalist, and the Montana State University Acoustic Atlas are redistributed
+under their respective public-domain or Creative Commons terms. Some bear
+recordings carry NonCommercial terms. See per-file creators, source links,
+licenses, recording context, and edits in
+[MAMMAL_CREDITS.md](src/gaiascapes_host/recordings/MAMMAL_CREDITS.md).
 Checksums and provenance are retained in `src/gaiascapes_host/mammal_catalog.json`.

@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
+import json
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from starlette.datastructures import UploadFile
 
 from gaiascapes import __version__
 
@@ -38,10 +40,12 @@ from .macos_say import say_quark_paths
 from .audio_stream import AUDIO_TIMEOUT, RendererAudioRelay
 from .mammals import MAMMAL_KINDS, MAMMAL_LABELS
 from .sanctsound import MARINE_KINDS, available_locations
-from .commons_birdsong import BIRDSONG_LOCATIONS
+from .commons_birdsong import BIRDSONG_LOCATIONS, COMMONS_CATALOG
 from .geoip import GeoIpLocationResolver
 from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
 from .service import GaiascapesService
+from .xeno_canto import cached_recording_count
+from .user_recordings import ANIMAL_KINDS, ASSET_TYPES, MAX_AUDIO_BYTES, MAX_CATALOG_BYTES, MAX_PICTURE_BYTES
 
 
 PACKAGE_DIR = Path(__file__).resolve().parent
@@ -89,6 +93,7 @@ def create_app(
     )
     announcements = AnnouncementRenderer(runtime_data)
     announcement_lock = asyncio.Lock()
+    recording_addition_lock = asyncio.Lock()
     audio_relay = RendererAudioRelay(config)
     system_location = geoip_resolver or GeoIpLocationResolver()
     resolved_location = None
@@ -231,6 +236,73 @@ def create_app(
         """Report process health and the running application version."""
         return {"status": "ok", "version": _version()}
 
+    @app.get("/api/settings/recording-counts")
+    def recording_counts():
+        """Report catalog counts and known Xeno-canto matches for Sound Sources."""
+        return {
+            "commons_birdsong": sum(len(location["recordings"]) for location in COMMONS_CATALOG),
+            "xeno_canto_birdsong": cached_recording_count(runtime_data, "birds", config.birdsong_locations),
+            "frog_calls": cached_recording_count(runtime_data, "frogs", config.frog_calls_locations),
+            **{kind: sum(location["recording_count"] for location in available_locations(kind)
+                         if location["id"] in getattr(config, f"{kind}_regions")) for kind in MARINE_KINDS},
+            **{kind: len(getattr(service, kind).recordings) for kind in MAMMAL_KINDS},
+            "user_recordings": {kind: len(service.user_recordings.for_kind(kind)) for kind in ANIMAL_KINDS},
+        }
+
+    @app.post("/api/recordings/catalog/{kind}/import")
+    async def import_recording_catalog(kind: str, request: Request):
+        """Append a manifest's verified public audio and pictures to one tile."""
+        _validate_recording_request(kind, request)
+        body = bytearray()
+        async for chunk in request.stream():
+            if len(body) + len(chunk) > MAX_CATALOG_BYTES:
+                raise HTTPException(status_code=413, detail="Catalog JSON exceeds 1 MiB")
+            body.extend(chunk)
+        try:
+            document = json.loads(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="Choose a valid JSON catalog") from exc
+        async with recording_addition_lock:
+            try:
+                return await asyncio.to_thread(service.user_recordings.import_catalog, kind, document)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            except OSError as exc:
+                raise HTTPException(status_code=503, detail="Could not save the catalog and its media") from exc
+
+    @app.post("/api/recordings/catalog/{kind}/local")
+    async def add_local_recording(kind: str, request: Request):
+        """Append one local sound and picture supplied by the browser."""
+        _validate_recording_request(kind, request)
+        if not request.headers.get("content-type", "").startswith("multipart/form-data;"):
+            raise HTTPException(status_code=415, detail="Choose a sound and picture in the local recording form")
+        request_length = request.headers.get("content-length", "")
+        if not request_length.isascii() or not request_length.isdecimal() or len(request_length) > 10:
+            raise HTTPException(status_code=411, detail="The upload must have a known size")
+        if int(request_length) > MAX_AUDIO_BYTES + MAX_PICTURE_BYTES + 65536:
+            raise HTTPException(status_code=413, detail="Choose audio up to 64 MiB and a picture up to 10 MiB")
+        async with request.form(max_files=2, max_fields=24, max_part_size=4096) as form:
+            sound, picture = form.get("sound"), form.get("picture")
+            if not isinstance(sound, UploadFile) or not isinstance(picture, UploadFile):
+                raise HTTPException(status_code=422, detail="A sound file and a picture are required")
+            async with recording_addition_lock:
+                try:
+                    return await asyncio.to_thread(service.user_recordings.add_upload, kind, dict(form), sound, picture)
+                except ValueError as exc:
+                    raise HTTPException(status_code=422, detail=str(exc)) from exc
+                except OSError as exc:
+                    raise HTTPException(status_code=503, detail="Could not save the recording and picture") from exc
+
+    @app.get("/user-recording-media/{name}")
+    def user_recording_media(name: str):
+        """Serve only verified audio and picture assets referenced by the user catalog."""
+        path = service.user_recordings.asset_path(name)
+        if path is None:
+            raise HTTPException(status_code=404, detail="Recording media not found")
+        return FileResponse(path, media_type=ASSET_TYPES[path.suffix], headers={
+            "X-Content-Type-Options": "nosniff",
+        })
+
     @app.get("/api/audio/status")
     async def audio_status():
         """Describe host audio availability without starting the renderer tap."""
@@ -328,10 +400,13 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.post("/api/recordings/next-image")
-    async def next_recording_image():
-        """Stage the next animal without emitting an audible cue."""
+    async def next_recording_image(play: bool = False):
+        """Stage the next animal and optionally start its playback."""
         try:
-            return {"event": await service.next_recording_image()}
+            event = await service.next_recording_image()
+            if play:
+                await start_live_playback()
+            return {"event": event}
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except (OSError, RuntimeError, asyncio.TimeoutError) as exc:
@@ -396,14 +471,17 @@ def create_app(
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {"view": config.app_view}
 
+    async def start_live_playback():
+        if config.live_mode != "continuous":
+            await service.update_settings({"live_mode": "continuous"}, config_path)
+        else:
+            await service.start_continuous()
+
     @app.post("/api/live/start")
     async def start_live():
         """Start continuous playback, selecting it for older capture configurations."""
         try:
-            if config.live_mode != "continuous":
-                await service.update_settings({"live_mode": "continuous"}, config_path)
-            else:
-                await service.start_continuous()
+            await start_live_playback()
         except (OSError, RuntimeError) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return (await service.status())["live"]
@@ -576,6 +654,14 @@ async def _json_body(request: Request) -> dict:
     if not isinstance(body, dict):
         raise HTTPException(status_code=400, detail="Expected a JSON object")
     return body
+
+
+def _validate_recording_request(kind, request):
+    if kind not in ANIMAL_KINDS:
+        raise HTTPException(status_code=422, detail="Choose a supported animal recording tile")
+    origin = request.headers.get("origin")
+    if origin and origin.rstrip("/") != str(request.base_url).rstrip("/"):
+        raise HTTPException(status_code=403, detail="Open the recording form from this Gaiascapes installation")
 
 
 def _version() -> str:

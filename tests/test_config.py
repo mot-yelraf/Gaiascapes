@@ -420,7 +420,7 @@ def test_new_sound_defaults_and_saved_choices_are_preserved(tmp_path):
     assert config.enabled_sources == ['usgs', 'open_meteo_marine', 'open_meteo_storm', 'noaa_glm']
     assert all(getattr(config, f'{kind}_enabled') for kind in (
         'birdsong', 'frog_calls', 'whale_song', 'dolphin_calls',
-        'feline_calls', 'canine_calls', 'elephant_calls', 'primate_calls',
+        'bear_calls', 'feline_calls', 'canine_calls', 'elephant_calls', 'primate_calls',
     ))
     assert config.birdsong_provider == 'wikimedia_commons'
     assert config.announcements_enabled is False

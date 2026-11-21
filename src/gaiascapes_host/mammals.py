@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import tempfile
 import time
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from gaiascapes.events import GaiaEvent
 
 
 MAMMAL_LABELS = {
+    "bear_calls": "Bears",
     "feline_calls": "Feline Calls",
     "canine_calls": "Canine Calls",
     "elephant_calls": "Elephants",
@@ -55,9 +57,7 @@ class MammalRecordingClient:
             audio = source.read_bytes()
             if hashlib.sha256(audio).hexdigest() != expected:
                 raise RuntimeError(f"Bundled recording failed integrity check: {name}")
-            temporary = destination.with_suffix(".mp3.part")
-            temporary.write_bytes(audio)
-            temporary.replace(destination)
+            _write_cache_file(destination, audio)
         traits = {key: recording[key] for key in (
             "common_name", "wikipedia_title", "creator", "license", "license_url",
             "source_url", "place", "context", "coordinate_basis",
@@ -77,11 +77,21 @@ class MammalRecordingClient:
         })
         metadata = destination.with_suffix(".json")
         if not metadata.is_file():
-            temporary = metadata.with_suffix(".json.tmp")
-            temporary.write_text(json.dumps(recording, indent=2) + "\n", encoding="utf-8")
-            temporary.replace(metadata)
+            _write_cache_file(metadata, (json.dumps(recording, indent=2) + "\n").encode("utf-8"))
         return GaiaEvent(
-            provider="freesound", event_id=f"{recording['id']}-{time.time_ns()}",
+            provider=recording.get("provider", "freesound"), event_id=f"{recording['id']}-{time.time_ns()}",
             kind=self.kind, timestamp=time.time(), strength=0.6,
             latitude=recording["latitude"], longitude=recording["longitude"], traits=traits,
         )
+
+
+def _write_cache_file(destination: Path, content: bytes) -> None:
+    # A cancelled playback task can leave its cache write running in a thread.
+    pending = tempfile.NamedTemporaryFile(dir=destination.parent, prefix=f".{destination.name}.", delete=False)
+    temporary = Path(pending.name)
+    try:
+        with pending:
+            pending.write(content)
+        temporary.replace(destination)
+    finally:
+        temporary.unlink(missing_ok=True)

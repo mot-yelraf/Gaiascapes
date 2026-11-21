@@ -21,11 +21,12 @@ const selectors=['background','event','earthquake','background','event','earthqu
  closest(){return {removeAttribute(){}}}};
 });
 let starts=0,stops=0,release;
+const startActions=[];
 const scope=vm.createContext({document:{
  getElementById:id=>id==='playbackControlStatus'?status:details[id],
  querySelectorAll:query=>query==='[data-playback-action]'?buttons:selectors},
  updateStatus:()=>{},
- startPlayback:async()=>{starts++;await new Promise(resolve=>release=resolve);scope.gaiascapesControls.setPlaying(true)},
+ startPlayback:async(next)=>{starts++;startActions.push(next);await new Promise(resolve=>release=resolve);scope.gaiascapesControls.setPlaying(true);return true},
  stopPlayback:async()=>{stops++;scope.gaiascapesControls.setPlaying(false)},
 });
 vm.runInContext(fs.readFileSync(process.argv[1],'utf8'),scope);
@@ -43,6 +44,13 @@ vm.runInContext(fs.readFileSync(process.argv[1],'utf8'),scope);
  assert.equal(playButton.attrs['aria-pressed'],'true');
  await pauseButton.handlers.click();assert.equal(stops,1);
  assert.equal(pauseButton.attrs['aria-pressed'],'true');
+ const advance=nextButton.handlers.click();
+ assert.equal(nextButton.disabled,true);
+ assert.equal(status.textContent,'Loading next recording…');
+ release();await advance;
+ assert.deepEqual(startActions,[false,true]);
+ assert.equal(stops,1);
+ assert.equal(playButton.attrs['aria-pressed'],'true');
  selectors[0].handlers.change({target:{value:'hide'}});
  assert.equal(details[0].hidden,true);assert.equal(details[3].hidden,true);
  assert.equal(selectors[3].inputs[1].checked,true);assert.equal(selectors[3].inputs[0].checked,false);assert.equal(details[1].hidden,false);

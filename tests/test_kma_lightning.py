@@ -51,10 +51,12 @@ def test_kma_settings_and_capture(tmp_path, monkeypatch):
         home = client.get("/")
         for response in (result, home, client.get("/api/config")):
             assert "private-test-key" not in response.text
-        group = home.text.split('aria-labelledby="lightningSourcesHeading"', 1)[1]
-        group = group.split('aria-label="Other event sound sources"', 1)[0]
-        assert all(f'id="{source}"' in group for source in
-                   ("sourceKma", "sourceGlm", "sourceMtgLi"))
+        sources = home.text.split('data-pane="sources"', 1)[1].split('</section>', 1)[0]
+        assert 'lightningSourcesHeading' not in sources
+        group = sources.split('aria-labelledby="eventSourcesHeading"', 1)[1]
+        positions = [group.index(f'id="{source}"') for source in
+                     ("sourceMtgLi", "sourceKma", "sourceGlm", "sourceUsgs")]
+        assert positions == sorted(positions)
 
     observed = datetime.now(timezone.utc).isoformat(sep=" ")
     event, = parse_strokes(ROW.replace("2015-01-22 01:59:27.655747+09:00", observed))

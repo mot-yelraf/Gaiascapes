@@ -13,7 +13,7 @@ let lightningIntensityTimer = null;
 let lastLightningIntensityUpdate = 0;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const MARINE_BACKGROUNDS = ["whale_song", "dolphin_calls"];
-const MAMMAL_BACKGROUNDS = {feline_calls: "Feline Calls", canine_calls: "Canine Calls", elephant_calls: "Elephants", primate_calls: "Primates"};
+const MAMMAL_BACKGROUNDS = {bear_calls: "Bears", feline_calls: "Feline Calls", canine_calls: "Canine Calls", elephant_calls: "Elephants", primate_calls: "Primates"};
 const RECORDED_BACKGROUNDS = ["birdsong", "frog_calls", ...MARINE_BACKGROUNDS, ...Object.keys(MAMMAL_BACKGROUNDS)];
 let deviceListening = false;
 let deviceMuted = false;
@@ -103,7 +103,7 @@ function stopRecordingPlayback(fadeMilliseconds = 700) {
   recordingLoadController?.abort();
   recordingPlaybackGeneration += 1;
   recordingKind = null;
-  if (!globalThis.gaiascapesControls?.previewEvent) globalThis.animalWikipedia?.update(null);
+  globalThis.animalWikipedia?.update(null);
   globalThis.recordingAnnouncements?.stop();
   if (recordingFadeTimer) clearInterval(recordingFadeTimer);
   if (recordingPreviewTimer) clearTimeout(recordingPreviewTimer);
@@ -131,7 +131,6 @@ function stopRecordingPlayback(fadeMilliseconds = 700) {
 }
 
 async function playRecordingCue(cue) {
-  if (globalThis.gaiascapesControls?.previewEvent) return;
   const mediaUrl = cue.event?.traits?.media_url;
   if (!mediaUrl) {
     if (cue.recording_rotation) recoverRecording(cue.sequence, recordingPlaybackGeneration, "missing_media");
@@ -850,10 +849,14 @@ function updateBackgroundCharacteristics(event, fallbackText = null) {
     }
     if (RECORDED_BACKGROUNDS.includes(event?.kind)) {
       const traits = event.traits || {};
-      const source = document.createElement("a");
-      source.href = traits.source_url || (event.provider === "xeno_canto" ? "https://xeno-canto.org/" : "https://commons.wikimedia.org/");
-      source.target = "_blank";
-      source.rel = "noopener noreferrer";
+      const userRecording = traits.media_url?.startsWith("/user-recording-media/");
+      const linkSource = !userRecording || Boolean(traits.source_url);
+      const source = document.createElement(linkSource ? "a" : "span");
+      if (linkSource) {
+        source.href = traits.source_url || (event.provider === "xeno_canto" ? "https://xeno-canto.org/" : "https://commons.wikimedia.org/");
+        source.target = "_blank";
+        source.rel = "noopener noreferrer";
+      }
       source.textContent = traits.title || "Animal recording";
       const description = document.createElement("span");
       description.className = "recording-description";
@@ -876,6 +879,7 @@ function updateBackgroundCharacteristics(event, fallbackText = null) {
         figshare: "Figshare",
         zenodo: "Zenodo",
         freesound: "Freesound",
+        local_recording: "Local recording",
       }[event.provider] || event.provider || "Unknown source";
       provenance.textContent = `${sourceName} · ${traits.license || "License unavailable"}`;
       element.classList.add("forecast-characteristics");
@@ -1522,15 +1526,15 @@ setInterval(() => {
   if (interrupted) recoverAfterWake();
 }, 5000);
 
-async function startPlayback() {
-  if (globalThis.gaiascapesControls) globalThis.gaiascapesControls.previewEvent = null;
+async function startPlayback(nextRecording = false) {
   try {
     if (!deviceMuted && (localRecordingPlayback || deviceListening)
-        && RECORDED_BACKGROUNDS.includes(byId("backgroundInstrument")?.value)) {
+        && (nextRecording || RECORDED_BACKGROUNDS.includes(byId("backgroundInstrument")?.value))) {
       await recordingNormalizer.resume();
     }
-    await request("/api/live/start", {method: "POST", body: "{}"});
-    message("Continuous environmental sound is running with the selected global background.");
+    const endpoint = nextRecording ? "/api/recordings/next-image?play=true" : "/api/live/start";
+    await request(endpoint, {method: "POST", body: "{}"});
+    message(nextRecording ? "Playing next recording." : "Continuous environmental sound is running with the selected global background.");
     await updateStatus();
     return true;
   } catch (error) {
@@ -1599,6 +1603,39 @@ function initializeSettings() {
   if (!settingsDialog || !settingsForm) return;
   const tabs = Array.from(settingsDialog.querySelectorAll("[data-settings-pane]"));
   const panes = Array.from(settingsDialog.querySelectorAll("[data-pane]"));
+  const recordingCountFields = settingsDialog.querySelectorAll("[data-source-recording-count]");
+  let recordingCounts = {};
+  let recordingCountsRequest = 0;
+  function showRecordingCounts() {
+    recordingCountFields.forEach((field) => {
+      const kind = field.dataset.sourceRecordingCount;
+      const source = kind === "birdsong"
+        ? (byId("birdsongProvider").value === "xeno_canto" ? "xeno_canto_birdsong" : "commons_birdsong")
+        : kind;
+      const cached = source === "xeno_canto_birdsong" || source === "frog_calls";
+      const nativeCount = recordingCounts[source];
+      const additions = recordingCounts.user_recordings?.[kind] || 0;
+      const count = nativeCount == null && !additions ? null : (nativeCount ?? 0) + additions;
+      field.textContent = count == null ? "—" : count.toLocaleString();
+      if (nativeCount != null && cached) field.textContent += " known";
+      field.title = count == null
+        ? (cached ? "No cached recording searches for these regions" : "Recording count unavailable")
+        : (cached && nativeCount != null ? "Cached recording matches and user additions" : `${count} ${count === 1 ? "recording" : "recordings"} in the selected catalog`);
+    });
+  }
+  async function refreshRecordingCounts() {
+    const requestId = ++recordingCountsRequest;
+    try {
+      const counts = await request("/api/settings/recording-counts", {cache: "no-store"});
+      if (requestId !== recordingCountsRequest) return;
+      recordingCounts = counts;
+      showRecordingCounts();
+    } catch (error) {
+      if (requestId !== recordingCountsRequest) return;
+      recordingCountFields.forEach((field) => { field.title = error.message; });
+    }
+  }
+  document.addEventListener("user-recordings-changed", refreshRecordingCounts);
   const locationDataElement = byId("forecastLocationData");
   const parsedLocationData = locationDataElement
     ? JSON.parse(locationDataElement.textContent)
@@ -1894,6 +1931,7 @@ function initializeSettings() {
     }
     document.body.classList.add("modal-open");
     activatePane("sources");
+    refreshRecordingCounts();
   }
 
   function closeSettings() {
@@ -2102,6 +2140,7 @@ function initializeSettings() {
   byId("sourceBirdsong").addEventListener("change", updateBirdsongCredentials);
   byId("birdsongProvider").addEventListener("change", () => {
     updateBirdsongCredentials();
+    showRecordingCounts();
     renderForecastLocationEditor();
   });
   updateBirdsongCredentials();
@@ -2222,6 +2261,7 @@ function initializeSettings() {
         });
       }
       if (recordingKind && !audioSettings[`${recordingKind}_enabled`]) stopRecordingPlayback();
+      refreshRecordingCounts();
       await updateSystemLocation();
       showSettingsToast("Settings saved.");
       await updateEvents();

@@ -150,15 +150,20 @@ const scope=vm.createContext({
  byId:()=>({value:'birdsong'}),
  deviceMuted:false,localRecordingPlayback:true,deviceListening:false,RECORDED_BACKGROUNDS:['birdsong'],
  recordingNormalizer:{resume:async()=>{order.push('resume')}},
- request:async()=>{order.push('request')},message(){},updateStatus:async()=>{},
+ request:async(path)=>{order.push(path)},message(){},updateStatus:async()=>{},
 });
-vm.runInContext(source.slice(source.indexOf('async function startPlayback()'),
+vm.runInContext(source.slice(source.indexOf('async function startPlayback('),
  source.indexOf('const worldMap =')),scope);
 (async()=>{
  const pending=vm.runInContext('startPlayback()',scope);
  assert.deepEqual(order,['resume']); // Unlock inside the original user gesture.
  await pending;
- assert.deepEqual(order,['resume','request']);
+ assert.deepEqual(order,['resume','/api/live/start']);
+ order.length=0;
+ const next=vm.runInContext('startPlayback(true)',scope);
+ assert.deepEqual(order,['resume']);
+ await next;
+ assert.deepEqual(order,['resume','/api/recordings/next-image?play=true']);
 })().catch(e=>{console.error(e);process.exitCode=1});
 ''','app.js')
 

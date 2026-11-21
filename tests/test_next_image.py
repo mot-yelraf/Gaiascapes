@@ -54,3 +54,27 @@ def test_next_rejects_nonrecorded_background(tmp_path):
     response = TestClient(create_app(tmp_path, auto_capture=False)).post('/api/recordings/next-image')
     assert response.status_code == 422
     assert 'animal recording background' in response.json()['detail']
+
+
+@pytest.mark.parametrize("mode", ["continuous", "capture"])
+def test_next_with_play_emits_the_selected_recording_once(tmp_path, mode):
+    config_path = tmp_path / "config.json"
+    AppConfig(live_mode=mode, osc_enabled=False, system_location_enabled=False,
+              canine_calls_enabled=True, event_instruments={
+                  "event_1": "none", "event_2": "none", "event_3": "none", "background": "canine_calls",
+              }).save(config_path)
+    app = create_app(tmp_path, auto_capture=False)
+    with TestClient(app) as client:
+        after = 0
+        for expected_cursor in (1, 2):
+            response = client.post("/api/recordings/next-image?play=true")
+            assert response.status_code == 200, response.text
+            event = response.json()["event"]
+            cues = client.get("/api/cues", params={"after": after}).json()["cues"]
+            cue, = cues
+            assert cue["event"] == event
+            assert cue["recording_rotation"]
+            assert app.state.service._ambient_cursors["canine_calls"] == expected_cursor
+            assert client.get("/api/status").json()["live"]["running"]
+            after = cue["sequence"]
+        assert AppConfig.load(config_path).live_mode == "continuous"
