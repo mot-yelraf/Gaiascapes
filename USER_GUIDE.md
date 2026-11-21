@@ -325,6 +325,14 @@ The animation, palette, shape, and Animations choices preview immediately. Click
 
 ### Map
 
+Click or tap the main map to open a circular magnifier centered on that
+location. It shows shaded relief, nearby city and town names where available,
+and the same event and background markers as the world map. Hover over a
+marker in the popup for its details. With keyboard focus on the world map,
+press Enter or Space to zoom to the latest marker or the map center. Press
+Escape or use the close button to return to the world map. The magnifier
+uses bundled map data and works offline.
+
 Below Background Animation, **Projection Model** changes both the main map and the location editor:
 
 | Projection | Appearance |

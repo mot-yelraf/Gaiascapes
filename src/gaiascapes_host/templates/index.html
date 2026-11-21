@@ -60,9 +60,10 @@
 
     <section class="map-view" id="mapView" data-app-view="map" aria-label="Global event map">
       <div class="map-stage">
-        <svg id="worldMap" data-projection="{{ map_projection }}" viewBox="{{ '20 282 984 484' if map_projection == 'eckert_iv' else '20 214 984 622' }}" role="img" aria-labelledby="worldMapTitle worldMapDescription">
+        <svg id="worldMap" data-projection="{{ map_projection }}" viewBox="{{ '20 282 984 484' if map_projection == 'eckert_iv' else '20 214 984 622' }}" role="button" tabindex="0" aria-haspopup="dialog" aria-controls="mapMagnifier" aria-labelledby="worldMapTitle" aria-describedby="worldMapDescription worldMapInstructions">
           <title id="worldMapTitle">Live Gaiascapes world map</title>
           <desc id="worldMapDescription">{{ "Eckert IV" if map_projection == "eckert_iv" else "Robinson" }} projection with land cover, mountain relief, ocean depth shading, latitude and longitude grid, approximate system location, recent environmental locations, and animated sound cues.</desc>
+          <desc id="worldMapInstructions">Click or tap a location to zoom in. Press Enter or Space to zoom to the latest marker or the map center.</desc>
           <defs>
             <radialGradient id="mapOcean" cx="50%" cy="44%" r="68%"><stop offset="0" stop-color="#173e48"/><stop offset=".62" stop-color="#0d2f39"/><stop offset="1" stop-color="#09232b"/></radialGradient>
             <clipPath id="mapGlobeClip"><path id="mapGlobeClipPath"/></clipPath>
@@ -77,7 +78,7 @@
           <g id="mapSystemLocationLayer" clip-path="url(#mapGlobeClip)"></g>
           <g id="mapCoordinateLabels" aria-hidden="true"></g>
         </svg>
-        <output class="map-coordinate-readout" id="mapCoordinateReadout" aria-live="polite">Move over the map to inspect coordinates</output>
+        <output class="map-coordinate-readout" id="mapCoordinateReadout" aria-live="polite">Click or tap the map to zoom in</output>
       </div>
       <div class="map-heading">
         <div class="map-legend" aria-label="Map marker legend"><span><i class="map-legend-background"></i>Background</span><span><i class="map-legend-event"></i>Event</span><span><b class="map-legend-system" aria-hidden="true"></b>My location</span></div>
@@ -91,6 +92,28 @@
     </section>
 
   </main>
+
+  <dialog class="map-magnifier" id="mapMagnifier" data-version="{{ version }}" aria-labelledby="mapMagnifierTitle">
+    <header>
+      <div>
+        <h2 id="mapMagnifierTitle">Map magnifier</h2>
+        <p data-magnifier-coordinates></p>
+      </div>
+      <button class="icon-button" type="button" data-close-magnifier aria-label="Close map magnifier" autofocus>×</button>
+    </header>
+    <div class="map-magnifier-lens">
+      <canvas width="512" height="512" aria-label="Regional shaded relief map"></canvas>
+      <svg viewBox="0 0 512 512" role="group" aria-label="Towns and event markers">
+        <g data-magnifier-labels></g>
+        <path class="map-magnifier-center" d="M248 256h5m6 0h5m-8-8v5m0 6v5" aria-hidden="true"/>
+        <g data-magnifier-markers></g>
+      </svg>
+    </div>
+    <footer>
+      <span>Made with Natural Earth</span>
+      <span data-magnifier-status role="status"></span>
+    </footer>
+  </dialog>
 
   <dialog id="animalArticle" class="animal-article" aria-labelledby="animalArticleTitle">
     <header><h2 id="animalArticleTitle"></h2><button type="button" aria-label="Collapse article">×</button></header>
@@ -468,6 +491,7 @@
   <script src="/static/announcements.js?v={{ version }}"></script>
   <script src="/static/murmuration.js?v={{ version }}"></script>
   <script src="/static/background-animation.js?v={{ version }}"></script>
+  <script src="/static/map-magnifier.js?v={{ version }}"></script>
   <script src="/static/app.js?v={{ version }}"></script>
   <script src="/static/user-recordings.js?v={{ version }}"></script>
   <script src="/static/game-controls.js?v={{ version }}"></script>

@@ -47,7 +47,7 @@ version = {attr = "gaiascapes.__version__"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-gaiascapes_host = ["sanctsound_catalog.json", "commons_birdsong_catalog.json", "mammal_catalog.json", "recordings/*.mp3", "recordings/*.wav", "recordings/*.md", "templates/*.html", "static/*.css", "static/*.js", "static/*.svg", "static/*.png", "static/*.ico", "static/*.icns", "static/*.webmanifest"]
+gaiascapes_host = ["sanctsound_catalog.json", "commons_birdsong_catalog.json", "mammal_catalog.json", "recordings/*.mp3", "recordings/*.wav", "recordings/*.md", "templates/*.html", "static/*.css", "static/*.js", "static/*.svg", "static/*.png", "static/*.ico", "static/*.icns", "static/*.webmanifest", "static/map-magnifier/*.jpg", "static/map-magnifier/places.json"]
 
 [tool.setuptools.exclude-package-data]
 gaiascapes_host = ["recordings/freesound-818986.mp3"]
