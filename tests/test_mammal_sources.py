@@ -67,7 +67,7 @@ def test_bundled_catalog_rotation_integrity_and_cache_repair(tmp_path):
     import json
     from gaiascapes_host.mammals import CATALOG_PATH, MammalRecordingClient
 
-    catalog = json.loads(CATALOG_PATH.read_text())["recordings"]
+    catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))["recordings"]
     assert {r["kind"] for r in catalog} == set(MAMMAL_KINDS)
     for kind in MAMMAL_KINDS:
         recording_client = MammalRecordingClient(tmp_path, kind)
