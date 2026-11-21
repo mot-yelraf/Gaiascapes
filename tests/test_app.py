@@ -1080,6 +1080,7 @@ def test_audio_settings_persist_and_update_live_renderer(tmp_path, monkeypatch):
         "frog_calls": "none",
         "whale_song": "none",
         "dolphin_calls": "none",
+        "bear_calls": "none",
         "feline_calls": "none",
         "canine_calls": "none",
         "elephant_calls": "none",

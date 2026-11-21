@@ -49,8 +49,11 @@ def test_mammal_tiles_have_art_and_no_location_picker(tmp_path):
     app = create_app(tmp_path, auto_capture=False)
     with TestClient(app) as client:
         home = client.get("/").text
+        counts = client.get("/api/settings/recording-counts").json()
         for kind, label in MAMMAL_LABELS.items():
             assert f'id="source_{kind}"' in home
+            assert f'<option value="{kind}" ' in home
+            assert counts[kind] == len(getattr(app.state.service, kind).recordings) > 0
             assert f'data-location-catalog="{kind}"' not in home
             assert home.index(f'id="source_{kind}"') < home.index('aria-label="Announce Recording"')
             image = client.get(f"/static/sound-{kind}.svg")
@@ -64,7 +67,7 @@ def test_bundled_catalog_rotation_integrity_and_cache_repair(tmp_path):
     import json
     from gaiascapes_host.mammals import CATALOG_PATH, MammalRecordingClient
 
-    catalog = json.loads(CATALOG_PATH.read_text())["recordings"]
+    catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))["recordings"]
     assert {r["kind"] for r in catalog} == set(MAMMAL_KINDS)
     for kind in MAMMAL_KINDS:
         recording_client = MammalRecordingClient(tmp_path, kind)
@@ -75,8 +78,9 @@ def test_bundled_catalog_rotation_integrity_and_cache_repair(tmp_path):
             visited.append(event.traits["recording_id"])
             assert (event.latitude, event.longitude) == (recording["latitude"], recording["longitude"])
             assert event.traits["common_name"] == recording["common_name"]
-            assert event.traits["license"] in {"CC0", "CC BY 4.0"}
-            assert event.traits["source_url"].startswith("https://freesound.org/")
+            assert event.provider == recording.get("provider", "freesound")
+            assert event.traits["license"] == recording["license"]
+            assert event.traits["source_url"] == recording["source_url"]
             assert event.traits["wikipedia_title"]
             cached = recording_client.media_dir / recording["file"]
             assert hashlib.sha256(cached.read_bytes()).hexdigest() == recording["sha256"]

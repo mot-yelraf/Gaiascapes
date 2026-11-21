@@ -10,7 +10,7 @@ import urllib.error
 
 import pytest
 
-from gaiascapes_host.xeno_canto import COUNTRIES, XenoCantoClient, _record
+from gaiascapes_host.xeno_canto import COUNTRIES, XenoCantoClient, _record, cached_recording_count
 
 
 def recording(**changes):
@@ -26,6 +26,30 @@ def recording(**changes):
 
 class Response(io.BytesIO):
     headers = {"Content-Type": "audio/mpeg"}
+
+
+def test_known_recording_count_deduplicates_configured_region_matches(tmp_path, monkeypatch):
+    locations = [
+        {"name": "West", "latitude": 52.1, "longitude": -1.2},
+        {"name": "East", "latitude": 52.1, "longitude": -1.0},
+        {"name": "Elsewhere", "latitude": 40.0, "longitude": -5.0},
+    ]
+    responses = iter([
+        [recording(), recording(id="43")],
+        [recording(), recording(id="44")],
+        [recording(id="99", lat="40.0", lon="-5.0")],
+    ])
+
+    def opener(request, timeout):
+        return Response(json.dumps({"recordings": next(responses)}).encode())
+
+    client = XenoCantoClient(tmp_path, "test-key", opener, locations=locations)
+    for location in locations:
+        client._catalog(location["name"], location)
+    monkeypatch.setattr("gaiascapes_host.xeno_canto.CATALOG_TTL", 0)
+
+    assert cached_recording_count(tmp_path, "birds", locations[:2]) == 3
+    assert cached_recording_count(tmp_path, "frogs", locations) is None
 
 
 def test_cache_rotation_and_credential_separation(tmp_path):

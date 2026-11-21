@@ -20,6 +20,7 @@ globalThis.animalWikipedia = (() => {
   });
   const cache = new Map();
   let current = "";
+  let currentPicture = "";
   let controller;
   let currentEvent = null;
   let pointerFrame = null;
@@ -87,10 +88,11 @@ globalThis.animalWikipedia = (() => {
   picture.addEventListener("load", refreshPointer);
 
   function subject(event) {
-    if (!["birdsong", "frog_calls", "whale_song", "dolphin_calls", "feline_calls", "canine_calls", "elephant_calls", "primate_calls"].includes(event?.kind)) return "";
+    if (!["birdsong", "frog_calls", "whale_song", "dolphin_calls", "bear_calls", "feline_calls", "canine_calls", "elephant_calls", "primate_calls"].includes(event?.kind)) return "";
     const traits = event.traits || {};
     if (traits.wikipedia_title || traits.scientific_name) return traits.wikipedia_title || traits.scientific_name;
-    const mammal = {feline_calls: "Felidae", canine_calls: "Canidae", elephant_calls: "Elephant", primate_calls: "Primate"}[event.kind];
+    if (traits.common_name && traits.media_url?.startsWith("/user-recording-media/")) return traits.common_name;
+    const mammal = {bear_calls: "Bear", feline_calls: "Felidae", canine_calls: "Canidae", elephant_calls: "Elephant", primate_calls: "Primate"}[event.kind];
     if (mammal) return traits.common_name || mammal;
     const title = (traits.title || "").replace(/^File:/, "");
     if (event.kind === "birdsong") return title.match(/^([A-Z][a-z]+ [a-z]+)\b/)?.[1] || "Bird vocalization";
@@ -124,12 +126,15 @@ globalThis.animalWikipedia = (() => {
     currentEvent = event;
     refreshPointer();
     const title = subject(event);
+    const supplied = event?.traits?.picture;
+    const localPicture = /^\/user-recording-media\/[0-9a-f]{64}\.(?:jpe?g|png|webp)$/.test(supplied?.url) ? supplied.url : "";
     const longitude = event?.longitude;
     const side = typeof longitude === "number" && longitude < 0 ? "west" : "east";
     panel.dataset.hemisphere = side;
     panel.closest("main").dataset.animalSide = side;
-    if (title === current) return;
+    if (title === current && localPicture === currentPicture) return;
     current = title;
+    currentPicture = localPicture;
     controller?.abort();
     close();
     panel.hidden = !title;
@@ -140,8 +145,27 @@ globalThis.animalWikipedia = (() => {
     credit.hidden = true;
     credit.textContent = "Image credits and license";
     credit.onclick = null;
+    credit.removeAttribute("href");
     button.disabled = true;
     if (!title) return;
+    if (localPicture) {
+      const name = event.traits.common_name || title;
+      caption.textContent = name;
+      picture.alt = supplied.alt || name;
+      picture.src = localPicture;
+      picture.hidden = false;
+      picture.onerror = () => {
+        picture.hidden = true;
+        caption.textContent = `${name} · Image unavailable`;
+        refreshPointer();
+      };
+      const attribution = [supplied.creator, supplied.license, supplied.context].filter(Boolean).join(" · ");
+      credit.textContent = attribution || "Image source";
+      if (supplied.source_url?.startsWith("https://")) credit.href = supplied.source_url;
+      else if (supplied.license_url?.startsWith("https://")) credit.href = supplied.license_url;
+      credit.hidden = !attribution && !credit.getAttribute("href");
+      return;
+    }
     caption.textContent = `${title} · Loading Wikipedia…`;
     const requestController = new AbortController();
     controller = requestController;

@@ -17,6 +17,7 @@ from .announcements import ANNOUNCEMENT_VARIANTS, ANNOUNCEMENT_VOICES
 from .mammals import MAMMAL_KINDS
 from .sanctsound import MARINE_KINDS, default_regions, validate_regions
 from .open_meteo import STORM_LOCATIONS, SURF_LOCATIONS
+from .user_recordings import load_user_recordings
 
 
 DEFAULT_USGS_URL = (
@@ -255,6 +256,7 @@ class AppConfig:
     feline_calls_enabled: bool = True
     canine_calls_enabled: bool = True
     elephant_calls_enabled: bool = True
+    bear_calls_enabled: bool = True
     primate_calls_enabled: bool = True
     frog_calls_enabled: bool = True
     frog_calls_locations: list[dict] = field(default_factory=default_frog_locations)
@@ -296,6 +298,7 @@ class AppConfig:
             # v0.26.236.36 lengthened the original, non-user-facing default.
             if document.get("continuous_interval_seconds") in {12, 12.0}:
                 config.continuous_interval_seconds = 23.0
+        config._user_recording_kinds = {entry["kind"] for entry in load_user_recordings(path.parent)}
         config.apply_environment()
         config.validate()
         return config
@@ -437,7 +440,7 @@ class AppConfig:
         if self.birdsong_provider not in {"wikimedia_commons", "xeno_canto"}:
             raise ValueError("Unsupported birdsong provider")
         background = self.event_instruments["background"]
-        if not self.xeno_canto_api_key:
+        if not self.xeno_canto_api_key and background not in getattr(self, "_user_recording_kinds", ()):
             if background == "frog_calls" and self.frog_calls_enabled:
                 raise ValueError("Frog Calls requires a Xeno-canto API key")
             if (background == "birdsong" and self.birdsong_enabled

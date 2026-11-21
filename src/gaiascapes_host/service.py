@@ -27,6 +27,7 @@ from .sanctsound import MARINE_KINDS, SanctSoundClient
 from .commons_birdsong import CommonsBirdsongClient
 from .birdsong_cache import read_download_progress
 from .xeno_canto import NoRecordingsError, XenoCantoClient
+from .user_recordings import UserRecordingLibrary
 from .config import AppConfig, EVENT_INSTRUMENT_OPTIONS, SUPPORTED_SOURCES, EVENT_KIND_BY_VOICE
 from .eumetsat_li import EumetsatLiClient
 from .open_meteo import (
@@ -109,6 +110,7 @@ class GaiascapesService:
     ):
         self.config = config
         self.data_dir = Path(data_dir)
+        self.user_recordings = UserRecordingLibrary(self.data_dir)
         self.store = EventStore(_resolve_event_database(self.data_dir))
         self.store.initialize()
         self.history = HistoryView(self.store)
@@ -942,6 +944,7 @@ class GaiascapesService:
     async def update_settings(self, changes: dict, path: Path) -> int:
         """Persist a candidate before applying coordinated runtime changes."""
         async with self._settings_lock:
+            self.config._user_recording_kinds = {entry["kind"] for entry in self.user_recordings.entries}
             previous_volumes = dict(self.config.instrument_volumes)
             previous_background = self.config.instrument_slots()["background"]
             candidate = settings_candidate(self.config, changes)
@@ -1000,14 +1003,13 @@ class GaiascapesService:
                      "whale_song": "Whale Song", "dolphin_calls": "Dolphin Calls", **MAMMAL_LABELS}[kind]
             if not getattr(self.config, f"{kind}_enabled"):
                 raise ValueError(f"Enable {label} in Sound Sources before previewing")
-            if (not self.config.xeno_canto_api_key
-                    and (kind == "frog_calls" or (
-                        kind == "birdsong" and self.config.birdsong_provider == "xeno_canto"
-                    ))):
+            additions = self.user_recordings.for_kind(kind)
+            if self._recording_requires_key(kind) and not additions:
                 raise ValueError(f"{label} requires a Xeno-canto API key in Sound Sources")
             volume = _preview_volume(volume)
             recording_client = getattr(self, kind)
-            event = await self._fetch_recording(recording_client, 0)
+            event = (await self._fetch_user_recording(additions[-1]) if additions
+                     else await self._fetch_recording(recording_client, 0))
             if getattr(self, kind) is not recording_client or not getattr(self.config, f"{kind}_enabled"):
                 raise ValueError(f"{label} settings changed; preview again")
             cue = cue_with_gain(
@@ -1103,8 +1105,7 @@ class GaiascapesService:
             async with self._playback_lifecycle_lock:
                 client = getattr(self, kind)
                 cursor = self._ambient_cursors[kind]
-                index = self._ambient_location_index(kind, client.location_count)
-                event = await self._fetch_recording(client, index)
+                event = await self._recording_at_cursor(kind, client)
                 self._ambient_cursors[kind] = cursor + 1
                 self._staged_recording = (client, event)
                 return event.as_dict()
@@ -1156,7 +1157,7 @@ class GaiascapesService:
         self._recording_decode_failures[url] = failures
         client = getattr(self, kind)
         media_dir = getattr(client, "media_dir", None)
-        if failures > 1 or media_dir is None:
+        if failures > 1 or media_dir is None or url.startswith("/user-recording-media/"):
             self._quarantined_recordings.add(url)
             LOGGER.warning("%s recording quarantined for this session: %s", kind, Path(url).name)
             return
@@ -1185,6 +1186,30 @@ class GaiascapesService:
             if event.traits.get("media_url") in self._quarantined_recordings:
                 raise RuntimeError("Recording repeatedly failed decoding; skipping quarantined selection")
             return event
+
+    def _recording_requires_key(self, kind):
+        return not self.config.xeno_canto_api_key and (
+            kind == "frog_calls" or (kind == "birdsong" and self.config.birdsong_provider == "xeno_canto")
+        )
+
+    async def _fetch_user_recording(self, entry):
+        event = await asyncio.to_thread(self.user_recordings.event, entry)
+        if event.traits["media_url"] in self._quarantined_recordings:
+            raise RuntimeError("User recording failed decoding; skipping quarantined selection")
+        return event
+
+    async def _recording_at_cursor(self, kind, client):
+        additions = self.user_recordings.for_kind(kind)
+        native_count = getattr(client, "location_count", 1)
+        if not additions:
+            return await self._fetch_recording(client, self._ambient_location_index(kind, native_count))
+        if self._recording_requires_key(kind):
+            native_count = 0
+        count = native_count + len(additions)
+        turn, position = divmod(self._ambient_location_index(kind, count), count)
+        if position < native_count:
+            return await self._fetch_recording(client, turn * native_count + position)
+        return await self._fetch_user_recording(additions[position - native_count])
 
     def _expire_recordings(self) -> None:
         """Release recordings whose player stopped reporting forward progress."""
@@ -1524,8 +1549,7 @@ class GaiascapesService:
                     self._staged_recording = None
                     cursor -= 1  # Next already advanced the cursor for this visit.
                 else:
-                    index = self._ambient_location_index(kind, getattr(recording_client, "location_count", 1))
-                    recording_event = await self._fetch_recording(recording_client, index)
+                    recording_event = await self._recording_at_cursor(kind, recording_client)
             except Exception as exc:
                 if getattr(self, kind) is recording_client and self._instruments_for_kind(kind):
                     self._recording_status[kind] = {

@@ -38,7 +38,7 @@
         <div class="playback-selector" role="group" aria-label="Gaiascapes playback">
           <button id="playButton" type="button" data-playback-action="play" aria-label="Play Gaiascapes" title="Play" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 4 L20 12 L7 20 Z"/></svg></button>
           <button id="pauseButton" type="button" data-playback-action="pause" aria-label="Pause Gaiascapes" title="Pause" aria-pressed="true"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 4 H10 V20 H6 Z M14 4 H18 V20 H14 Z"/></svg></button>
-          <button id="nextButton" type="button" data-playback-action="next" aria-label="Next animal image and pause" title="Next animal image and pause" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 4 L16 12 L4 20 Z M17 4 H21 V20 H17 Z"/></svg></button>
+          <button id="nextButton" type="button" data-playback-action="next" aria-label="Play next recording" title="Play next recording" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 4 L16 12 L4 20 Z M17 4 H21 V20 H17 Z"/></svg></button>
         </div>
         <button class="settings-trigger" type="button" data-open-settings aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill-rule="evenodd" d="M19.39,8.94 L19.79,10.20 L21.85,10.26 L21.85,13.74 L19.79,13.80 L19.39,15.06 L18.78,16.24 L20.19,17.74 L17.74,20.19 L16.24,18.78 L15.06,19.39 L13.80,19.79 L13.74,21.85 L10.26,21.85 L10.20,19.79 L8.94,19.39 L7.76,18.78 L6.26,20.19 L3.81,17.74 L5.22,16.24 L4.61,15.06 L4.21,13.80 L2.15,13.74 L2.15,10.26 L4.21,10.20 L4.61,8.94 L5.22,7.76 L3.81,6.26 L6.26,3.81 L7.76,5.22 L8.94,4.61 L10.20,4.21 L10.26,2.15 L13.74,2.15 L13.80,4.21 L15.06,4.61 L16.24,5.22 L17.74,3.81 L20.19,6.26 L18.78,7.76 Z M15.5,12 a3.5,3.5 0 1,0 -7,0 a3.5,3.5 0 1,0 7,0 Z"/></svg></button>
         <span class="message playback-message" id="message" role="status"></span>
@@ -172,20 +172,40 @@
           </section>
           <section class="settings-pane is-active" data-pane="sources">
             <div class="pane-heading"><div><h3>Captured sound sources</h3><p>Choose live Earth data feeds and archived animal recordings.</p></div></div>
+            {% macro source_recording_count(kind) %}
+              <small class="source-recording-count" data-source-recording-count="{{ kind }}" title="Recording count unavailable">—</small>
+            {% endmacro %}
+            {% macro source_recording_actions(kind, label) %}
+              <div class="source-recording-actions">
+                <button type="button" data-recording-action="import" data-recording-kind="{{ kind }}" data-recording-label="{{ label }}" aria-label="Import catalog for {{ label }}" title="import catalog" aria-haspopup="dialog">
+                  <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8m-3-3 3 3 3-3M2 10v4h12v-4"/></svg>
+                </button>
+                <button type="button" data-recording-action="local" data-recording-kind="{{ kind }}" data-recording-label="{{ label }}" aria-label="Add local sound or picture for {{ label }}" title="add local sound/picture" aria-haspopup="dialog">
+                  <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
+                </button>
+              </div>
+            {% endmacro %}
             {% macro marine_source_tile(kind, label, control, enabled) %}
               <article class="source-tile" aria-label="{{ label }}">
-                <div class="source-title">
+                <div class="source-title source-title--with-actions">
                   <label for="{{ control }}"><input id="{{ control }}" type="checkbox" aria-describedby="{{ control }}Hint" {% if enabled %}checked{% endif %}><strong>{{ label }}</strong></label>
+                  {{ source_recording_count(kind) }}
+                  {{ source_recording_actions(kind, label) }}
                   <small class="source-hint" id="{{ control }}Hint" role="tooltip">Curated archive recordings from 19 locations. No API key required. Choose sites in Sound locations; each visit advances to the next recording.</small>
                 </div>
                 <label class="source-art" for="{{ control }}" aria-label="Toggle {{ label }}"><img src="/static/sound-{{ kind }}.svg" width="512" height="512" alt=""></label>
               </article>
             {% endmacro %}
             <h4 class="source-group-heading" id="backgroundSourcesHeading">Background</h4>
-            <div class="source-tile-grid source-tile-grid--background" role="group" aria-labelledby="backgroundSourcesHeading">
+            <div class="source-tile-grid source-tile-grid--background" role="group" aria-label="Animal vocalizations">
+              {% set animal_sources = [("birdsong", "Birdsong"), ("dolphin_calls", "Dolphin Calls"), ("frog_calls", "Frog Calls"), ("whale_song", "Whale Song")] + (mammal_labels.items() | list) %}
+              {% for kind, label in animal_sources | sort(attribute=1) %}
+              {% if kind == "birdsong" %}
               <article class="source-tile" aria-label="Birdsong">
-                <div class="source-title">
+                <div class="source-title source-title--with-actions">
                   <label for="sourceBirdsong"><input id="sourceBirdsong" type="checkbox" aria-describedby="sourceBirdsongHint" {% if birdsong_enabled %}checked{% endif %}><strong>Birdsong</strong></label>
+                  {{ source_recording_count(kind) }}
+                  {{ source_recording_actions(kind, label) }}
                   <small class="source-hint" id="sourceBirdsongHint" role="tooltip">Archived bird recordings for the Birdsong background.</small>
                 </div>
                 <label class="source-art" for="sourceBirdsong" aria-label="Toggle Birdsong"><img src="/static/sound-birdsong.svg" width="512" height="512" alt=""></label>
@@ -195,17 +215,37 @@
                   <label for="xenoCantoApiKey" id="xenoCantoCredentials"{% if birdsong_provider != "xeno_canto" %} hidden{% endif %}><span>Xeno-canto API key (shared)</span><input id="xenoCantoApiKey" type="password" autocomplete="new-password" placeholder="{% if xeno_canto_credentials_configured %}Saved — enter only to replace{% else %}Enter your Xeno-canto API key{% endif %}"></label>
                 </div>
               </article>
-              {{ marine_source_tile("dolphin_calls", "Dolphin Calls", "sourceDolphinCalls", dolphin_calls_enabled) }}
+              {% elif kind == "dolphin_calls" %}
+              {{ marine_source_tile(kind, label, "sourceDolphinCalls", dolphin_calls_enabled) }}
+              {% elif kind == "frog_calls" %}
               <article class="source-tile" aria-label="Frog Calls">
-                <div class="source-title">
+                <div class="source-title source-title--with-actions">
                   <label for="sourceFrogCalls"><input id="sourceFrogCalls" type="checkbox" aria-describedby="sourceFrogCallsHint" {% if frog_calls_enabled %}checked{% endif %}><strong>Frog Calls</strong></label>
-                  <small class="source-hint" id="sourceFrogCallsHint" role="tooltip">Archived Xeno-canto frog and toad recordings from your selected regions. An API key is required when selecting or previewing Frog Calls.</small>
+                  {{ source_recording_count(kind) }}
+                  {{ source_recording_actions(kind, label) }}
+                  <small class="source-hint" id="sourceFrogCallsHint" role="tooltip">Frog and toad recordings. Xeno-canto searches require an API key. Added recordings play from this installation.</small>
                 </div>
                 <label class="source-art" for="sourceFrogCalls" aria-label="Toggle Frog Calls"><img src="/static/sound-frog_calls.svg" width="512" height="512" alt=""></label>
                 <div class="source-credentials" id="frogCallsCredentials"{% if not frog_calls_enabled %} hidden{% endif %}>
                   <label for="frogCallsApiKey"><span>Xeno-canto API key (shared)</span><input id="frogCallsApiKey" type="password" autocomplete="new-password" placeholder="{% if xeno_canto_credentials_configured %}Saved — enter only to replace{% else %}Enter your Xeno-canto API key{% endif %}"></label>
                 </div>
               </article>
+              {% elif kind == "whale_song" %}
+              {{ marine_source_tile(kind, label, "sourceWhaleSong", whale_song_enabled) }}
+              {% else %}
+              <article class="source-tile" aria-label="{{ label }}">
+                <div class="source-title source-title--with-actions">
+                  <label for="source_{{ kind }}"><input id="source_{{ kind }}" type="checkbox" {% if mammal_enabled[kind] %}checked{% endif %} aria-describedby="source_{{ kind }}Hint"><strong>{{ label }}</strong></label>
+                  {{ source_recording_count(kind) }}
+                  {{ source_recording_actions(kind, label) }}
+                  <small class="source-hint" id="source_{{ kind }}Hint" role="tooltip">Bundled animal recordings from fixed sites, with source credits. Locations cannot be changed; zoo recordings retain their zoo location.</small>
+                </div>
+                <label class="source-art" for="source_{{ kind }}" aria-label="Toggle {{ label }}"><img src="/static/sound-{{ kind }}.svg" width="512" height="512" alt=""></label>
+              </article>
+              {% endif %}
+              {% endfor %}
+            </div>
+            <div class="source-tile-grid source-tile-grid--background" role="group" aria-label="Open-Meteo">
               <article class="source-tile" aria-label="Open-Meteo Storm Outlook">
                 <div class="source-title">
                   <label for="sourceStorm"><input id="sourceStorm" type="checkbox" aria-describedby="sourceStormHint" {% if "open_meteo_storm" in enabled_sources %}checked{% endif %}><strong>Open-Meteo Storm Outlook</strong></label>
@@ -220,15 +260,6 @@
                 </div>
                 <label class="source-art" for="sourceMarine" aria-label="Toggle Open-Meteo surf & tides"><img src="/static/sound-ocean_swell.svg" width="512" height="512" alt=""></label>
               </article>
-              {{ marine_source_tile("whale_song", "Whale Song", "sourceWhaleSong", whale_song_enabled) }}
-              {% for kind, label in mammal_labels.items() %}
-              <article class="source-tile" aria-label="{{ label }}">
-                <div class="source-title"><label for="source_{{ kind }}"><input id="source_{{ kind }}" type="checkbox" {% if mammal_enabled[kind] %}checked{% endif %} aria-describedby="source_{{ kind }}Hint"><strong>{{ label }}</strong></label>
-                  <small class="source-hint" id="source_{{ kind }}Hint" role="tooltip">Bundled animal recordings from fixed sites, with source credits. Locations cannot be changed; zoo recordings retain their zoo location.</small>
-                </div>
-                <label class="source-art" for="source_{{ kind }}" aria-label="Toggle {{ label }}"><img src="/static/sound-{{ kind }}.svg" width="512" height="512" alt=""></label>
-              </article>
-              {% endfor %}
             </div>
             <div class="source-tile-grid announcement-source-row">
               <article class="source-tile" aria-label="Announce Recording">
@@ -246,8 +277,7 @@
               </article>
             </div>
             <h4 class="source-group-heading" id="eventSourcesHeading">Event sound sources</h4>
-            <h5 class="source-group-heading" id="lightningSourcesHeading">Lightning</h5>
-            <div class="source-tile-grid" role="group" aria-labelledby="lightningSourcesHeading">
+            <div class="source-tile-grid" role="group" aria-labelledby="eventSourcesHeading">
               <article class="source-tile" aria-label="EUMETSAT MTG Lightning Imager">
                 <div class="source-title">
                   <label for="sourceMtgLi"><input id="sourceMtgLi" type="checkbox" data-credentials-configured="{{ 'true' if eumetsat_credentials_configured else 'false' }}" aria-describedby="sourceMtgLiHint" {% if "eumetsat_mtg_li" in enabled_sources %}checked{% endif %}><strong>EUMETSAT MTG Lightning Imager</strong></label>
@@ -258,13 +288,6 @@
                   <label for="eumetsatConsumerKey"><span>Consumer Key</span><input id="eumetsatConsumerKey" type="password" autocomplete="off" placeholder="{% if eumetsat_credentials_configured %}Saved — enter only to replace{% else %}EUMETSAT Consumer Key{% endif %}"></label>
                   <label for="eumetsatConsumerSecret"><span>Consumer Secret</span><input id="eumetsatConsumerSecret" type="password" autocomplete="new-password" placeholder="{% if eumetsat_credentials_configured %}Saved — enter only to replace{% else %}EUMETSAT Consumer Secret{% endif %}"></label>
                 </div>
-              </article>
-              <article class="source-tile" aria-label="NOAA GOES GLM lightning">
-                <div class="source-title">
-                  <label for="sourceGlm"><input id="sourceGlm" type="checkbox" aria-describedby="sourceGlmHint" {% if "noaa_glm" in enabled_sources %}checked{% endif %}><strong>NOAA GOES GLM lightning</strong></label>
-                  <small class="source-hint" id="sourceGlmHint" role="tooltip">Observed total-lightning flashes from GOES-East and GOES-West every 20 seconds.</small>
-                </div>
-                <label class="source-art" for="sourceGlm" aria-label="Toggle NOAA GOES GLM lightning"><img src="/static/sound-natural_thunder.svg" width="512" height="512" alt=""></label>
               </article>
               <article class="source-tile" aria-label="KMA lightning">
                 <div class="source-title">
@@ -277,8 +300,13 @@
                   <small><a href="https://apihub.kma.go.kr/apiList.do?apiMov=%EB%82%99%EB%A2%B0+%EC%9B%90%EC%8B%9C%EC%9E%90%EB%A3%8C+%EC%A1%B0%ED%9A%8C&amp;seqApi=5&amp;seqApiSub=264" target="_blank" rel="noopener noreferrer">Get a key and apply for lightning API access</a></small>
                 </div>
               </article>
-            </div>
-            <div class="source-tile-grid" role="group" aria-label="Other event sound sources">
+              <article class="source-tile" aria-label="NOAA GOES GLM lightning">
+                <div class="source-title">
+                  <label for="sourceGlm"><input id="sourceGlm" type="checkbox" aria-describedby="sourceGlmHint" {% if "noaa_glm" in enabled_sources %}checked{% endif %}><strong>NOAA GOES GLM lightning</strong></label>
+                  <small class="source-hint" id="sourceGlmHint" role="tooltip">Observed total-lightning flashes from GOES-East and GOES-West every 20 seconds.</small>
+                </div>
+                <label class="source-art" for="sourceGlm" aria-label="Toggle NOAA GOES GLM lightning"><img src="/static/sound-natural_thunder.svg" width="512" height="512" alt=""></label>
+              </article>
               <article class="source-tile" aria-label="USGS earthquakes">
                 <div class="source-title">
                   <label for="sourceUsgs"><input id="sourceUsgs" type="checkbox" aria-describedby="sourceUsgsHint" {% if "usgs" in enabled_sources %}checked{% endif %}><strong>USGS earthquakes</strong></label>
@@ -334,7 +362,7 @@
                 <label class="volume-control" for="announcementVolume"><input id="announcementVolume" type="range" min="0" max="100" step="1" value="{{ (announcement_volume * 100) | round | int }}" aria-label="Announcement volume"><output>{{ (announcement_volume * 100) | round | int }}%</output></label>
                 <span id="announcementStatus" role="status" aria-live="polite">{% if not announcement_available %}{{ announcement_install_message }}{% endif %}</span>
               </article>
-              {{ sound_tile("Background", "background", "background", [("feline_calls", "Feline Calls"), ("canine_calls", "Canine Calls"), ("elephant_calls", "Elephants"), ("primate_calls", "Primates"), ("birdsong", "Birdsong"), ("frog_calls", "Frog Calls"), ("whale_song", "Whale Song"), ("dolphin_calls", "Dolphin Calls"), ("ocean_swell", "Ocean Swells"), ("storm_potential", "Storm Outlook"), ("none", "None")], "background") }}
+              {{ sound_tile("Background", "background", "background", (mammal_labels.items() | list) + [("birdsong", "Birdsong"), ("frog_calls", "Frog Calls"), ("whale_song", "Whale Song"), ("dolphin_calls", "Dolphin Calls"), ("ocean_swell", "Ocean Swells"), ("storm_potential", "Storm Outlook"), ("none", "None")], "background") }}
             </div>
             <div class="event-mapping-grid sound-event-grid">
               {% for number in range(1, 4) %}
@@ -387,6 +415,51 @@
       <footer class="modal-footer"><p>Changes are stored with this installation.</p><div><button class="primary" type="submit">Save settings</button></div></footer>
     </form>
   </dialog>
+  <dialog class="settings-dialog recording-entry-dialog" id="recordingEntryDialog" aria-labelledby="recordingEntryTitle">
+    <form id="recordingEntryForm">
+      <header class="modal-header">
+        <div><p class="eyebrow" id="recordingEntryTile"></p><h2 id="recordingEntryTitle"></h2></div>
+        <button class="icon-button" type="button" id="recordingEntryClose" aria-label="Close recording form">×</button>
+      </header>
+      <div class="recording-entry-body">
+        <fieldset id="recordingImportFields">
+          <label class="settings-field"><span>Catalog file</span><input type="file" name="catalog" accept=".json,application/json" required></label>
+          <p class="muted">Choose a Gaiascapes catalog JSON file. Audio and pictures will be downloaded to this installation.</p>
+          <output id="recordingImportSummary" aria-live="polite"></output>
+        </fieldset>
+        <fieldset id="recordingLocalFields" hidden disabled>
+          <label class="settings-field"><span>Animal name</span><input name="common_name" required maxlength="200"></label>
+          <label class="settings-field"><span>Sound file (MP3 or WAV)</span><input type="file" name="sound" accept=".mp3,.wav,audio/mpeg,audio/wav" required></label>
+          <label class="settings-field"><span>Picture (JPEG, PNG or WebP)</span><input type="file" name="picture" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required></label>
+          <label class="settings-field"><span>Recording location</span><input name="place" required maxlength="200"></label>
+          <div class="recording-entry-coordinates">
+            <label class="settings-field"><span>Latitude</span><input type="number" name="latitude" required min="-90" max="90" step="any"></label>
+            <label class="settings-field"><span>Longitude</span><input type="number" name="longitude" required min="-180" max="180" step="any"></label>
+          </div>
+          <details>
+            <summary>Optional recording and picture details</summary>
+            <div class="recording-entry-extras">
+              <label class="settings-field"><span>Recording title</span><input name="title" maxlength="200"></label>
+              <label class="settings-field"><span>Scientific name</span><input name="scientific_name" maxlength="200"></label>
+              <label class="settings-field"><span>Call type</span><input name="call_type" maxlength="200"></label>
+              <label class="settings-field"><span>Recorded date</span><input name="recorded_date" type="date"></label>
+              <label class="settings-field"><span>Recordist</span><input name="creator" maxlength="200"></label>
+              <label class="settings-field"><span>Recording license</span><input name="license" maxlength="200"></label>
+              <label class="settings-field"><span>Recording license URL</span><input name="license_url" type="url" maxlength="2000"></label>
+              <label class="settings-field"><span>Recording source URL</span><input name="source_url" type="url" maxlength="2000"></label>
+              <label class="settings-field"><span>Recording context</span><input name="context" maxlength="2000"></label>
+              <label class="settings-field"><span>Picture credit</span><input name="picture_creator" maxlength="200"></label>
+              <label class="settings-field"><span>Picture license</span><input name="picture_license" maxlength="200"></label>
+              <label class="settings-field"><span>Picture license URL</span><input name="picture_license_url" type="url" maxlength="2000"></label>
+              <label class="settings-field"><span>Picture source URL</span><input name="picture_source_url" type="url" maxlength="2000"></label>
+              <label class="settings-field"><span>Picture notes</span><input name="picture_context" maxlength="2000"></label>
+            </div>
+          </details>
+        </fieldset>
+      </div>
+      <footer class="modal-footer"><p id="recordingEntryStatus" role="status" aria-live="polite"></p><button class="primary" type="submit" id="recordingEntrySubmit"></button></footer>
+    </form>
+  </dialog>
   <script id="displaySettingsData" type="application/json">{{ display_settings | tojson }}</script>
   <script id="forecastLocationData" type="application/json">{{ {"current": forecast_location_catalogs, "defaults": default_forecast_location_catalogs} | tojson }}</script>
   <script src="/static/recording-audio.js?v={{ version }}"></script>
@@ -396,6 +469,7 @@
   <script src="/static/murmuration.js?v={{ version }}"></script>
   <script src="/static/background-animation.js?v={{ version }}"></script>
   <script src="/static/app.js?v={{ version }}"></script>
+  <script src="/static/user-recordings.js?v={{ version }}"></script>
   <script src="/static/game-controls.js?v={{ version }}"></script>
 </body>
 </html>

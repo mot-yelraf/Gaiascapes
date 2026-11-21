@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title id="title">Bears</title>
+<defs><radialGradient id="forest" cx="65%" cy="25%" r="85%"><stop stop-color="#a3b17e" stop-opacity=".25"/><stop offset="1" stop-color="#0c1b19"/></radialGradient></defs>
+<path fill="#10221f" d="M0 0H512V512H0Z"/><path fill="url(#forest)" d="M0 0H512V512H0Z"/>
+<circle cx="355" cy="126" r="52" fill="#d2c48c" opacity=".72"/>
+<path d="M68 421Q255 398 444 421" fill="none" stroke="#587e58" stroke-width="7" stroke-linecap="round"/>
+<path d="M113 404Q128 355 143 300Q153 266 186 240Q208 192 257 184Q285 166 327 195Q356 212 369 245L412 271Q427 282 419 298Q411 315 382 322L333 324Q307 352 311 403Z" fill="#9a8065"/>
+<path d="M235 197C207 183 213 145 239 140C269 134 285 160 270 183Z" fill="#9a8065"/>
+<path d="M236 183C225 175 229 158 242 155C254 153 262 164 256 175Z" fill="#584c3e"/>
+<path d="M378 250L412 271Q427 282 419 298Q411 315 382 322L330 324Q337 292 357 278Z" fill="#c2aa80"/>
+<path d="M410 269Q431 276 421 290L403 288L396 277Z" fill="#23382f"/>
+<path d="M341 241L348 240M373 306L401 303" fill="none" stroke="#23382f" stroke-width="6" stroke-linecap="round"/>
+<path d="M155 326Q180 310 195 272Q218 240 249 234Q222 254 213 294Q199 348 171 403H113Z" fill="#77694f"/>
+</svg>

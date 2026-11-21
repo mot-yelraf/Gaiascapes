@@ -13,10 +13,8 @@
     });
   }
   globalThis.gaiascapesControls = {
-    previewEvent: null,
     setPlaying(active) {
       playing = Boolean(active);
-      if (playing && pending !== "next") globalThis.gaiascapesControls.previewEvent = null;
       refresh();
     },
     showError(detail) { status.textContent = detail; },
@@ -28,27 +26,13 @@
     refresh();
     try {
       if (pending === "pause") await stopPlayback();
-      else if (pending === "play") {
-        globalThis.gaiascapesControls.previewEvent = null;
-        await startPlayback();
-      } else {
-        // Block late audio completions and cue polls during image-only stepping.
-        globalThis.gaiascapesControls.previewEvent = {};
-        stopRecordingPlayback(1);
-        status.textContent = "Loading next animal…";
-        const result = await request("/api/recordings/next-image", {method: "POST", body: "{}"});
-        globalThis.gaiascapesControls.previewEvent = result.event;
-        updateBackgroundStatus(result.event);
-        await globalThis.animalWikipedia?.update(result.event);
-        playing = false;
-        status.textContent = "Paused at next animal. Press Play to hear it.";
-        await updateStatus();
+      else {
+        const next = pending === "next";
+        if (next) status.textContent = "Loading next recording…";
+        if (await startPlayback(next)) status.textContent = "";
       }
     } catch (error) {
       status.textContent = error.message;
-      if (globalThis.gaiascapesControls.previewEvent && !globalThis.gaiascapesControls.previewEvent.kind) {
-        globalThis.gaiascapesControls.previewEvent = null;
-      }
       await updateStatus();
     } finally {
       pending = "";
