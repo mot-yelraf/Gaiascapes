@@ -33,7 +33,7 @@ const context = vm.createContext({
   mapMarkerTitle: () => 'Whale song',
   updateMapBackgroundLocation() {},
   createSvgElement: (tag, attributes) => {
-    const element = {tag, attributes, append() {}, remove() {this.removed = true;},
+    const element = {tag, attributes, dataset: {}, append() {}, remove() {this.removed = true;},
       style: {setProperty(name, value) {this[name] = value;}}};
     elements.push(element);
     return element;
@@ -41,10 +41,13 @@ const context = vm.createContext({
   requestAnimationFrame: callback => {frame = callback;},
   setTimeout: () => {throw new Error('Recording ring must use playback time');},
 });
+vm.runInContext(source.slice(source.indexOf('function setMapMarkerLocation('),
+  source.indexOf('function updateMapBackgroundLocation(')), context);
 vm.runInContext(source.slice(source.indexOf('function syncRecordingAnimation('),
   source.indexOf('\nasync function request(')), context);
-vm.runInContext("animateMapEvent({kind: 'whale_song', traits: {}}, '', 'background', 24.5, audio)", context);
-const [group, pulse] = elements;
+vm.runInContext("animateMapEvent({kind: 'whale_song', latitude: 37, longitude: -122, traits: {}}, '', 'background', 24.5, audio)", context);
+const [group, pulse, core] = elements;
+assert.deepEqual(core.dataset, {mapLatitude: 37, mapLongitude: -122, mapMarkerLabel: 'Whale song'});
 assert.equal(pulse.style.visibility, 'hidden');
 audio.duration = 120;
 frame();

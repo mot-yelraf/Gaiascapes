@@ -177,6 +177,17 @@ using Pillow and NumPy (build-time dependencies only).
 - Source: <https://www.naturalearthdata.com/downloads/50m-raster-data/50m-natural-earth-1/>
 - Archive: <https://naturalearth.s3.amazonaws.com/50m_raster/NE1_50M_SR_W.zip>
 
+The offline map magnifier uses Natural Earth I with Shaded Relief and Water
+(`NE1_LR_LC_SR_W`) and Populated Places Simple (version 5.1.2).
+The terrain is resized and split into JPEG tiles. The place data retains
+names and coordinates, ordered by Natural Earth's scale rank and population.
+To rebuild the assets, run
+`python scripts/build_map_magnifier.py NE1_LR_LC_SR_W.zip ne_10m_populated_places_simple.zip`
+with Pillow and pyshp installed.
+
+- Terrain archive: <https://naturalearth.s3.amazonaws.com/10m_raster/NE1_LR_LC_SR_W.zip>
+- Place archive: <https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_populated_places_simple.zip>
+
 Credit: Made with Natural Earth. The geometry has been transformed and styled
 for Gaiascapes; Natural Earth does not warrant its accuracy or endorse this
 project.

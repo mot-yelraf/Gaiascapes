@@ -186,6 +186,9 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
   background-size: 137px 151px, 211px 193px, 307px 251px, 100% 100%;
 }
 #worldMap { display: block; width: 100%; height: auto; }
+#worldMap :is(.map-ocean, [clip-path]) { cursor: zoom-in; }
+#worldMap:focus { outline: none; }
+#worldMap:focus-visible .map-ocean { stroke: var(--moss); stroke-width: 4; }
 .map-glow { fill: rgba(83,167,168,.12); filter: drop-shadow(0 0 22px rgba(64,152,158,.22)); }
 .map-ocean { fill: url(#mapOcean); stroke: rgba(198,230,228,.42); stroke-width: 2; }
 .map-grid-line { fill: none; stroke: rgba(15,39,53,.23); stroke-width: 1; vector-effect: non-scaling-stroke; }
@@ -202,6 +205,60 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 .map-cue--provider-eumetsat_mtg_li .map-cue-core { stroke: #fff1a8; stroke-width: 2.4; filter: drop-shadow(0 0 5px #ffd15a); }
 @keyframes map-cue-pulse { 0% { opacity: 0; transform: scale(.3); } 12% { opacity: .95; } 50% { opacity: .62; transform: scale(var(--map-pulse-scale, 2.8)); } 90% { opacity: .5; transform: scale(.3); } 100% { opacity: 0; transform: scale(.3); } }
 .map-coordinate-readout { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); text-align: center; padding: 6px 9px; border-radius: 6px; color: #000; background: transparent; font-size: .72rem; font-variant-numeric: tabular-nums; pointer-events: none; }
+
+.map-magnifier {
+  width: min(34rem, calc(100vw - 2rem), calc(100vh - 8rem));
+  width: min(34rem, calc(100vw - 2rem), calc(100dvh - 8rem));
+  max-width: none;
+  margin: auto;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+.map-magnifier::backdrop { background: transparent; }
+.map-magnifier > header, .map-magnifier > footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  padding: .65rem .85rem;
+  border: 1px solid var(--line);
+  border-radius: .85rem;
+  background: var(--panel);
+}
+.map-magnifier h2 { margin: 0; font-size: 1.15rem; }
+.map-magnifier p { margin: .2rem 0 0; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.map-magnifier .icon-button { flex: 0 0 auto; }
+.map-magnifier > footer { font-size: .7rem; min-height: 1.8rem; padding-block: .3rem; }
+.map-magnifier > footer [role="status"] { text-align: right; }
+.map-magnifier-lens {
+  position: relative;
+  margin: .55rem 0;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #18343d;
+  box-shadow: 0 0 0 2px #d5e1dd, 0 17px 48px rgba(0, 0, 0, .45);
+}
+.map-magnifier-lens :is(canvas, svg) { position: absolute; inset: 0; width: 100%; height: 100%; }
+.map-magnifier-lens [data-magnifier-labels] { fill: #192d33; pointer-events: none; }
+.map-magnifier-lens text {
+  font-family: system-ui;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: #f6f1df;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.map-magnifier-lens [data-magnifier-markers] circle {
+  stroke: #192d33;
+  stroke-width: 2px;
+  filter: drop-shadow(0 0 2px #fff);
+}
+.map-magnifier-center { stroke: #fff; stroke-width: 2px; filter: drop-shadow(0 0 2px #112528); }
 
 
 .event-pulse-layer { position: fixed; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }

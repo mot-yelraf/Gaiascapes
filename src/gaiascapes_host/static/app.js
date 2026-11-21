@@ -508,6 +508,12 @@ function mapMarkerTitle(event) {
   return `${place}${magnitudeText}${sourceText} · ${Number(event.latitude).toFixed(2)}, ${Number(event.longitude).toFixed(2)}`;
 }
 
+function setMapMarkerLocation(marker, location, label) {
+  marker.dataset.mapLatitude = location.latitude;
+  marker.dataset.mapLongitude = location.longitude;
+  marker.dataset.mapMarkerLabel = label;
+}
+
 function updateMapBackgroundLocation(location, color = EVENT_PALETTES.ocean_swell[3]) {
   const layer = byId("mapBackgroundLayer");
   if (!layer) return;
@@ -519,6 +525,7 @@ function updateMapBackgroundLocation(location, color = EVENT_PALETTES.ocean_swel
   const core = createSvgElement("circle", {cx: position.x, cy: position.y, r: 4, class: "map-background-core", fill: color});
   const title = createSvgElement("title");
   title.textContent = `${location.name || "Background sound"} · ${Number(location.latitude).toFixed(2)}, ${Number(location.longitude).toFixed(2)}`;
+  setMapMarkerLocation(core, location, title.textContent);
   ring.append(title);
   layer.append(ring, core);
 }
@@ -573,6 +580,7 @@ function renderMapHistory(events) {
     const marker = createSvgElement("circle", {cx: position.x, cy: position.y, r: 3.7, class: "map-history-marker", fill: colors.primary});
     const title = createSvgElement("title");
     title.textContent = mapMarkerTitle(event);
+    setMapMarkerLocation(marker, event, title.textContent);
     marker.append(title);
     layer.append(marker);
   });
@@ -608,6 +616,7 @@ function animateMapEvent(event, instrument, role, animationDuration, audio = nul
   const core = createSvgElement("circle", {cx: position.x, cy: position.y, r: role === "background" ? 5 : 4, class: "map-cue-core", fill: colors.primary});
   const title = createSvgElement("title");
   title.textContent = mapMarkerTitle(event);
+  setMapMarkerLocation(core, event, title.textContent);
   pulse.style.setProperty("--map-pulse-duration", `${animationDuration}s`);
   pulse.style.setProperty("--map-pulse-scale", role === "background" ? "3.1" : "2.8");
   group.append(title, pulse, core);
@@ -1561,20 +1570,65 @@ const worldMap = byId("worldMap");
 if (worldMap) {
   renderMapProjection();
   renderMapGrid();
-  worldMap.addEventListener("pointermove", (event) => {
+  const magnifier = globalThis.createMapMagnifier({
+    dialog: byId("mapMagnifier"),
+    worldMap,
+    svg: createSvgElement,
+  });
+  const formatCoordinates = ({latitude, longitude}) =>
+    `${Math.abs(latitude).toFixed(2)}°${latitude >= 0 ? "N" : "S"} · ${Math.abs(longitude).toFixed(2)}°${longitude >= 0 ? "E" : "W"}`;
+  const mapPointAtPointer = (event) => {
+    const transform = worldMap.getScreenCTM();
+    if (!transform) return null;
     const point = worldMap.createSVGPoint();
     point.x = event.clientX;
     point.y = event.clientY;
-    const mapPoint = point.matrixTransform(worldMap.getScreenCTM().inverse());
-    const readout = byId("mapCoordinateReadout");
-    if (!mapContainsPoint(mapPoint.x, mapPoint.y)) {
-      readout.textContent = "Outside mapped coordinates";
-      return;
-    }
-    const coordinates = inverseProjectCoordinates(mapPoint.x, mapPoint.y);
-    readout.textContent = `${Math.abs(coordinates.latitude).toFixed(2)}°${coordinates.latitude >= 0 ? "N" : "S"} · ${Math.abs(coordinates.longitude).toFixed(2)}°${coordinates.longitude >= 0 ? "E" : "W"}`;
+    const position = point.matrixTransform(transform.inverse());
+    return mapContainsPoint(position.x, position.y) ? position : null;
+  };
+  const markerCoordinates = (marker) => ({
+    latitude: Number(marker.dataset.mapLatitude), longitude: Number(marker.dataset.mapLongitude),
   });
-  worldMap.addEventListener("pointerleave", () => { byId("mapCoordinateReadout").textContent = "Move over the map to inspect coordinates"; });
+  const nearestMarker = ({x, y}) => {
+    let nearest = null;
+    let nearestDistance = Infinity;
+    for (const marker of worldMap.querySelectorAll("[data-map-latitude]")) {
+      const distance = Math.hypot(x - marker.cx.baseVal.value, y - marker.cy.baseVal.value);
+      if (distance <= marker.r.baseVal.value && distance <= nearestDistance) {
+        nearest = marker;
+        nearestDistance = distance;
+      }
+    }
+    return nearest;
+  };
+  const openMagnifier = (coordinates) => magnifier.open(coordinates, formatCoordinates(coordinates));
+  let releasedPointer;
+  worldMap.addEventListener("pointermove", (event) => {
+    const point = mapPointAtPointer(event);
+    byId("mapCoordinateReadout").textContent = point
+      ? formatCoordinates(inverseProjectCoordinates(point.x, point.y)) : "Outside mapped coordinates";
+  });
+  worldMap.addEventListener("pointerleave", () => { byId("mapCoordinateReadout").textContent = "Click or tap the map to zoom in"; });
+  worldMap.addEventListener("pointerup", (event) => { releasedPointer = event; });
+  worldMap.addEventListener("click", (event) => {
+    // Some browsers round click positions to whole pixels, which can put a
+    // click just outside the world map outline. Pointer positions retain precision.
+    const pointer = releasedPointer && Math.abs(releasedPointer.clientX - event.clientX) < 1
+      && Math.abs(releasedPointer.clientY - event.clientY) < 1 ? releasedPointer : event;
+    releasedPointer = null;
+    const point = mapPointAtPointer(pointer);
+    if (!point) return;
+    const marker = nearestMarker(point);
+    openMagnifier(marker ? markerCoordinates(marker) : inverseProjectCoordinates(point.x, point.y));
+  });
+  worldMap.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    const marker = worldMap.querySelector("#mapPulseLayer > :last-child [data-map-latitude]")
+      || worldMap.querySelector("#mapHistoryLayer > [data-map-latitude]:last-child")
+      || worldMap.querySelector("#mapBackgroundLayer [data-map-latitude]");
+    openMagnifier(marker ? markerCoordinates(marker) : {latitude: 0, longitude: mapCenterLongitude});
+  });
 }
 
 let settingsToastTimer = null;
@@ -1860,7 +1914,7 @@ function initializeSettings() {
       terrain.setAttribute("href", `/static/world-terrain-${mapProjection}${mapCenterLongitude ? `-${mapCenterLongitude}` : ""}.png`);
     });
     byId("worldMapDescription").textContent = `${mapProjection === "eckert_iv" ? "Eckert IV" : "Robinson"} projection with land cover, mountain relief, ocean depth shading, latitude and longitude grid, approximate system location, recent environmental locations, and animated sound cues.`;
-    byId("mapCoordinateReadout").textContent = "Move over the map to inspect coordinates";
+    byId("mapCoordinateReadout").textContent = "Click or tap the map to zoom in";
     renderMapProjection();
     renderMapGrid();
     renderForecastMarkers();
