@@ -7,6 +7,72 @@ local preferences, and positioning as the map resizes.
 from test_browser_recovery import run_node
 
 
+def test_recording_intensity_follows_output_and_releases_animation_frame():
+    """Smooth the shared level and suspend sampling while effects are paused."""
+    run_node(r'''
+const assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm');
+const frames = new Map(), properties = new Map(), listeners = new Map();
+const motion = {matches: false, addEventListener: (name, fn) => listeners.set(name, fn)};
+const layer = {style: {
+ setProperty: (name, value) => properties.set(name, Number(value)),
+ removeProperty: name => properties.delete(name),
+}};
+let now = 0, nextFrame = 0, rms = .05, reads = 0;
+const scope = vm.createContext({
+ document: {
+  hidden: false, documentElement: {dataset: {}}, querySelectorAll: () => [],
+  body: {classList: {remove() {}}},
+  getElementById: id => id === 'eventPulseLayer' ? layer : null,
+  addEventListener: (name, fn) => listeners.set(name, fn),
+ },
+ window: {matchMedia: () => motion, addEventListener() {}},
+ requestAnimationFrame(fn) {frames.set(++nextFrame, fn); return nextFrame;},
+ cancelAnimationFrame(id) {frames.delete(id);},
+});
+vm.runInContext(fs.readFileSync(process.argv[1], 'utf8'), scope);
+const follow = () => scope.backgroundAnimation.followRecordingOutput(() => {reads++; return rms;});
+const level = () => properties.get('--background-recording-level') ?? 0;
+function frame() {
+ assert.equal(frames.size, 1);
+ const [id, fn] = frames.entries().next().value;
+ frames.delete(id);
+ fn(now += 40);
+}
+follow();
+follow(); // Replacing a recording during a crossfade keeps one sampler.
+frame();
+const attack = level();
+assert.ok(attack > 0 && attack < 1);
+frame();
+assert.ok(level() > attack);
+const loud = level();
+rms = 0;
+frame();
+assert.ok(level() > 0 && level() < loud);
+motion.matches = true;
+listeners.get('change')();
+assert.equal(level(), 0);
+assert.equal(frames.size, 0);
+motion.matches = false;
+rms = .05;
+listeners.get('change')();
+frame();
+assert.ok(level() > 0);
+scope.document.hidden = true;
+listeners.get('visibilitychange')();
+assert.equal(level(), 0);
+assert.equal(frames.size, 0);
+scope.document.hidden = false;
+listeners.get('visibilitychange')();
+frame();
+rms = null; // No live player remains.
+for (let i = 0; i < 50 && frames.size; i++) frame();
+assert.equal(level(), 0);
+assert.equal(frames.size, 0);
+assert.ok(reads > 6);
+''', 'background-animation.js')
+
+
 def test_paint_rounds_preferences_and_perimeter_positioning():
     """Retain nineteen locations, reset on the twentieth, and restore Burst."""
     run_node(r'''
@@ -101,8 +167,8 @@ const source = fs.readFileSync(process.argv[1], 'utf8');
 vm.runInContext(source, scope);
 assert.equal(controls.backgroundPalette.value, 'aurora');
 assert.equal(controls.backgroundPaintShape.value, 'watercolor');
-assert.equal(controls.backgroundEvents.value, 'both');
-assert.equal(scope.backgroundAnimation.visible('event'), true);
+assert.equal(controls.backgroundEvents.value, 'background');
+assert.equal(scope.backgroundAnimation.visible('event'), false);
 assert.equal(scope.backgroundAnimation.visible('background'), true);
 controls.backgroundEvents.value = 'events';
 controls.backgroundEvents.change();
@@ -128,9 +194,9 @@ controls.backgroundPalette.value = 'wildflower';
 controls.backgroundPalette.change();
 assert.notEqual(waves[0].style['--wave-color'], aurora);
 assert.equal(storage.get('background_palette'), 'aurora'); // Unsaved previews leave persisted settings alone.
-controls.backgroundPaintShape.value = 'ribbon';
+controls.backgroundPaintShape.value = 'spiral';
 controls.backgroundPaintShape.change();
-assert.ok(waves.every(w => w.dataset.paintShape === 'ribbon' && !w.removed));
+assert.ok(waves.every(w => w.dataset.paintShape === 'spiral' && !w.removed));
 assert.equal(storage.get('background_paint_shape'), 'watercolor');
 controls.backgroundPalette.value = 'natural';
 controls.backgroundPalette.change();
@@ -139,7 +205,7 @@ assert.equal(waves[0].style['--wave-inner'], '#abcdef');
 const twentieth = wave();
 scope.backgroundAnimation.retain(twentieth, {});
 assert.ok(waves.every(w => w.removed)); // Changing choices did not reset the round counter.
-assert.equal(twentieth.dataset.paintShape, 'ribbon');
+assert.equal(twentieth.dataset.paintShape, 'spiral');
 controls.backgroundEvents.value = 'background';
 controls.backgroundEvents.change();
 assert.equal(scope.backgroundAnimation.visible('event'), false);
@@ -164,7 +230,7 @@ inputs[1].change();
 controls.backgroundPalette.value = 'random';
 controls.backgroundPaintShape.value = 'random';
 controls.backgroundPalette.change();
-let randomValues = [0.3, 0.5, 0.8, 0.9];
+let randomValues = [0.3, 0.4, 0.8, 0.9];
 scope.Math = Object.create(Math);
 scope.Math.random = () => randomValues.shift();
 const randomFirst = wave();
@@ -174,7 +240,7 @@ assert.equal(randomFirst.dataset.paintShape, 'watercolor');
 const randomSecond = wave();
 scope.backgroundAnimation.retain(randomSecond, {});
 assert.equal(randomSecond.dataset.paintPalette, 'pastel');
-assert.equal(randomSecond.dataset.paintShape, 'ribbon');
+assert.equal(randomSecond.dataset.paintShape, 'spiral');
 controls.backgroundPaintShape.change();
 assert.equal(randomFirst.dataset.paintPalette, 'aurora');
 assert.equal(randomFirst.dataset.paintShape, 'watercolor');
@@ -182,7 +248,7 @@ assert.equal(randomSecond.dataset.paintPalette, 'pastel');
 assert.equal(randomValues.length, 0); // Existing layers never reroll when choices change.
 storage.set('background_palette', 'random');
 storage.set('background_paint_shape', 'random');
-storage.set('background_events', 'background');
+storage.set('background_events', 'both');
 vm.runInContext(source, scope);
 assert.equal(controls.backgroundPalette.value, 'random');
 assert.equal(controls.backgroundPaintShape.value, 'random');
@@ -191,12 +257,13 @@ storage.set('background_paint_shape', 'invalid');
 vm.runInContext(source, scope);
 assert.equal(controls.backgroundPalette.value, 'natural');
 assert.equal(controls.backgroundPaintShape.value, 'bloom');
-assert.equal(controls.backgroundEvents.value, 'background');
-assert.equal(scope.backgroundAnimation.visible('event'), false);
-storage.set('background_events', 'invalid');
-vm.runInContext(source, scope);
 assert.equal(controls.backgroundEvents.value, 'both');
 assert.equal(scope.backgroundAnimation.visible('event'), true);
+assert.equal(scope.backgroundAnimation.visible('background'), true);
+storage.set('background_events', 'invalid');
+vm.runInContext(source, scope);
+assert.equal(controls.backgroundEvents.value, 'background');
+assert.equal(scope.backgroundAnimation.visible('event'), false);
 assert.equal(scope.backgroundAnimation.visible('background'), true);
 ''', 'background-animation.js')
 
@@ -311,7 +378,8 @@ assert.equal(starts, 1);
 assert.equal(inputs[2].checked, true);
 assert.equal(scope.backgroundAnimation.retain({remove() {removed = true;}}, {}), true);
 assert.equal(removed, true);
-assert.equal(scope.backgroundAnimation.visible('event'), true);
+assert.equal(scope.backgroundAnimation.visible('event'), false);
+assert.equal(scope.backgroundAnimation.visible('background'), true);
 inputs[0].change();
 assert.equal(stops, 1);
 assert.equal(scope.backgroundAnimation.retain({}, {}), false);

@@ -262,11 +262,11 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
 
 
 .event-pulse-layer { position: fixed; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
-.murmuration-canvas { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--ink); pointer-events: none; }
+.murmuration-canvas { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--ink); pointer-events: none; filter: brightness(calc(1 + .6 * var(--background-recording-level, 0))); }
 .event-wave { position: absolute; left: var(--wave-x, 50%); top: var(--wave-y, 50%); width: 15vmin; aspect-ratio: 1; border-radius: 50%; opacity: 0; transform: translate(-50%, -50%) scale(.12); background: radial-gradient(circle, var(--wave-inner, #765236) 0%, var(--wave-color, #93643f) 34%, transparent 82%); filter: blur(.45vmin) saturate(1.18); mix-blend-mode: screen; animation: event-wave var(--wave-duration, 3.6s) cubic-bezier(.45,0,.55,1) forwards; }
-.event-wave--background { z-index: 0; }
+.event-wave--background { z-index: 0; --wave-response: var(--background-recording-level, 0); }
 .event-wave--event { z-index: 1; }
-.event-wave.event-wave--paint { display: block; opacity: .48; transform: translate(-50%, -50%) scale(var(--wave-scale, 9)); mix-blend-mode: screen; animation: event-paint-in 1s ease-out; }
+.event-wave.event-wave--paint { display: block; opacity: calc(.48 + .22 * var(--wave-response, 0)); transform: translate(-50%, -50%) scale(var(--wave-scale, 9)); mix-blend-mode: screen; animation: event-paint-in 1s ease-out; }
 .event-wave--paint[data-paint-shape="watercolor"] { border-radius: 42% 58% 64% 36% / 57% 38% 62% 43%; aspect-ratio: 1.3; transform: translate(-50%, -50%) rotate(var(--paint-angle, 0deg)) scale(var(--wave-scale, 9)) scaleX(var(--paint-variation, 1)); background: radial-gradient(ellipse at 32% 38%, var(--wave-inner), transparent 65%), radial-gradient(ellipse at 64% 58%, var(--wave-color), transparent 72%); filter: blur(.75vmin) saturate(1.25); }
 .event-wave--paint[data-paint-shape="ribbon"] { aspect-ratio: 3.5; border-radius: 55% 45% 60% 40% / 70% 35% 65% 30%; transform: translate(-50%, -50%) rotate(var(--paint-angle, 0deg)) scale(var(--wave-scale, 9)) scaleX(var(--paint-variation, 1)); background: linear-gradient(175deg, transparent 8%, var(--wave-inner) 32%, var(--wave-color) 54%, transparent 90%); filter: blur(.35vmin) saturate(1.25); }
 /* Keep color-mix out of fallback declarations: older WebKit resolves var() before rejecting unsupported functions. */
@@ -275,13 +275,30 @@ button.quiet { padding: 7px 10px; color: var(--muted); background: transparent; 
   .event-wave--paint[data-paint-shape="watercolor"] { background: radial-gradient(ellipse at 32% 38%, color-mix(in srgb, var(--wave-inner) 74%, transparent), transparent 65%), radial-gradient(ellipse at 64% 58%, color-mix(in srgb, var(--wave-color) 80%, transparent), transparent 72%); }
   .event-wave--paint[data-paint-shape="ribbon"] { background: linear-gradient(175deg, transparent 8%, color-mix(in srgb, var(--wave-inner) 65%, transparent) 32%, color-mix(in srgb, var(--wave-color) 85%, transparent) 54%, transparent 90%); }
 }
+.event-wave--paint[data-paint-shape="spiral"] {
+  width: 12vmin;
+  transform: translate(-50%, -50%) rotate(var(--paint-angle, 0deg)) scale(var(--wave-scale, 9)) scaleX(var(--paint-variation, 1));
+  background: radial-gradient(circle, var(--wave-inner), var(--wave-color) 60%, transparent 82%);
+  filter: saturate(1.18);
+  -webkit-mask: url("paint-spiral.svg") center / contain no-repeat;
+  mask: url("paint-spiral.svg") center / contain no-repeat;
+}
 :root[data-background-animation="paint"][data-animation-events="events"] .event-wave--background,
 :root[data-background-animation="paint"][data-animation-events="background"] .event-wave--event,
 :root[data-background-animation="murmuration"][data-animation-events="events"] .murmuration-canvas,
 :root[data-background-animation="murmuration"][data-animation-events="background"] .event-wave--event { display: none; }
-@keyframes event-paint-in { from { opacity: 0; } to { opacity: .48; } }
+@keyframes event-paint-in { from { opacity: 0; } to { opacity: calc(.48 + .22 * var(--wave-response, 0)); } }
 .event-wave--earthquake { --wave-color: #93643f; --wave-inner: #765236; }
-@keyframes event-wave { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.12); } 10% { opacity: .9; } 50% { opacity: .72; transform: translate(-50%, -50%) scale(var(--wave-scale, 9)); } 90% { opacity: .58; transform: translate(-50%, -50%) scale(.12); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(.12); } }
+@keyframes event-wave {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.12); }
+  10% { opacity: calc(.9 + .1 * var(--wave-response, 0)); }
+  50% {
+    opacity: calc(.72 + .23 * var(--wave-response, 0));
+    transform: translate(-50%, -50%) scale(calc(var(--wave-scale, 9) * (1 + .16 * var(--wave-response, 0))));
+  }
+  90% { opacity: calc(.58 + .23 * var(--wave-response, 0)); transform: translate(-50%, -50%) scale(.12); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(.12); }
+}
 
 .settings-dialog { width: min(68rem, calc(100vw - 2rem)); height: min(42rem, calc(100vh - 2rem)); max-width: none; max-height: none; margin: auto; padding: 0; overflow: hidden; color: var(--ink); border: 1px solid rgba(186,213,191,.28); border-radius: 2px; background: #111b17; box-shadow: 0 30px 100px rgba(0,0,0,.72); }
 .settings-dialog::backdrop { background: rgba(4,10,8,.78); backdrop-filter: blur(9px); }

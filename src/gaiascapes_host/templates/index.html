@@ -156,7 +156,9 @@
             <div class="pane-heading"><div><h3 id="backgroundAnimationHeading">Background Animation</h3><p>Choose bursts, layered paint, or a flowing cloud around the map.</p></div></div>
             <fieldset class="background-animation-options" aria-labelledby="backgroundAnimationHeading">
               <label class="settings-field background-event-filter" for="backgroundEvents"><span>Animations</span><select id="backgroundEvents" aria-describedby="backgroundEventsHint">
-                <option value="both">Events &amp; Background</option><option value="events">Events</option><option value="background">Background</option>
+                <option value="background">Background</option>
+                <option value="events">Events</option>
+                <option value="both">Background &amp; Events</option>
               </select><small id="backgroundEventsHint">Color effects shown in Paint and Murmuration.</small></label>
               <label class="theme-option"><input type="radio" name="backgroundAnimation" value="burst" checked><span><strong>Bursts</strong><small>Colors rise and fade with each sound.</small></span></label>
               <div class="background-paint-choice">
@@ -166,7 +168,7 @@
                     <option value="natural">Natural</option><option value="aurora">Aurora</option><option value="wildflower">Wildflower</option><option value="pastel">Pastel</option><option value="random">Random</option>
                   </select></label>
                   <label class="settings-field" for="backgroundPaintShape"><span>Paint Shape</span><select id="backgroundPaintShape" aria-describedby="backgroundPaintShapeHint">
-                    <option value="bloom">Bloom</option><option value="watercolor">Watercolor</option><option value="ribbon">Ribbon</option><option value="random">Random</option>
+                    <option value="bloom">Bloom</option><option value="watercolor">Watercolor</option><option value="ribbon">Ribbon</option><option value="spiral">Spiral</option><option value="random">Random</option>
                   </select><small id="backgroundPaintShapeHint">Used with Paint animation.</small></label>
                 </div>
               </div>

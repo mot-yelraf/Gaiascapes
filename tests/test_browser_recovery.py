@@ -150,6 +150,7 @@ const scope=vm.createContext({
  byId:()=>({value:'birdsong'}),
  deviceMuted:false,localRecordingPlayback:true,deviceListening:false,RECORDED_BACKGROUNDS:['birdsong'],
  recordingNormalizer:{resume:async()=>{order.push('resume')}},
+ stopRecordingPlayback:()=>{order.push('fade out')},
  request:async(path)=>{order.push(path)},message(){},updateStatus:async()=>{},
 });
 vm.runInContext(source.slice(source.indexOf('async function startPlayback('),
@@ -163,7 +164,7 @@ vm.runInContext(source.slice(source.indexOf('async function startPlayback('),
  const next=vm.runInContext('startPlayback(true)',scope);
  assert.deepEqual(order,['resume']);
  await next;
- assert.deepEqual(order,['resume','/api/recordings/next-image?play=true']);
+ assert.deepEqual(order,['resume','fade out','/api/recordings/next-image?play=true']);
 })().catch(e=>{console.error(e);process.exitCode=1});
 ''','app.js')
 
