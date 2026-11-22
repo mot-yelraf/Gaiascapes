@@ -6,7 +6,7 @@ This guide explains the controls in Gaiascapes. Installation and system setup ar
 
 Peace Hill Studios hope you find the app fun and educational with soothing background sounds.
 
-All screenshots were refreshed from this version on 29 October 2026 using a separate temporary installation. Enabled sources and selected sounds are examples, not the factory defaults. The mobile images show Safari’s 390 × 844 responsive viewport.
+The Sound sources, Display, Map View options, and map magnifier screenshots were captured on 22 November 2026 using a temporary installation. The other screenshots are from 29 October 2026. Source and sound selections illustrate example setups. The mobile images show Safari’s 390 × 844 responsive viewport.
 
 ## Map View
 
@@ -15,6 +15,14 @@ The map is always visible in the main window, with the themed animation behind i
 The legend distinguishes background locations, event locations, and **My location**. Moving the pointer over the map displays coordinates. The system-location marker, when available, shows the host’s approximate location derived from its public IP address. Background locations come from **Sound locations**; the host location can seed location 1 for Xeno-canto Birdsong and Storm Outlook at startup (see [Location privacy](#location-privacy)).
 
 The main view is the map, with the animated themed background behind it. Use the **Play / Pause / Next** control strip beside the title. Playback status and errors appear beside the controls. Open Settings with the **gear (⚙)** in its themed pill, centered beneath the playback strip. Settings contains **Sound sources**, **Sound Choices**, **Sound locations**, **Display**, and finally **Event History**. The version appears above the Settings heading.
+
+### Map magnifier
+
+Click or tap a point on the world map to open the circular **Map magnifier** at that location. The magnifier shows the center coordinates, shaded terrain, nearby city and town names, and any event or background markers in the area. Hover over a marker to read its details. The magnifier uses bundled map data and works offline.
+
+With the world map focused, press **Enter** or **Space** to open the magnifier at the latest marker or at the map center. Press **Escape** or select **×** to close it.
+
+![Map magnifier centered on San Francisco Bay, with terrain, nearby city names, and an example earthquake marker](docs/images/user-guide/23-map-magnifier.png)
 
 ### Start a soundscape
 
@@ -51,6 +59,14 @@ Three separate status tiles appear below the map. On desktop they sit side by si
 | **Last Earthquake Event** | The latest available earthquake location and details, including captured observations. |
 
 A dash or **Not yet** means there is no matching event to display yet. A previous event can remain visible after playback stops; it is not evidence that sound is still playing.
+
+## Saving settings
+
+Click **Save settings** after editing Sound sources, Sound Choices, Sound locations, or any section in Display. The button saves changes across these sections, not just the visible one. The button shows **Saving…** while the request is in progress. Look for the **Settings saved.** toast before closing the dialog. Success and failure notifications for saving, previewing, restoring defaults, and changing theme dismiss automatically after **five seconds**, or immediately when clicked. Source recovery toasts follow the same behavior. A newer result replaces the previous notification and starts a fresh five-second interval. Errors begin with **Error:**; resolve the reported problem and save again. Earlier parts of a save may already have been applied.
+
+Use the **×** in the dialog header to close Settings; there is no Close button beside Save. Escape or clicking outside the dialog also closes it. Closing is not a save action. Unsaved edits may remain visible when you reopen Settings in the same page, so they should not be treated as a saved configuration. Reloading the page restores the saved settings.
+
+Theme and Background Animation are saved with the installation when you click **Save settings**. Listen/Mute applies only to the current page session. Event History is read-only and requires no save.
 
 ## Sound sources
 
@@ -309,7 +325,7 @@ Map points identify documented recording locations or approximate study regions,
 
 Open **Settings → Display** and choose **Earth** (light brown), **Wind** (light yellow), **Fire** (light red), or **Ocean** (light blue). The palette applies to the main view and dialogs immediately, and a **Theme applied.** notification confirms the change.
 
-![Display pane with the Theme palettes above Map controls for Projection Model and Map View](docs/images/user-guide/13-display.png)
+![Display settings with Background selected under Animations, Spiral selected as the Paint Shape, and controls for Projection Model and Map View](docs/images/user-guide/13-display.png)
 
 Theme previews immediately. Click **Save settings** to store it in this installation’s `data/config.json`; it is restored when the desktop app restarts or a browser reconnects.
 
@@ -317,21 +333,15 @@ Theme previews immediately. Click **Save settings** to store it in this installa
 
 Below Theme, choose **Burst** for colors that expand and fade with each background sound, **Paint** to retain full-size colors around the map's perimeter, or **Murmuration** for a translucent cloud of tiny flying particles flowing around the map's outline. The cloud stretches and folds continuously, pauses while the tab is hidden, and becomes still when reduced motion is preferred. Its own **Color Palette** blends gradually through Natural, Aurora, Wildflower, or Pastel colors; Random cycles through hues. Paint layers colors over 19 background location visits, then clears them as the next round begins. Event bursts and map animations keep their usual timing.
 
-**Color Palette** offers **Natural** (the existing sound colors), **Aurora**, **Wildflower**, and **Pastel**. The additional palettes provide a different shade for each of the 19 location visits. Both selectors sit beneath **Paint** and apply only to Paint animation. **Paint Shape** offers **Bloom** (soft circles), **Watercolor** (irregular washes), and **Ribbon** (curved strokes). **Random** is available in both selectors: each new paint layer independently chooses a palette and/or shape. Existing layers keep their resolved random choices. Changing palette or shape updates existing paint immediately without restarting the round.
+**Color Palette** offers **Natural** (the existing sound colors), **Aurora**, **Wildflower**, and **Pastel**. The additional palettes provide a different shade for each of the 19 location visits. Both selectors sit beneath **Paint** and apply only to Paint animation. **Paint Shape** offers **Bloom** (soft circles), **Watercolor** (irregular washes), **Ribbon** (curved strokes), and **Spiral** (coiled strokes). **Random** is available in both selectors. Each new paint layer independently chooses a palette or shape for each selector set to **Random**. Existing layers keep their resolved random choices. Changing palette or shape updates existing paint immediately without restarting the round.
 
-The animation section has four columns: **Animations**, **Bursts**, **Paint**, and **Murmuration**. **Animations** selects **Events & Background** (the default), **Events**, or **Background** for the visible color effects. It filters Paint and Murmuration immediately; Burst continues showing both event and background effects. Audio and map markers continue unchanged. Hidden paint still advances through the 19-location round.
+The animation section has four columns for **Animations**, **Bursts**, **Paint**, and **Murmuration**. **Animations** selects **Background** (the default), **Events**, or **Background & Events** for the visible color effects in Paint and Murmuration. Burst shows both event and background effects. Audio and map markers continue unchanged. Hidden paint still advances through the 19-location round.
+
+During background recording playback, louder passages strengthen the background bursts, brighten the paint layers, and brighten the murmuration. The effects follow the recording volume and crossfades, ease back during quiet passages, and stay at their usual intensity when reduced motion is enabled.
 
 The animation, palette, shape, and Animations choices preview immediately. Click **Save settings** to store them with the installation and restore them after restart. Switching modes clears the accumulated paint; reloading starts a fresh canvas.
 
 ### Map
-
-Click or tap the main map to open a circular magnifier centered on that
-location. It shows shaded relief, nearby city and town names where available,
-and the same event and background markers as the world map. Hover over a
-marker in the popup for its details. With keyboard focus on the world map,
-press Enter or Space to zoom to the latest marker or the map center. Press
-Escape or use the close button to return to the world map. The magnifier
-uses bundled map data and works offline.
 
 Below Background Animation, **Projection Model** changes both the main map and the location editor:
 
@@ -362,16 +372,6 @@ Changing either selector updates both maps immediately. Terrain, grid lines, mar
 Open **Settings → Event History**, the last menu option, to inspect recent activity. Rows show the event type, place, measurements or recording title, associated sound, and time. The list is a presentation of recent activity, not a complete inventory of downloaded recordings. Individual lightning flashes are omitted from the visible history list; they can still trigger sound and map activity. **No events in this history window** means there is no activity to list for the current window.
 
 ![Event History in a new session with no captured events](docs/images/user-guide/02-event-history.png)
-
-## Saving settings
-
-Click **Save settings** after editing Sound sources, Sound Choices, Sound locations, or any section in Display. The button saves changes across these sections, not just the visible one. The button shows **Saving…** while the request is in progress. Look for the **Settings saved.** toast before closing the dialog. Success and failure notifications for saving, previewing, restoring defaults, and changing theme dismiss automatically after **five seconds**, or immediately when clicked. Source recovery toasts follow the same behavior. A newer result replaces the previous notification and starts a fresh five-second interval. Errors begin with **Error:**; resolve the reported problem and save again. Earlier parts of a save may already have been applied.
-
-![Settings saved notification in Display after saving a Pacific-centered map](docs/images/user-guide/14-settings-saved.png)
-
-Use the **×** in the dialog header to close Settings; there is no Close button beside Save. Escape or clicking outside the dialog also closes it. Closing is not a save action. Unsaved edits may remain visible when you reopen Settings in the same page, so they should not be treated as a saved configuration. Reloading the page restores the saved settings.
-
-Theme and Background Animation are saved with the installation when you click **Save settings**. Listen/Mute applies only to the current page session. Event History is read-only and requires no save.
 
 ## Mobile and iPhone Home Screen
 
