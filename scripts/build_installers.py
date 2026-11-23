@@ -1,4 +1,4 @@
-"""Build native installers with a private Python runtime and user guide.
+"""Build native installers with a private Python runtime and documentation.
 
 Run on each target OS/architecture in a dedicated build environment. Generated
 artifacts and build work stay under installers/; installed user data is untouched.
@@ -65,8 +65,8 @@ def build_deb(bundle: Path, work: Path, output: Path, name: str, arch: str) -> P
                  icons / "earth.gaia_scape.GaiaScape.png")
     docs = staging / "usr/share/doc/gaiascapes"
     docs.mkdir(parents=True)
-    for source in (ROOT / "user_guide.pdf", ROOT / "installers/README.md", ROOT / "LICENSE",
-                   ROOT / "THIRD_PARTY_NOTICES.md"):
+    for source in (ROOT / "user_guide.pdf", ROOT / "create_catalog.md", ROOT / "installers/README.md",
+                   ROOT / "LICENSE", ROOT / "THIRD_PARTY_NOTICES.md"):
         shutil.copy2(source, docs / source.name)
     destination = output / f"{name}.deb"
     run("dpkg-deb", "--root-owner-group", "--build", staging, destination)
@@ -101,6 +101,7 @@ def build_macos(bundle: Path, work: Path, output: Path, name: str) -> list[Path]
     run("ditto", bundle, image / bundle.name)
     (image / "Applications").symlink_to("/Applications", target_is_directory=True)
     shutil.copy2(ROOT / "user_guide.pdf", image / "user_guide.pdf")
+    shutil.copy2(ROOT / "create_catalog.md", image / "create_catalog.md")
     shutil.copy2(ROOT / "installers/README.md", image / "INSTALLATION.txt")
     dmg = output / f"{name}.dmg"
     run("hdiutil", "create", "-volname", "Gaiascapes", "-srcfolder", image,

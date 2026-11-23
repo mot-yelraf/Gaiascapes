@@ -74,11 +74,12 @@ jobs:
           python3 -m venv --system-site-packages /tmp/gaiascapes-build
           /tmp/gaiascapes-build/bin/python -m pip install -r packaging/requirements-build.txt '.[desktop,lightning,eumetsat]'
           /tmp/gaiascapes-build/bin/python scripts/build_installers.py
-      - name: Verify package payload and guide
+      - name: Verify package payload and documentation
         run: |
           dpkg-deb --info installers/*.deb
           dpkg-deb --contents installers/*.deb > /tmp/gaiascapes-payload.txt
           test "$(rg -c '/usr/share/doc/gaiascapes/user_guide.pdf' /tmp/gaiascapes-payload.txt)" = 1
+          dpkg-deb --fsys-tarfile installers/*.deb | tar -xOf - ./usr/share/doc/gaiascapes/create_catalog.md | cmp - create_catalog.md
       - uses: actions/upload-artifact@v7
         with:
           name: installers-${{ matrix.os }}
