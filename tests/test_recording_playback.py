@@ -321,6 +321,7 @@ const context = vm.createContext({
     }
     async play() {}
     pause() { this.paused = true; }
+    releaseNormalization() { this.released = true; }
     removeAttribute() {}
     addEventListener(name, fn) { this.listeners[name] = fn; }
   },
@@ -400,6 +401,36 @@ context.cue = {sequence: 42, recording_rotation: true, duration: 24.5, volume: 1
   await vm.runInContext('playRecordingCue({...cue, emitted_at: 1, playback_position: 1000})', context);
   assert.equal(players.at(-1).startOffset, 0);
   assert.equal(typeof players.at(-1).listeners.ended, 'function');
+  // A skip can replace a long recording early, even during another crossfade.
+  const long = players.at(-1);
+  long.duration = 600;
+  now += 4000; fade();
+  await vm.runInContext('playRecordingCue({...cue, sequence: 44})', context);
+  const replacement = players.at(-1);
+  now += 50; fade();
+  assert.ok(long.recordingOutputGain > 0);
+  await vm.runInContext('playRecordingCue({...cue, sequence: 45})', context);
+  assert.ok(long.paused && long.released);
+  assert.ok(!replacement.paused);
+  now += 3000; fade();
+  assert.ok(replacement.paused && replacement.released);
+  assert.equal(vm.runInContext('activeRecordingAudio.size', context), 1);
+  const beforeSkip = players.at(-1);
+  beforeSkip.duration = 600;
+  await vm.runInContext('playRecordingCue({...cue, sequence: 46})', context);
+  now += 3000; fade();
+  assert.ok(beforeSkip.paused && beforeSkip.released);
+  const beforeToolbarSkip = players.at(-1);
+  vm.runInContext('stopRecordingPlayback()', context);
+  now += 700; fade();
+  assert.ok(beforeToolbarSkip.paused && beforeToolbarSkip.released);
+  assert.equal(vm.runInContext('activeRecordingAudio.size', context), 0);
+  await vm.runInContext('playRecordingCue({...cue, sequence: 47})', context);
+  const quickSkip = players.at(-1);
+  vm.runInContext('stopRecordingPlayback()', context);
+  await vm.runInContext('playRecordingCue({...cue, sequence: 48})', context);
+  assert.ok(quickSkip.paused && quickSkip.released);
+  assert.equal(vm.runInContext('activeRecordingAudio.size', context), 1);
 })().catch(error => {console.error(error); process.exitCode = 1;});
 '''
     result = subprocess.run([node, '-e', script, str(source), kind, str(duration)],
@@ -488,12 +519,15 @@ function buffer(amplitude, silence = 0, stereo = false) {
 }
 const nodes = [];
 function node() {
-  const result = {connect(to) {this.to = to;}, disconnect() {this.disconnected = true;},
+  const result = {connections: [], connect(to, channel = 0) {this.to = to; this.connections.push([to, channel]);},
+    disconnect() {this.disconnected = true;},
     gain: {}, threshold: {}, knee: {}, ratio: {}, attack: {}, release: {}};
   nodes.push(result);
   return result;
 }
 let fetches = 0, fail = false, audioClock, decodedSource;
+const outputLevels = [.125, -.25];
+const analysers = [];
 const context = vm.createContext({
   EventTarget, Event, setInterval, clearInterval, setTimeout, clearTimeout,
   window: {AudioContext: class {
@@ -502,6 +536,17 @@ const context = vm.createContext({
     async suspend() {this.state = 'suspended';}
     createDynamicsCompressor() {throw new Error("Automatic makeup gain must not amplify recordings");}
     createWaveShaper() {return node();}
+    createChannelSplitter(channels) {assert.equal(channels, 2); return node();}
+    createAnalyser() {
+      const analyser = node();
+      const channel = analysers.length;
+      analyser.getFloatTimeDomainData = samples => {
+        assert.equal(samples.length, analyser.fftSize);
+        samples.fill(outputLevels[channel]);
+      };
+      analysers.push(analyser);
+      return analyser;
+    }
     createGain() {return node();}
     createMediaElementSource() {return node();}
     createBufferSource() {
@@ -579,6 +624,13 @@ assert.throws(() => gain(invalid), /invalid audio/);
   await normalizer.prepare(player, '/a.wav', new AbortController().signal);
   player.startOffset = 1;
   await player.play();
+  assert.equal(normalizer.outputRms(), .25);
+  const [[destination], [splitter]] = nodes[0].connections;
+  assert.equal(destination, audioClock.destination);
+  assert.deepEqual(splitter.connections, [[analysers[0], 0], [analysers[1], 1]]);
+  outputLevels.fill(0);
+  assert.equal(normalizer.outputRms(), 0);
+  assert.equal(analysers.length, 2);
   assert.equal(decodedSource.offset, 1);
   audioClock.currentTime = 2;
   assert.equal(player.currentTime, 3);

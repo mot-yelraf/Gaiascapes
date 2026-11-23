@@ -11,21 +11,76 @@
   const murmurationPaletteInput = document.getElementById("backgroundMurmurationPalette");
   const shapeInput = document.getElementById("backgroundPaintShape");
   const eventsInput = document.getElementById("backgroundEvents");
-  const eventChoices = ["both", "events", "background"];
-  let eventSelection = "both";
+  const pulseLayer = document.getElementById("eventPulseLayer");
+  const reducedMotion = pulseLayer && window.matchMedia("(prefers-reduced-motion: reduce)");
+  const eventChoices = ["background", "events", "both"];
   const palettes = {
     natural: null,
     aurora: ["#269eaa", "#7954bf", "#2aa579", "#dc73aa", "#4289cf"],
     wildflower: ["#e27e6b", "#d7ab42", "#a38bd2", "#cf7194", "#77a36b"],
     pastel: ["#edb59d", "#a8d5bf", "#c5b4e0", "#a7cce7", "#ead798"],
   };
-  const shapes = ["bloom", "watercolor", "ribbon"];
+  const shapes = ["bloom", "watercolor", "ribbon", "spiral"];
   let palette = "natural";
   let shape = "bloom";
   const paletteChoices = Object.keys(palettes);
   const paints = [];
   const roundLength = 19;
   let mode = "burst";
+  let readRecordingRms = null;
+  let recordingFrame = null;
+  let lastRecordingSample = null;
+  let recordingLevel = 0;
+
+  function updateRecordingLevel(now) {
+    recordingFrame = null;
+    const elapsed = lastRecordingSample === null ? 1000 / 30 : now - lastRecordingSample;
+    if (elapsed >= 1000 / 30) {
+      lastRecordingSample = now;
+      const rms = readRecordingRms();
+      // Map -64 to -30 dBFS onto the visual response. Ramp up faster than we fade out.
+      const target = rms > 0 ? Math.max(0, Math.min(1, (20 * Math.log10(rms) + 64) / 34)) : 0;
+      const timeConstant = target > recordingLevel ? 90 : 300;
+      const smoothed = recordingLevel + (target - recordingLevel) * (1 - Math.exp(-elapsed / timeConstant));
+      if (!target && smoothed < .005) {
+        if (recordingLevel) pulseLayer.style.removeProperty("--background-recording-level");
+        recordingLevel = 0;
+        if (rms === null) {
+          readRecordingRms = null;
+          lastRecordingSample = null;
+          return;
+        }
+      } else {
+        recordingLevel = smoothed;
+        pulseLayer.style.setProperty("--background-recording-level", recordingLevel.toFixed(3));
+      }
+    }
+    recordingFrame = requestAnimationFrame(updateRecordingLevel);
+  }
+
+  function syncRecordingResponse() {
+    if (document.hidden || reducedMotion.matches) {
+      if (recordingFrame !== null) cancelAnimationFrame(recordingFrame);
+      recordingFrame = null;
+      lastRecordingSample = null;
+      recordingLevel = 0;
+      pulseLayer.style.removeProperty("--background-recording-level");
+    } else if (readRecordingRms && recordingFrame === null) {
+      recordingFrame = requestAnimationFrame(updateRecordingLevel);
+    }
+  }
+
+  /** Follow the shared recording output until playback and the visual fade finish. */
+  function followRecordingOutput(readRms) {
+    if (!pulseLayer) return;
+    readRecordingRms = readRms;
+    syncRecordingResponse();
+  }
+
+  if (pulseLayer) {
+    document.addEventListener("visibilitychange", syncRecordingResponse);
+    reducedMotion.addEventListener("change", syncRecordingResponse);
+  }
 
   function clearPaint() {
     paints.forEach(({wave}) => wave.remove());
@@ -136,7 +191,7 @@
     globalThis.murmuration?.setPalette?.(murmurationPaletteInput.value);
   });
   shape = loadChoice(shapeInput, "background_paint_shape", [...shapes, "random"], "bloom");
-  eventSelection = loadChoice(eventsInput, "background_events", eventChoices, "both");
+  let eventSelection = loadChoice(eventsInput, "background_events", eventChoices, "background");
   function applyEventSelection() {
     document.documentElement.dataset.animationEvents = eventSelection;
     globalThis.murmuration?.setVisible?.(eventSelection !== "events");
@@ -144,7 +199,7 @@
   }
   applyEventSelection();
   eventsInput?.addEventListener("change", () => {
-    eventSelection = eventChoices.includes(eventsInput.value) ? eventsInput.value : "both";
+    eventSelection = eventChoices.includes(eventsInput.value) ? eventsInput.value : "background";
     applyEventSelection();
   });
 
@@ -163,5 +218,5 @@
   window.addEventListener("resize", positionPaint);
   const map = document.getElementById("worldMap");
   if (map && typeof ResizeObserver !== "undefined") new ResizeObserver(positionPaint).observe(map);
-  globalThis.backgroundAnimation = {retain, visible};
+  globalThis.backgroundAnimation = {retain, visible, followRecordingOutput};
 })();

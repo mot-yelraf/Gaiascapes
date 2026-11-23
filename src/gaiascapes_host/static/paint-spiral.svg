@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <path id="arm" d="M50 51 C54 48 58 53 56 57 C51 66 36 61 34 50 C31 35 46 25 60 29 C78 34 86 51 80 67 C72 87 49 96 27 83 C14 75 8 61 8 46"/>
+    <radialGradient id="arm-fade" gradientUnits="userSpaceOnUse" cx="50" cy="50" r="48">
+      <stop offset=".42" stop-color="white"/>
+      <stop offset=".78" stop-color="white" stop-opacity=".72"/>
+      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="core">
+      <stop offset="0" stop-color="white" stop-opacity=".88"/>
+      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="cloud" filterUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+    <filter id="ridges" filterUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+      <feGaussianBlur stdDeviation="1.8"/>
+    </filter>
+  </defs>
+  <g fill="none" stroke="url(#arm-fade)" stroke-linecap="round">
+    <g filter="url(#cloud)" stroke-width="13" opacity=".72">
+      <use href="#arm"/>
+      <use href="#arm" transform="rotate(166 50 50)" opacity=".7"/>
+    </g>
+    <g filter="url(#ridges)" stroke-width="4.5" opacity=".72">
+      <use href="#arm"/>
+      <use href="#arm" transform="rotate(166 50 50)" opacity=".6"/>
+    </g>
+  </g>
+  <circle cx="50" cy="51" r="15" fill="url(#core)"/>
+</svg>

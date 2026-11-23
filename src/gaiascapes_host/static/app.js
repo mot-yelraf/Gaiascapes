@@ -98,6 +98,13 @@ function clearRecordingWatchdog() {
   recordingWatchdog = null;
 }
 
+function releaseRecordingPlayer(audio) {
+  audio.pause();
+  audio.releaseNormalization?.();
+  audio.removeAttribute("src");
+  activeRecordingAudio.delete(audio);
+}
+
 function stopRecordingPlayback(fadeMilliseconds = 700) {
   clearRecordingWatchdog();
   recordingLoadController?.abort();
@@ -115,17 +122,13 @@ function stopRecordingPlayback(fadeMilliseconds = 700) {
   if (!players.length) return;
   const initialFades = players.map((audio) => audio.recordingFade);
   const startedAt = performance.now();
-  const timer = setInterval(() => {
+  recordingFadeTimer = setInterval(() => {
     const progress = Math.min(1, (performance.now() - startedAt) / fadeMilliseconds);
     players.forEach((audio, index) => setRecordingFade(audio, initialFades[index] * (1 - progress)));
     if (progress >= 1) {
-      clearInterval(timer);
-      players.forEach((audio) => {
-        audio.pause();
-        audio.releaseNormalization?.();
-        audio.removeAttribute("src");
-        activeRecordingAudio.delete(audio);
-      });
+      clearInterval(recordingFadeTimer);
+      recordingFadeTimer = null;
+      players.forEach(releaseRecordingPlayer);
     }
   }, 50);
 }
@@ -186,12 +189,7 @@ async function playRecordingCue(cue) {
         if (recordingPreviewTimer) clearTimeout(recordingPreviewTimer);
         recordingFadeTimer = null;
         recordingPreviewTimer = null;
-        for (const audio of activeRecordingAudio) {
-          audio.pause();
-          audio.releaseNormalization?.();
-          audio.removeAttribute("src");
-        }
-        activeRecordingAudio.clear();
+        activeRecordingAudio.forEach(releaseRecordingPlayer);
         previous = null;
         recordingAudio = null;
         next.startOffset = 0;
@@ -238,6 +236,11 @@ async function playRecordingCue(cue) {
     next.removeAttribute("src");
     return;
   }
+  if (recordingFadeTimer) clearInterval(recordingFadeTimer);
+  // A new transition supersedes any outgoing layer from an earlier crossfade.
+  for (const audio of activeRecordingAudio) {
+    if (audio !== previous || audio.ended) releaseRecordingPlayer(audio);
+  }
   recordingAudio = next;
   globalThis.animalWikipedia?.update(cue.event);
   next.addEventListener("ended", () => {
@@ -249,7 +252,16 @@ async function playRecordingCue(cue) {
   }, {once: true});
   activeRecordingAudio.add(next);
   if (byId("mapPulseLayer") || byId("eventPulseLayer")) {
-    animateCapturedEvent(cue.event, cue.instrument, cueRole(cue), cueDuration, cue.volume ?? 1, next);
+    const role = cueRole(cue);
+    if (role === "background") {
+      globalThis.backgroundAnimation?.followRecordingOutput?.(() => {
+        for (const audio of activeRecordingAudio) {
+          if (!audio.paused && !audio.ended) return recordingNormalizer.outputRms();
+        }
+        return null;
+      });
+    }
+    animateCapturedEvent(cue.event, cue.instrument, role, cueDuration, cue.volume ?? 1, next);
   }
   if (cue.recording_rotation) {
     let advancing = false;
@@ -262,10 +274,7 @@ async function playRecordingCue(cue) {
       advancing = true;
       clearRecordingWatchdog();
       if (reason) {
-        next.pause();
-        next.releaseNormalization?.();
-        next.removeAttribute("src");
-        activeRecordingAudio.delete(next);
+        releaseRecordingPlayer(next);
         if (recordingAudio === next) recordingAudio = null;
         message(`Recording ${reason}; advancing to the next recording.`, true);
       }
@@ -331,27 +340,28 @@ async function playRecordingCue(cue) {
     recordingPreviewTimer = null;
     recordingPreviewUntil = 0;
   }
-  if (recordingFadeTimer) clearInterval(recordingFadeTimer);
   const startedAt = performance.now();
   const fadeMilliseconds = Number.isFinite(next.duration)
     ? Math.max(50, Math.min(3000, next.duration * 100)) : 3000;
-  const previousFadeMilliseconds = cue.recording_rotation && previous && Number.isFinite(previous.duration)
-    ? Math.max(50, (previous.duration - previous.currentTime) * 1000) : fadeMilliseconds;
-  const previousFade = previous?.recordingFade || 0;
+  let outgoing = activeRecordingAudio.has(previous) ? previous : null;
+  const outgoingFadeMilliseconds = cue.recording_rotation && outgoing && Number.isFinite(outgoing.duration)
+    ? Math.max(50, Math.min(3000, (outgoing.duration - outgoing.currentTime) * 1000)) : fadeMilliseconds;
+  const outgoingFade = outgoing?.recordingFade || 0;
   recordingFadeTimer = setInterval(() => {
-    const progress = Math.min(1, (performance.now() - startedAt) / fadeMilliseconds);
+    const elapsed = performance.now() - startedAt;
+    const progress = Math.min(1, elapsed / fadeMilliseconds);
     setRecordingFade(next, progress);
-    const previousProgress = Math.min(1, (performance.now() - startedAt) / previousFadeMilliseconds);
-    if (previous) setRecordingFade(previous, previousFade * (1 - previousProgress));
-    if (progress >= 1 && (!previous || previousProgress >= 1)) {
+    if (outgoing) {
+      const outgoingProgress = Math.min(1, elapsed / outgoingFadeMilliseconds);
+      setRecordingFade(outgoing, outgoingFade * (1 - outgoingProgress));
+      if (outgoingProgress >= 1) {
+        releaseRecordingPlayer(outgoing);
+        outgoing = null;
+      }
+    }
+    if (progress >= 1 && !outgoing) {
       clearInterval(recordingFadeTimer);
       recordingFadeTimer = null;
-      if (previous) {
-        previous.pause();
-        previous.releaseNormalization?.();
-        previous.removeAttribute("src");
-        activeRecordingAudio.delete(previous);
-      }
     }
   }, 50);
 }
@@ -1542,6 +1552,7 @@ async function startPlayback(nextRecording = false) {
       await recordingNormalizer.resume();
     }
     const endpoint = nextRecording ? "/api/recordings/next-image?play=true" : "/api/live/start";
+    if (nextRecording) stopRecordingPlayback();
     await request(endpoint, {method: "POST", body: "{}"});
     message(nextRecording ? "Playing next recording." : "Continuous environmental sound is running with the selected global background.");
     await updateStatus();

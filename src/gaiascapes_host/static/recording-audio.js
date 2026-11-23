@@ -1,10 +1,13 @@
-/* Recording loudness adjustment and peak protection.
- * Measure gated RMS once per URL in this page, preserving the source files and
- * natural dynamics. This is an RMS approximation, not broadcast LUFS metering.
+/* Recording playback with loudness adjustment, peak protection, and output metering.
+ *
+ * Gated source RMS sets playback gain. Short-term RMS on the shared output
+ * follows the recorded sounds after normalization, volume, and crossfades.
  */
 const recordingNormalizer = (() => {
   let context;
   let output;
+  let outputAnalysers;
+  const outputSamples = new Float32Array(2048);
   const gains = new Map();
 
   function measureGain(buffer) {
@@ -47,9 +50,34 @@ const recordingNormalizer = (() => {
       output.curve = Float32Array.from({length: 4097}, (_, i) =>
         Math.max(-0.95, Math.min(0.95, i / 2048 - 1)));
       output.connect(context.destination);
+      outputAnalysers = null;
     }
     await withTimeout(context.resume());
     if (context.state !== "running") throw new Error("Select Start or Preview to allow normalized audio");
+  }
+
+  /** Read short-term RMS from the louder output channel without altering playback. */
+  function outputRms() {
+    if (context?.state !== "running") return 0;
+    if (!outputAnalysers) {
+      const splitter = context.createChannelSplitter(2);
+      output.connect(splitter);
+      // Measure channels separately so stereo phase cannot cancel the visual response.
+      outputAnalysers = [0, 1].map(channel => {
+        const analyser = context.createAnalyser();
+        analyser.fftSize = outputSamples.length;
+        splitter.connect(analyser, channel);
+        return analyser;
+      });
+    }
+    let energy = 0;
+    for (const analyser of outputAnalysers) {
+      analyser.getFloatTimeDomainData(outputSamples);
+      let channelEnergy = 0;
+      for (const sample of outputSamples) channelEnergy += sample * sample;
+      energy = Math.max(energy, channelEnergy);
+    }
+    return Math.sqrt(energy / outputSamples.length);
   }
 
   async function withTimeout(operation) {
@@ -162,5 +190,5 @@ const recordingNormalizer = (() => {
     };
   }
 
-  return {resume, recover, prepare, measureGain, createPlayer};
+  return {resume, recover, prepare, measureGain, createPlayer, outputRms};
 })();

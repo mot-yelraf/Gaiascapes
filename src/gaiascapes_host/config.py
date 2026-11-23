@@ -28,8 +28,8 @@ DISPLAY_CHOICES = {
     "background_animation": ("burst", "paint", "murmuration"),
     "background_palette": ("natural", "aurora", "wildflower", "pastel", "random"),
     "background_murmuration_palette": ("natural", "aurora", "wildflower", "pastel", "random"),
-    "background_paint_shape": ("bloom", "watercolor", "ribbon", "random"),
-    "background_events": ("both", "events", "background"),
+    "background_paint_shape": ("bloom", "watercolor", "ribbon", "spiral", "random"),
+    "background_events": ("background", "events", "both"),
 }
 SUPPORTED_SOURCES = (
     "usgs",
@@ -222,7 +222,7 @@ class AppConfig:
     background_palette: str = "natural"
     background_murmuration_palette: str = "aurora"
     background_paint_shape: str = "bloom"
-    background_events: str = "both"
+    background_events: str = "background"
     map_projection: str = "eckert_iv"
     map_center_longitude: int = 0
     system_location_enabled: bool = True

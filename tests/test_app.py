@@ -2914,11 +2914,19 @@ def test_display_settings_persist_and_restore_without_browser_storage(tmp_path, 
     selected = {
         "theme": "ocean", "background_animation": animation,
         "background_murmuration_palette": "wildflower",
-        "background_palette": "random", "background_paint_shape": "ribbon",
-        "background_events": "background",
+        "background_palette": "random", "background_paint_shape": "spiral",
+        "background_events": "both",
     }
     app = create_app(tmp_path, auto_capture=False, usgs_client=FakeUsgs())
     with TestClient(app) as client:
+        assert app.state.service.config.background_events == "background"
+        home = client.get("/").text
+        options = re.search(r'<select id="backgroundEvents"[^>]*>(.*?)</select>', home, re.S)
+        assert options is not None
+        assert re.findall(r'<option value="([^"]+)">(.*?)</option>', options.group(1)) == [
+            ("background", "Background"), ("events", "Events"), ("both", "Background &amp; Events"),
+        ]
+        assert '<option value="spiral">Spiral</option>' in home
         response = client.put("/api/settings/display", json=selected)
         assert response.status_code == 200
         assert response.json() == selected
