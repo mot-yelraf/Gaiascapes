@@ -12,7 +12,8 @@ from gaiascapes import __version__
 
 resources = "gaiascapes_host/installation"
 datas = collect_data_files("gaiascapes_host")
-for name in ("user_guide.pdf", "LICENSE", "THIRD_PARTY_NOTICES.md", "PRIVACY.md", "SECURITY.md"):
+for name in ("user_guide.pdf", "create_catalog.md", "LICENSE", "THIRD_PARTY_NOTICES.md",
+             "PRIVACY.md", "SECURITY.md"):
     datas.append((str(root / name), resources))
 datas.append((str(root / "supercollider/gaia-scape.scd"), resources))
 python_licenses = [Path(sysconfig.get_path("stdlib")) / "LICENSE.txt",

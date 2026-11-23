@@ -25,6 +25,8 @@ def main() -> None:
     helper = executable_dir / ("gaiascapes-runtime.exe" if os.name == "nt" else "gaiascapes-runtime")
     resources = (bundle / "Contents/Resources" if mac else bundle / "_internal") / "gaiascapes_host/installation"
     assert (resources / "user_guide.pdf").read_bytes().startswith(b"%PDF-")
+    prompt = Path(__file__).resolve().parents[1] / "create_catalog.md"
+    assert (resources / prompt.name).read_bytes() == prompt.read_bytes()
     from netCDF4 import Dataset
     with tempfile.TemporaryDirectory(prefix="gaiascapes-bundle-smoke-") as temporary:
         data = Path(temporary) / "data"
@@ -110,7 +112,7 @@ def main() -> None:
                     process.wait()
         saved = json.loads((data / "config.json").read_text())
         assert saved["http_port"] == 8769 and saved["osc_port"] == 57130
-    print(f"Frozen {version}: HTTPS roots, weather source defaults, Murmuration/Aurora, PDF, worker pipes, NetCDF, HTTP API, and web assets passed")
+    print(f"Frozen {version}: HTTPS roots, weather source defaults, Murmuration/Aurora, PDF, catalog prompt, worker pipes, NetCDF, HTTP API, and web assets passed")
 
 
 if __name__ == "__main__":

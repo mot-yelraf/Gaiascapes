@@ -53,12 +53,13 @@ Close Gaiascapes before updating. Upgrades do not depend on a source checkout.
 Default HTTP port: **8769**. Local SuperCollider OSC port: **57130**.
 Desktop diagnostics: `data/desktop.log`.
 
-Every installer includes **user_guide.pdf**:
+Every installer includes **user_guide.pdf** and **create_catalog.md**, the agent
+prompt for creating a custom recording catalog.
 
 - macOS: in the disk image and inside the app's
   `Contents/Resources/gaiascapes_host/installation/` folder.
-- Linux/Pi: `/usr/share/doc/gaiascapes/user_guide.pdf`.
-- Windows: in the installation folder, with a Start Menu shortcut.
+- Linux/Pi: in `/usr/share/doc/gaiascapes/`.
+- Windows: in the installation folder. The user guide has a Start Menu shortcut.
 
 The executable also accepts `--user-guide`. The console helper
 `gaiascapes-runtime` (`gaiascapes-runtime.exe` on Windows) accepts `--server`

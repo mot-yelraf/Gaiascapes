@@ -28,6 +28,7 @@ Name: desktopicon; Description: "Create a desktop shortcut"; Flags: unchecked
 [Files]
 Source: "{#BundleDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\user_guide.pdf"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceRoot}\create_catalog.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#WebViewSetup}"; DestDir: "{tmp}"; DestName: "MicrosoftEdgeWebview2Setup.exe"; Flags: deleteafterinstall
 
 [Icons]
