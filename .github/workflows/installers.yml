@@ -2,8 +2,6 @@ name: Build installer apps
 
 on:
   workflow_dispatch:
-  push:
-    branches: ['codex/installer-apps-*']
 
 permissions:
   contents: read
@@ -44,17 +42,6 @@ jobs:
       - name: Verify native macOS Quit cleanup
         if: runner.os == 'macOS'
         run: python scripts/smoke_macos_quit.py installers/build-*/dist/Gaiascapes.app
-      - name: Save installer outputs
-        if: success()
-        uses: actions/upload-artifact@v7
-        with:
-          name: installers-${{ matrix.os }}
-          path: |
-            installers/*.dmg
-            installers/*.pkg
-            installers/*.exe
-            installers/*.json
-          if-no-files-found: error
 
   linux:
     strategy:
@@ -80,10 +67,3 @@ jobs:
           dpkg-deb --contents installers/*.deb > /tmp/gaiascapes-payload.txt
           test "$(rg -c '/usr/share/doc/gaiascapes/user_guide.pdf' /tmp/gaiascapes-payload.txt)" = 1
           dpkg-deb --fsys-tarfile installers/*.deb | tar -xOf - ./usr/share/doc/gaiascapes/create_catalog.md | cmp - create_catalog.md
-      - uses: actions/upload-artifact@v7
-        with:
-          name: installers-${{ matrix.os }}
-          path: |
-            installers/*.deb
-            installers/*.json
-          if-no-files-found: error

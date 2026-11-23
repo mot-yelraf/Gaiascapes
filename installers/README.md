@@ -84,11 +84,11 @@ On Windows use a dedicated venv with its `Scripts\python.exe`, and install
 GTK 3, and WebKitGTK 4.1 development/runtime packages. This includes the GTK
 bindings in the bundle without requiring Python on the destination machine.
 
-The manual **Build installer apps** GitHub Actions workflow builds macOS ARM64
-and Intel, Windows x64, Linux amd64, and Linux ARM64/Pi installers. Linux is built
-on Debian 12 to target glibc 2.36 or newer; 32-bit Pi OS and non-Debian Linux
-distributions are not currently packaged. CI artifacts can be downloaded into
-this directory with `gh run download RUN_ID --dir installers`.
+Run the **Build installer apps** GitHub Actions workflow manually to verify
+macOS ARM64 and Intel, Windows x64, Linux amd64, and Linux ARM64/Pi packaging.
+Installer files and manifests stay on the temporary runners. To keep a copy,
+build locally using the commands above. The Linux packages target Debian-based
+distributions with glibc 2.36 or newer, including 64-bit Raspberry Pi OS.
 
 Each build smoke-tests the actual frozen console helper with temporary data,
 a real native NetCDF decode in a worker subprocess, offline HTTP routes, web
