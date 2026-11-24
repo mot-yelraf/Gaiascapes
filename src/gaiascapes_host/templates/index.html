@@ -155,11 +155,11 @@
             </fieldset>
             <div class="pane-heading"><div><h3 id="backgroundAnimationHeading">Background Animation</h3><p>Choose bursts, layered paint, or a flowing cloud around the map.</p></div></div>
             <fieldset class="background-animation-options" aria-labelledby="backgroundAnimationHeading">
-              <label class="settings-field background-event-filter" for="backgroundEvents"><span>Animations</span><select id="backgroundEvents" aria-describedby="backgroundEventsHint">
+              <label class="settings-field background-event-filter" for="backgroundEvents"><span>Animations</span><select id="backgroundEvents">
                 <option value="background">Background</option>
                 <option value="events">Events</option>
                 <option value="both">Background &amp; Events</option>
-              </select><small id="backgroundEventsHint">Color effects shown in Paint and Murmuration.</small></label>
+              </select></label>
               <label class="theme-option"><input type="radio" name="backgroundAnimation" value="burst" checked><span><strong>Bursts</strong><small>Colors rise and fade with each sound.</small></span></label>
               <div class="background-paint-choice">
                 <label class="theme-option"><input type="radio" name="backgroundAnimation" value="paint"><span><strong>Paint</strong><small>Layer colors for 19 locations, then start fresh.</small></span></label>
@@ -167,17 +167,17 @@
                   <label class="settings-field" for="backgroundPalette"><span>Color Palette</span><select id="backgroundPalette">
                     <option value="natural">Natural</option><option value="aurora">Aurora</option><option value="wildflower">Wildflower</option><option value="pastel">Pastel</option><option value="random">Random</option>
                   </select></label>
-                  <label class="settings-field" for="backgroundPaintShape"><span>Paint Shape</span><select id="backgroundPaintShape" aria-describedby="backgroundPaintShapeHint">
+                  <label class="settings-field" for="backgroundPaintShape"><span>Paint Shape</span><select id="backgroundPaintShape">
                     <option value="bloom">Bloom</option><option value="watercolor">Watercolor</option><option value="ribbon">Ribbon</option><option value="spiral">Spiral</option><option value="random">Random</option>
-                  </select><small id="backgroundPaintShapeHint">Used with Paint animation.</small></label>
+                  </select></label>
                 </div>
               </div>
               <div class="background-murmuration-choice">
                 <label class="theme-option"><input type="radio" name="backgroundAnimation" value="murmuration"><span><strong>Murmuration</strong><small>A translucent cloud flows and folds around the map.</small></span></label>
                 <div class="background-murmuration-options">
-                  <label class="settings-field" for="backgroundMurmurationPalette"><span>Color Palette</span><select id="backgroundMurmurationPalette" aria-describedby="backgroundMurmurationPaletteHint">
+                  <label class="settings-field" for="backgroundMurmurationPalette"><span>Color Palette</span><select id="backgroundMurmurationPalette">
                     <option value="natural">Natural</option><option value="aurora">Aurora</option><option value="wildflower">Wildflower</option><option value="pastel">Pastel</option><option value="random">Random</option>
-                  </select><small id="backgroundMurmurationPaletteHint">Cloud colors shift gradually through this palette.</small></label>
+                  </select></label>
                 </div>
               </div>
             </fieldset>
@@ -298,7 +298,6 @@
                     <option value="espeak-ng" {% if announcement_synthesizer == "espeak-ng" %}selected{% endif %}>eSpeak NG</option>
                   </select>
                 </label>
-                <p class="muted">Used for announcing background recorded sounds. Automatic prefers Say on supported Macs; eSpeak NG is the fallback.</p>
               </article>
             </div>
             <h4 class="source-group-heading" id="eventSourcesHeading">Event sound sources</h4>
@@ -322,7 +321,6 @@
                 <label class="source-art" for="sourceKma" aria-label="Toggle KMA lightning"><img src="/static/sound-natural_thunder.svg" width="512" height="512" alt=""></label>
                 <div class="source-credentials" id="kmaCredentials"{% if "kma_lightning" not in enabled_sources %} hidden{% endif %}>
                   <label for="kmaApiKey"><span>KMA API key</span><input id="kmaApiKey" type="password" autocomplete="new-password" placeholder="{{ 'Saved — enter only to replace' if kma_credentials_configured else 'KMA API key' }}"></label>
-                  <small><a href="https://apihub.kma.go.kr/apiList.do?apiMov=%EB%82%99%EB%A2%B0+%EC%9B%90%EC%8B%9C%EC%9E%90%EB%A3%8C+%EC%A1%B0%ED%9A%8C&amp;seqApi=5&amp;seqApiSub=264" target="_blank" rel="noopener noreferrer">Get a key and apply for lightning API access</a></small>
                 </div>
               </article>
               <article class="source-tile" aria-label="NOAA GOES GLM lightning">
@@ -385,7 +383,7 @@
                   <select id="announcementVariant">{% for variant in announcement_variants %}<option value="{{ variant }}" {% if announcement_variant == variant %}selected{% endif %}>{{ variant | capitalize }}</option>{% endfor %}</select>
                 </label>
                 <label class="volume-control" for="announcementVolume"><input id="announcementVolume" type="range" min="0" max="100" step="1" value="{{ (announcement_volume * 100) | round | int }}" aria-label="Announcement volume"><output>{{ (announcement_volume * 100) | round | int }}%</output></label>
-                <span id="announcementStatus" role="status" aria-live="polite">{% if not announcement_available %}{{ announcement_install_message }}{% endif %}</span>
+                <span id="announcementStatus" role="status" aria-live="polite"></span>
               </article>
               {{ sound_tile("Background", "background", "background", (mammal_labels.items() | list) + [("birdsong", "Birdsong"), ("frog_calls", "Frog Calls"), ("whale_song", "Whale Song"), ("dolphin_calls", "Dolphin Calls"), ("ocean_swell", "Ocean Swells"), ("storm_potential", "Storm Outlook"), ("none", "None")], "background") }}
             </div>
@@ -394,8 +392,7 @@
               {{ sound_tile("Event " ~ number, "event" ~ number, "event_" ~ number, [("earthquake", "Earthquake"), ("natural_thunder", "Thunder"), ("seismic_bells", "Seismic Tone"), ("tidal_bell", "Tidal Tone"), ("none", "None")], "event") }}
               {% endfor %}
             </div>
-            <label class="location-privacy-option"><input type="checkbox" aria-describedby="systemLocationHint" id="systemLocationEnabled" {% if system_location_enabled %}checked{% endif %}> Show this host’s approximate location on the map</label>
-            <p class="units-note" id="systemLocationHint">Uses IP location services (ipapi.co, with ipwho.is as a fallback). Also sets location 1 for Xeno-canto Birdsong and Storm Outlook at startup. Frog Calls keeps its verified defaults or your edited locations. Turn off to stop location lookups.</p>
+            <label class="location-privacy-option"><input type="checkbox" id="systemLocationEnabled" {% if system_location_enabled %}checked{% endif %}> Show this host’s approximate location on the map</label>
           </section>
           <section class="settings-pane location-settings-pane" data-pane="locations" hidden>
             <div class="pane-heading"><div class="sound-location-heading"><h3>Sound locations</h3><span id="soundLocationCoordinates" aria-live="polite" hidden></span></div></div>
