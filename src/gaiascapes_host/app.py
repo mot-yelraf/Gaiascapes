@@ -194,9 +194,6 @@ def create_app(
             announcement_variants=ANNOUNCEMENT_VARIANTS,
             announcement_volume=config.announcement_volume,
             announcement_voices=ANNOUNCEMENT_VOICES,
-            announcement_available=bool(espeak_executable() or
-                                        (config.announcement_synthesizer != "espeak-ng" and say_quark_paths())),
-            announcement_install_message=announcement_install_message(config.announcement_synthesizer),
             instrument_slots=config.instrument_slots(),
             instrument_volumes=config.volume_slots(),
             lightning_sample_rate=config.lightning_sample_rate,

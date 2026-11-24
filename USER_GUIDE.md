@@ -106,9 +106,9 @@ animal labels are used where species identification is unresolved. See the
 | Source tile | What it supplies | Credentials and additional settings |
 | --- | --- | --- |
 | **Bears** | Bundled brown and grizzly bear, American black bear, and giant panda calls from North America, Europe, and Asia. | No key or download; no editable location catalog. |
-| **Birdsong** | Archived bird recordings. The **Birdsong source** selector chooses Wikimedia Commons or Xeno-canto. | **Wikimedia Commons:** no key; uses 19 curated locations. **Xeno-canto:** shared API key; uses 19 editable regions with searches within 100 km of each center. |
+| **Birdsong** | Archived bird recordings. The **Birdsong source** selector chooses Wikimedia Commons or Xeno-canto. | **Wikimedia Commons:** no key; uses 19 curated locations. **Xeno-canto:** [shared API key](#xeno-canto-for-birdsong-and-frog-calls); uses 19 editable regions with searches within 100 km of each center. |
 | **Dolphin Calls** | Dolphin recordings from NOAA and other verified archives at 19 locations. | No key. Select included sites in Sound locations. |
-| **Frog Calls** | Xeno-canto frog and toad recordings near the chosen region centers. | The same Xeno-canto API key as Birdsong. Its 19 region centers are edited independently of Birdsong. |
+| **Frog Calls** | Xeno-canto frog and toad recordings near the chosen region centers. | The same [Xeno-canto API key](#xeno-canto-for-birdsong-and-frog-calls) as Birdsong. Its 19 region centers are edited independently of Birdsong. |
 | **Open-Meteo Storm Outlook** | Forecast conditions used to generate a storm background. | No key. Uses the 19 Storm Outlook locations. This is forecast convection, not observed lightning. |
 | **Open-Meteo surf & tides** | Modeled ocean swells and tide turns. | No key. Uses the 19 Ocean Swells locations. Supplies both the Ocean Swells background and events for Tidal Tone. |
 | **Whale Song** | NOAA whale songs and calls from several species at 19 locations. | No key. Select included sites in Sound locations. |
@@ -123,41 +123,48 @@ NOAA marine recordings come from the [NCEI passive acoustic archive](https://www
 
 | Source tile | What it supplies | Credentials |
 | --- | --- | --- |
-| **EUMETSAT MTG Lightning Imager** | Observed lightning flashes covering Europe and Africa, used by Thunder. | **Consumer Key** and **Consumer Secret**, obtained through EUMETSAT. |
+| **EUMETSAT MTG Lightning Imager** | Observed lightning flashes covering Europe and Africa, used by Thunder. | [EUMETSAT Consumer Key and Consumer Secret](#eumetsat-mtg-lightning-imager). |
+| **KMA lightning · South Korea** | Observed lightning from the Korea Meteorological Administration, used by Thunder. | [KMA API key and access to the lightning observations API](#kma-lightning-for-south-korea). |
 | **NOAA GOES GLM lightning** | Observed total-lightning flashes from GOES-East and GOES-West, used by Thunder. | No API key. |
 | **USGS earthquakes** | Earthquake observations, used by Earthquake and Seismic Tone. | No API key. |
 
-Credentials are required for Xeno-canto searches in **Birdsong** and **Frog Calls**, and for **EUMETSAT MTG Lightning Imager**. Added bird and frog recordings are available independently of Xeno-canto.
-
 ### Obtaining credentials
 
-#### Xeno-canto: one key for Birdsong and Frog Calls
+Enter provider credentials in **Settings → Sound sources**. After saving,
+**Saved — enter only to replace** means Gaiascapes has stored the credential.
+Leave the field blank on later saves to keep the stored value.
 
-1. Open [Xeno-canto](https://xeno-canto.org/) in your browser and sign in, or register an account. Complete any email-verification step requested by the site.
-2. Open [Your account](https://xeno-canto.org/account) and locate your API key. The [official API page](https://xeno-canto.org/explore/api) provides the provider’s current API guidance. These pages may require sign-in or a browser verification check.
-3. In Gaiascapes, open **Settings → Sound sources**.
-4. Either enable **Birdsong**, choose **Xeno-canto** in **Birdsong source**, and enter the key; or enable **Frog Calls** and enter it in that tile’s **Xeno-canto API key (shared)** field.
-5. Click **Save settings**. One saved key serves both sources. Replacing it in either field changes the shared key.
+#### Xeno-canto for Birdsong and Frog Calls
 
-Leave the key field blank when you want to keep the saved key. After a successful save, the field clears and its placeholder indicates that a key is saved. Birdsong using Wikimedia Commons does not need this key.
+1. Sign in to Xeno-canto or [register an account](https://xeno-canto.org/account/register). Complete any email verification the site requests.
+2. Open [Your account](https://xeno-canto.org/account) and copy your API key.
+3. In **Settings → Sound sources**, enable **Birdsong** and choose **Xeno-canto** in **Birdsong source**, or enable **Frog Calls**. Paste the key into **Xeno-canto API key (shared)** in the tile you enabled.
+4. Click **Save settings**. One saved key serves both tiles. Replacing it in either tile updates the shared key.
+5. In **Sound Choices**, select **Birdsong** or **Frog Calls** as the **Background**, then save.
 
-The account-page link is also documented by the [rOpenSci suwo reference](https://docs.ropensci.org/suwo/articles/suwo.html). Xeno-canto blocked automated inspection of its account pages during preparation of this guide, so exact account-page wording could not be checked. No user credentials or recording API requests were used to prepare these instructions.
+Wikimedia Commons Birdsong and added bird or frog recordings are available without a Xeno-canto key. See the [Xeno-canto API documentation](https://xeno-canto.org/explore/api).
 
-#### EUMETSAT: Consumer Key and Consumer Secret
-
-Scroll down in Sound sources if the credential fields are below the visible area.
-
-![Sound sources scrolled to show EUMETSAT Consumer Key and Consumer Secret](docs/images/user-guide/12-eumetsat-credentials.png)
+#### EUMETSAT MTG Lightning Imager
 
 1. Open the [EUMETSAT User Portal sign-in page](https://user.eumetsat.int/cas/login). Choose **Register – Create new account** if needed, then complete registration and sign in.
 2. Open the [EUMETSAT Data Store](https://data.eumetsat.int/).
 3. Open the menu under your username and select **API Key**. You can also open [API key management](https://api.eumetsat.int/api-key/) directly after signing in.
-4. Under **User Credentials**, reveal and copy the **Consumer Key** and **Consumer Secret**. Use these two values, rather than the temporary access token.
+4. Under **User Credentials**, reveal and copy the **Consumer Key** and **Consumer Secret**. Gaiascapes exchanges these values for an access token.
 5. In Gaiascapes, enable **Settings → Sound sources → EUMETSAT MTG Lightning Imager**, paste the two values into the matching fields, and click **Save settings**.
 
-EUMETSAT illustrates these steps in its [Introductory Data Store user guide](https://user.eumetsat.int/resources/user-guides/introductory-data-store-user-guide). If access is denied after authentication, check the account’s applicable data licences using the [registration and licensing guide](https://user.eumetsat.int/resources/user-guides/data-registration-and-licensing).
+EUMETSAT illustrates key retrieval in its [Data Access Client training guide](https://classroom.eumetsat.int/pluginfile.php/58968/mod_resource/content/1/Data%20Access%20Services%20-%20EUMDAC%20Course%20Session2.pdf). If the Data Store denies access after authentication, check **My Data Licenses** for access to MTG LI Level 2 Lightning Flashes (`EO:EUM:DAT:0691`). See the [EUMETSAT Data Store FAQ](https://user.eumetsat.int/resources/user-guides/frequently-asked-questions-for-data-store).
 
-Blank credential fields preserve their saved values. The **Saved — enter only to replace** placeholder indicates that credentials are stored. Gaiascapes handles token acquisition; you do not need to paste a generated token into the app.
+#### KMA lightning for South Korea
+
+The KMA API Hub pages are in Korean. To read them in English on a computer,
+right-click the page in Chrome and choose **Translate to English**, or use the
+**Translate** icon in the address bar and select **English**. See [Chrome’s page translation guide](https://support.google.com/chrome/answer/173424).
+
+1. Open the [KMA API Hub](https://apihub.kma.go.kr/). Choose **로그인** (Log in), then **회원가입** (Register) if you need an account. After signing in, open **마이페이지** (My Page) and copy your **인증키** (authentication key, called `authKey` in the API). See the [KMA API Hub registration and key guide](https://apihub.kma.go.kr/apiInfo.do).
+2. Open [KMA’s raw lightning observations API](https://apihub.kma.go.kr/apiList.do?apiMov=%EB%82%99%EB%A2%B0+%EC%9B%90%EC%8B%9C%EC%9E%90%EB%A3%8C+%EC%A1%B0%ED%9A%8C&seqApi=5&seqApiSub=264). Find **1.4** (lightning observations from April 2015 onward), which lists `lgt_kma_nx1.php`. Click **API 활용신청** (Apply for API access) beside that entry and complete the application. Check that access to this specific API is active if requests are denied.
+3. In **Settings → Sound sources**, enable **KMA lightning · South Korea**, paste your authentication key into **KMA API key**, and click **Save settings**.
+
+To hear EUMETSAT or KMA lightning, choose **Thunder** in one of the three event slots under **Settings → Sound Choices**, save, and start Continuous playback. Thunder plays when the enabled sources report observations.
 
 ## Sound Choices
 
@@ -219,11 +226,13 @@ fails, its error is shown and the animal recording still plays. Coordinate-only 
 are skipped. Dialects change pronunciation; names use the original recording
 metadata and are not translated. The default is disabled, US English, 70% volume.
 
-Announcements use Say or eSpeak NG on the host; see the [installation instructions](README.md).
-No speech service or network API is required. SuperCollider is needed only for Say. Muting this device,
-stopping playback, or moving to another recording cancels its current announcement.
-The tile reports a missing engine, missing voice, or synthesis failure while
-recorded sound playback remains available.
+Say requires SuperCollider and the Say quark on the Gaiascapes Mac. For eSpeak NG
+playback or fallback, install eSpeak NG on the Gaiascapes host. Both engines
+synthesize speech locally. See the [installation instructions](README.md).
+Muting this device, stopping playback, or moving to another recording cancels
+its current announcement. Settings reports a missing engine when you try to
+enable announcements. The tile reports voice and synthesis errors during
+playback, and the recording still plays.
 
 On macOS, Say starts a short-lived SuperCollider language (`sclang`) worker for
 each uncached announcement. A second SuperCollider Dock icon may appear briefly
@@ -259,7 +268,7 @@ Each slot offers the same choices. Slot numbers do not restrict which source it 
 | **None** | Leaves this event slot silent. |
 | **Earthquake** | USGS earthquake observations, rendered as a low-frequency earthquake sound. |
 | **Seismic Tone** | USGS earthquake observations, rendered as a tonal voice. |
-| **Thunder** | Observed lightning from enabled NOAA GOES GLM and/or EUMETSAT MTG sources. Storm Outlook forecasts do not trigger it. |
+| **Thunder** | Observed lightning from enabled NOAA GOES GLM, EUMETSAT MTG, or KMA sources. |
 | **Tidal Tone** | Modeled tide-turn events from Open-Meteo surf & tides. |
 
 Selecting the same sound in multiple event slots creates multiple voices for matching events, each with its own volume. It does not select different geographic regions for those slots.
@@ -337,7 +346,7 @@ Below Theme, choose **Burst** for colors that expand and fade with each backgrou
 
 The animation section has four columns for **Animations**, **Bursts**, **Paint**, and **Murmuration**. **Animations** selects **Background** (the default), **Events**, or **Background & Events** for the visible color effects in Paint and Murmuration. Burst shows both event and background effects. Audio and map markers continue unchanged. Hidden paint still advances through the 19-location round.
 
-During background recording playback, louder passages strengthen the background bursts, brighten the paint layers, and brighten the murmuration. The effects follow the recording volume and crossfades, ease back during quiet passages, and stay at their usual intensity when reduced motion is enabled.
+During background recording playback, louder passages strengthen the background bursts, brighten every visible paint stroke together, and brighten the murmuration. The effects follow the recording volume and crossfades, ease back during quiet passages, and stay at their usual intensity when reduced motion is enabled.
 
 The animation, palette, shape, and Animations choices preview immediately. Click **Save settings** to store them with the installation and restore them after restart. Switching modes clears the accumulated paint; reloading starts a fresh canvas.
 
@@ -490,11 +499,16 @@ Automatic source-recovery notices can appear when an environmental feed fails or
 
 ## Location privacy
 
-In **Settings → Sound Choices**, clear **Show this host’s approximate location
-on the map** and save to stop IP-based location lookups. This hides the host
-marker without changing environmental events, audio, or LAN access. The marker refers to the Gaiascapes host, not the phone or other listening device. When enabled, IP location also sets the initial location 1 for Xeno-canto Birdsong and Storm Outlook at startup; Frog Calls retains its verified defaults or edited regions. The setting
-applies to the installation; other open browsers may need a refresh to remove
-a previously displayed marker. See [Privacy](PRIVACY.md) for details.
+Gaiascapes estimates the host’s location from its public IP address using
+`ipapi.co`, with `ipwho.is` as a fallback. In **Settings → Sound Choices**,
+clear **Show this host’s approximate location on the map** and save to stop
+these lookups and hide the host marker. Environmental events, audio, and LAN
+access continue to work. The marker shows the location of the computer running
+Gaiascapes. When enabled, the IP lookup sets location 1 for Xeno-canto Birdsong
+and Storm Outlook at startup. Frog Calls uses its verified defaults or your
+edited regions. The setting applies to the installation. Other open browsers
+may need a refresh to remove a previously displayed marker. See [Privacy](Privacy.md)
+for details.
 
 ## Screenshot image credit
 
